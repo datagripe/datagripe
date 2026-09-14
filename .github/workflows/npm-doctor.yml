@@ -1,0 +1,32 @@
+# Temporary: why does `npm publish` not attempt the OIDC exchange?
+# Delete once the answer is in release.yml.
+name: npm doctor
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  doctor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - run: npm install -g npm@^11.5.1
+
+      - name: What npm sees
+        run: |
+          echo "node        $(node --version)"
+          echo "npm         $(npm --version)"
+          echo "npm path    $(which npm)"
+          echo "registry    $(npm config get registry)"
+          echo "OIDC url    ${ACTIONS_ID_TOKEN_REQUEST_URL:+PRESENT}${ACTIONS_ID_TOKEN_REQUEST_URL:-ABSENT}"
+          echo "OIDC token  ${ACTIONS_ID_TOKEN_REQUEST_TOKEN:+PRESENT}${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-ABSENT}"
+          echo "authToken   $(npm config get //registry.npmjs.org/:_authToken)"
+          echo "userconfig  ${NPM_CONFIG_USERCONFIG:-none}"
+          test -f "${NPM_CONFIG_USERCONFIG:-/nonexistent}" && cat "$NPM_CONFIG_USERCONFIG" || echo "(no userconfig file)"
