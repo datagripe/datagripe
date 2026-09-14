@@ -103,9 +103,16 @@ Two habits that matter more than the format:
 it. Both are updated in the same change as the behaviour they describe —
 see [docs/README.md](docs/README.md).
 
-**`docs/spec/` is published.** Every spec is rendered to `/specs/<slug>/`
-on datagripe.com, with a Markdown twin, so a spec is now a public page
-and not only a file in a repository. Nothing about how they are written
+**`docs/spec/` is published; `docs/adr/` is not.** Every spec is rendered
+to `/specs/<slug>/` on datagripe.com, with a Markdown twin, so a spec is
+now a public page and not only a file in a repository.
+
+The split is deliberate. An ADR is for somebody who has checked the
+repository out and wants to know why a choice was made. A spec is the
+*result* of those choices and is reference material — it is what you read
+to write a gripe rule, add an adapter, or work out what the access report
+is actually claiming — so it belongs where people can read it without a
+clone. Nothing about how they are written
 changes — but a spec left saying "planned" about something that shipped
 last month is now visibly wrong to a reader rather than quietly wrong to
 a contributor.

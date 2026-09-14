@@ -122,8 +122,13 @@ page description and the `llms.txt` entry. All eighteen have that shape
 today; one that grows a different one is worth failing a build over,
 because the alternative is publishing it with an empty description.
 
-`docs/adr/` is **not** published. That was a separate decision and it
-has not been made.
+`docs/adr/` is **not** published, and that is a decision rather than an
+omission. An ADR is for somebody who has checked the repository out and
+wants to know why a choice was made; a spec is the *result* of those
+choices, and is reference material — it is what you read to write a
+gripe rule, add an adapter, or understand what the access report is
+actually claiming. The first belongs to the repository. The second
+belongs on the site.
 
 ## Markdown, for agents
 
