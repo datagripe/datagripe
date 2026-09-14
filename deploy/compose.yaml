@@ -1,0 +1,83 @@
+# A DataGripe deployment: the app, and the PostgreSQL it keeps its own
+# state in.
+#
+#   cp deploy/.env.example deploy/.env      # then fill in the two secrets
+#   docker compose -f deploy/compose.yaml up -d
+#
+# and DataGripe is on http://localhost:3000. The first person to open it
+# creates the first account; after that, signup is closed unless
+# ALLOW_SIGNUP says otherwise.
+#
+# Not to be confused with the compose file at the repository root, which
+# starts a PostgreSQL for the test suite and nothing else.
+
+name: datagripe
+
+x-datagripe: &datagripe
+  image: ghcr.io/rick-the-alien/datagripe:${DATAGRIPE_VERSION:-latest}
+  # So that `docker compose up` works from a checkout with nothing
+  # published yet. `docker compose pull` fetches the released image
+  # instead, and once one is in the local store compose stops building.
+  build:
+    context: ..
+  environment:
+    APP_DATABASE_URL: postgres://datagripe:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}@postgres:5432/datagripe
+    # Connection passwords are encrypted at rest with this. Lose it and
+    # the datasources in the database cannot be opened again — back it up
+    # somewhere other than beside the backup.
+    CONNECTION_ENCRYPTION_KEY: ${CONNECTION_ENCRYPTION_KEY:?set CONNECTION_ENCRYPTION_KEY in deploy/.env}
+    SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in deploy/.env}
+    # The exact origin browsers reach DataGripe on. Both the HTTP routes
+    # and the WebSocket upgrade compare against it, so a mismatch is an
+    # app that loads and then cannot connect. Change it together with the
+    # published port below, and to https://… once a proxy terminates TLS.
+    WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
+    # Set NODE_ENV=production once WEB_ORIGIN is https. It adds `Secure`
+    # to the session cookie, which a plain-http origin will not send back
+    # — on http it does not harden the deployment, it breaks sign-in.
+    NODE_ENV: ${NODE_ENV:-development}
+    ALLOW_SIGNUP: ${ALLOW_SIGNUP:-false}
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: datagripe
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+      POSTGRES_DB: datagripe
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U datagripe -d datagripe"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    # Deliberately not published: DataGripe is the only thing that needs
+    # this database, and it reaches it on the compose network.
+
+  # Runs to completion before the app starts. External mode does not
+  # migrate itself — that is embedded mode's job — and a server whose
+  # schema is a version behind fails at the first query, not at boot.
+  migrate:
+    <<: *datagripe
+    command: ["migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  datagripe:
+    <<: *datagripe
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${DATAGRIPE_PORT:-3000}:3001"
+    # git datasources and repo commands spawn processes; PID 1 in this
+    # container is the server, which has nothing to reap them with.
+    init: true
+
+volumes:
+  postgres:

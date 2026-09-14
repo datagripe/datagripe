@@ -1,0 +1,53 @@
+DataGripe {{ .Chart.AppVersion }} is installing as {{ include "datagripe.fullname" . }}.
+
+  kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ include "datagripe.fullname" . }}
+
+{{ if .Values.ingress.enabled -}}
+It will answer on:
+{{- range .Values.ingress.hosts }}
+  https://{{ .host }}
+{{- end }}
+{{- else }}
+No ingress. To reach it:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "datagripe.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+
+and open {{ .Values.webOrigin }} — which has to be the URL you actually
+open, port and all. DataGripe compares it against the browser's Origin on
+every WebSocket upgrade, so if they disagree the app loads and then never
+connects. For a port-forward that means:
+
+  --set webOrigin=http://localhost:{{ .Values.service.port }}
+{{- end }}
+
+The first person to open it creates the first account. After that, signup
+is closed{{ if .Values.allowSignup }} — except you have set allowSignup, so it is not{{ end }}.
+
+{{ if and (eq .Values.nodeEnv "production") (not (hasPrefix "https://" .Values.webOrigin)) -}}
+WARNING: nodeEnv is production but webOrigin is not https. The session
+cookie is marked Secure, which a browser will not send back over plain
+http — sign-in will appear to succeed and then not stick. Either put TLS
+in front of this, or set nodeEnv=development.
+
+{{ end -}}
+{{- if and (eq .Values.database.mode "embedded") (not .Values.persistence.enabled) -}}
+WARNING: the embedded database is writing to an emptyDir. The next
+restart takes the database with it, and the generated encryption key with
+that. Set persistence.enabled=true.
+
+{{ end -}}
+{{- if and .Values.postgresql.enabled (not .Values.postgresql.persistence.enabled) -}}
+WARNING: the bundled PostgreSQL is writing to an emptyDir and will lose
+everything on restart. Set postgresql.persistence.enabled=true.
+
+{{ end -}}
+{{- if not .Values.secrets.existingSecret -}}
+CONNECTION_ENCRYPTION_KEY was generated into the Secret
+{{ include "datagripe.fullname" . }}-secrets. Datasource passwords are
+encrypted with it and cannot be recovered without it. Back it up:
+
+  kubectl -n {{ .Release.Namespace }} get secret {{ include "datagripe.fullname" . }}-secrets -o yaml
+
+{{ end -}}
+Operations — backups, the audit log, the production checklist:
+https://github.com/rick-the-alien/datagripe/blob/main/docs/operations.md

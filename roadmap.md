@@ -356,6 +356,38 @@ Exit: point an agent at a cloned project and it answers a question about
 the database using the project's own runbook — with a read-only project
 unable to change a row no matter what it is asked to run.
 
+## Phase 16 — Packaging and deployment · shipped 2026-09-14
+
+- [x] `bun run build:dist` stages a checkout-free distribution — the
+      bundled server, its migrations, the built web app, a launcher —
+      that both the npm package and the container image are made of, so
+      the two cannot describe different software
+- [x] The distribution reproduces the checkout's directory layout on
+      purpose: `config.ts` derives the repository root from its own
+      location, so putting the bundle where the source was makes that
+      root the distribution root and every path default correct
+- [x] `@datagripe/cli` on npm: `bunx @datagripe/cli` is DataGripe with
+      no install, no configuration and no accounts. The launcher runs
+      under plain node so `npx` works too, finding a Bun to hand the
+      server to and installing one only if there is none
+- [x] `datagripe migrate` as a second entry point, for the deployments
+      that do not migrate themselves
+- [x] `ghcr.io/rick-the-alien/datagripe`, multi-arch, non-root, with the
+      embedded cluster still available so `docker run` with a volume and
+      nothing else is a working DataGripe
+- [x] `deploy/`: a compose stack with its own PostgreSQL and a one-shot
+      migration, plain Kubernetes manifests to read top to bottom, and a
+      Helm chart with managed-database, embedded-database and
+      bring-your-own-secrets shapes
+- [x] Secrets generated once and kept across upgrades, because rotating
+      `CONNECTION_ENCRYPTION_KEY` does not sign people out — it orphans
+      every datasource password in the database
+- [x] CI builds the distribution and the image, boots the container, and
+      validates the manifests, the chart and the compose file
+
+Exit: someone who has never seen the repository has DataGripe running
+from one command, and someone with a cluster has it running from three.
+
 ## Unscheduled / parking lot
 - SQLite type/nullability/default changes — need the 12-step table rebuild
 - Index, constraint and trigger editing — the preview-then-apply shape is

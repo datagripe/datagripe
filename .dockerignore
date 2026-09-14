@@ -1,0 +1,27 @@
+# The build context is the checkout. Everything the image needs is source;
+# everything below is either rebuilt inside it, secret, or someone's local
+# state that must not be baked into a published layer.
+.git
+.github
+node_modules
+dist
+dev-dist
+build
+data
+coverage
+.hutch
+.cottontail-tmp
+
+# `config.ts` merges a repository-root `.env` when it finds one, so a copy
+# of the developer's would become the image's configuration.
+.env
+.env.local
+connections.json
+
+apps/desktop/staged
+apps/desktop/artifacts
+apps/web/dist
+site
+brand
+docs
+*.log

@@ -6,6 +6,9 @@ on:
 
 permissions:
   contents: write
+  packages: write
+  # npm publishes with provenance, which is signed with this.
+  id-token: write
 
 jobs:
   web:
@@ -94,8 +97,86 @@ jobs:
           path: release-assets/*
           if-no-files-found: error
 
+  # Multi-arch because `embedded-postgres` ships per-platform binaries and
+  # an arm64 node running an amd64 image would emulate PostgreSQL as well
+  # as the server. QEMU builds the arm64 image; it is slow and it is once
+  # per release.
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # `bunx @datagripe/cli`. The published package is `dist/` — the bundled
+  # server, its migrations, the built web app and the launcher — so npm
+  # publishes a directory rather than the workspace, which is private and
+  # would need four unpublishable packages published first.
+  npm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.0"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Build the distribution
+        run: bun run build:dist
+
+      # The tag is the release; a package.json version that disagrees with
+      # it would publish something nobody asked for under a name they did.
+      - name: Tag matches the package version
+        run: |
+          tagged="${GITHUB_REF_NAME#v}"
+          built="$(bun --print "require('./dist/package.json').version")"
+          if [ "$tagged" != "$built" ]; then
+            echo "tag $GITHUB_REF_NAME does not match dist version $built" >&2
+            exit 1
+          fi
+
+      - name: Publish
+        run: npm publish --provenance --access public
+        working-directory: dist
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
   release:
-    needs: [web, desktop]
+    needs: [web, desktop, image, npm]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

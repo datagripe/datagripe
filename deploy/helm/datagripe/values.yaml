@@ -1,0 +1,161 @@
+# DataGripe — a web-based database IDE.
+#
+# The only value with no workable default is `webOrigin`: DataGripe
+# compares it against the browser's `Origin` on every WebSocket upgrade,
+# so it has to be the URL people actually type, and no chart can guess it.
+# Everything else installs as it stands.
+
+# The exact origin browsers reach DataGripe on, scheme and all —
+# https://datagripe.example.com. Required.
+webOrigin: ""
+
+image:
+  repository: ghcr.io/rick-the-alien/datagripe
+  # Defaults to the chart's appVersion.
+  tag: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+# One, and there is no autoscaling here on purpose. Sessions and
+# workspace state live in the database, so more replicas would work; what
+# does not is several of them applying migrations at the same moment. Run
+# the migration job (below) and raise this once you have a reason to.
+replicaCount: 1
+
+# `production` adds `Secure` to the session cookie. Right for the https
+# origin above, and wrong for a port-forward — over plain http the
+# browser will not send the cookie back and sign-in will not stick.
+nodeEnv: production
+
+# The first account is always allowed to sign up; this governs the rest.
+allowSignup: false
+
+# Off means no domain export to disk, no datasource paths, no git
+# datasources. The right default where the person pressing the button
+# does not own the disk — see docs/operations.md before changing it.
+hostFsDisabled: true
+
+database:
+  # external — use `postgresql` below, or `url` for one you already run.
+  # embedded — DataGripe starts and manages its own cluster under the
+  #   data volume. No second workload, no separate backup, and strictly
+  #   one replica. Turn `persistence` on with it or a restart is a wipe.
+  mode: external
+  # An external PostgreSQL, when `postgresql.enabled` is false.
+  # postgres://user:password@host:5432/datagripe
+  url: ""
+  # Take APP_DATABASE_URL from a Secret you manage instead of `url`.
+  existingSecret: ""
+  existingSecretKey: APP_DATABASE_URL
+
+secrets:
+  # Encrypts datasource passwords at rest. Generated on install if empty,
+  # and then kept across upgrades — but a `helm uninstall` takes it with
+  # the release, and without it the stored passwords cannot be decrypted.
+  # Set it explicitly, or back up the generated Secret, before this holds
+  # anything you would miss. `openssl rand -base64 32`.
+  connectionEncryptionKey: ""
+  # Signs session cookies. Regenerating it only signs everyone out.
+  sessionSecret: ""
+  # A Secret you manage, holding CONNECTION_ENCRYPTION_KEY and
+  # SESSION_SECRET. Takes precedence over the two values above.
+  existingSecret: ""
+
+# The bundled PostgreSQL: a single StatefulSet, and a floor rather than a
+# recommendation. A managed database is better operated than this — point
+# `database.url` at one and set `enabled: false`.
+postgresql:
+  enabled: true
+  image: postgres:17-alpine
+  auth:
+    username: datagripe
+    database: datagripe
+    # Generated on install if empty, and kept across upgrades.
+    password: ""
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+
+# Applies pending migrations before the app starts, as a pre-install and
+# pre-upgrade hook so it runs once per release rather than once per pod.
+# Embedded mode migrates itself and skips this.
+migrations:
+  enabled: true
+  backoffLimit: 3
+
+# The /data volume: the embedded cluster and the secrets generated beside
+# it, and git datasource clones. Required for `database.mode: embedded`.
+# In external mode the only thing here is re-cloneable, so an emptyDir is
+# a fair trade until git datasources matter to you.
+persistence:
+  enabled: false
+  size: 10Gi
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+
+service:
+  type: ClusterIP
+  port: 3001
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations:
+    # DataGripe holds a WebSocket open for as long as a tab is open. The
+    # 60-second default read timeout would close every one of them.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-body-size: 32m
+  hosts:
+    - host: datagripe.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: datagripe-tls
+  #    hosts:
+  #      - datagripe.example.com
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 1Gi
+
+# Anything in .env.example that this chart does not name. Query limits,
+# the MCP endpoint, GIT_ENABLED, WEBAUTHN_RP_ID, and so on.
+extraEnv: []
+#  - name: QUERY_MAX_ROWS
+#    value: "50000"
+
+# From a ConfigMap or Secret you manage.
+extraEnvFrom: []
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

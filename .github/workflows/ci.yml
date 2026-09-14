@@ -101,3 +101,80 @@ jobs:
           curl -sf http://localhost:39871/health
           curl -sf http://localhost:39871/api/session | grep -q '"authDisabled":true'
           curl -sf -o /dev/null -w '%{http_code}' -X POST http://localhost:39871/api/auth/login | grep -q 404
+
+  # The distribution, the image and the deployment manifests are all
+  # built from the same sources as the app and go stale the same way.
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.0"
+
+      # Nothing here starts an embedded cluster, and its postinstall
+      # downloads 60MB of PostgreSQL to make that possible.
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Build the distribution
+        run: bun run build:dist
+
+      - name: The distribution is complete
+        run: |
+          test -f dist/bin/datagripe.mjs
+          test -f dist/apps/server/src/index.js
+          test -f dist/apps/server/src/migrate.js
+          test -f dist/apps/web/dist/index.html
+          test -n "$(ls dist/apps/server/migrations/*.sql)"
+          # The bundler inlines every module into one file, where
+          # `import.meta.main` is true for all of them. A CLI guarded by
+          # it would run on the way up rather than staying out of the way.
+          ! grep -q "import.meta.main" dist/apps/server/src/index.js
+
+      - name: Build the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: datagripe:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Embedded mode, which is what `docker run` with no configuration
+      # does: it has to come up, migrate itself and serve the web app.
+      - name: Container boot smoke
+        run: |
+          docker run -d --name dg -p 39872:3001 \
+            -e WEB_ORIGIN=http://localhost:39872 datagripe:ci
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:39872/health > /dev/null && break
+            sleep 2
+          done
+          curl -sf http://localhost:39872/health
+          curl -sf http://localhost:39872/api/session | grep -q '"authDisabled":true'
+          curl -sf -o /dev/null http://localhost:39872/
+          # Everything in the app runs over this socket, and it is
+          # refused unless the browser's origin matches WEB_ORIGIN.
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Connection: Upgrade" -H "Upgrade: websocket" \
+            -H "Sec-WebSocket-Version: 13" \
+            -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+            -H "Origin: http://localhost:39872" http://localhost:39872/ws)
+          test "$code" = "101"
+          docker rm -f dg
+
+      - name: Deployment manifests are valid
+        run: |
+          kubectl kustomize deploy/k8s | kubectl apply --dry-run=client -f -
+          helm lint deploy/helm/datagripe --set webOrigin=https://datagripe.example.com
+          helm template dg deploy/helm/datagripe \
+            --set webOrigin=https://datagripe.example.com \
+            | kubectl apply --dry-run=client -f -
+          docker compose -f deploy/compose.yaml config > /dev/null
+        env:
+          POSTGRES_PASSWORD: ci
+          CONNECTION_ENCRYPTION_KEY: ci-encryption-key-0123456789abcdef
+          SESSION_SECRET: ci-session-secret-0123456789abcdef

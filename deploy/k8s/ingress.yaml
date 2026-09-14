@@ -1,0 +1,35 @@
+# Not in kustomization.yaml until you have a hostname and a controller.
+# The host here must match WEB_ORIGIN in configmap.yaml exactly.
+#
+# The annotations are ingress-nginx's. DataGripe holds one WebSocket open
+# per browser tab for as long as the tab is, so the default 60-second
+# read timeout would drop every connection a minute after it opened; the
+# app reconnects, but a query in flight does not survive it.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: datagripe
+  namespace: datagripe
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    # Result sets and CSV exports go through here.
+    nginx.ingress.kubernetes.io/proxy-body-size: "32m"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - datagripe.example.com
+      secretName: datagripe-tls
+  rules:
+    - host: datagripe.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: datagripe
+                port:
+                  name: http

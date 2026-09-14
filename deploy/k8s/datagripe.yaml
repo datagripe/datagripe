@@ -1,0 +1,118 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: datagripe
+  namespace: datagripe
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: datagripe
+    app.kubernetes.io/component: server
+  ports:
+    - name: http
+      port: 3001
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: datagripe
+  namespace: datagripe
+spec:
+  replicas: 1
+  # Recreate rather than RollingUpdate: one replica and one migration
+  # path, so there is nothing to gain from briefly running two versions
+  # against one schema.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: datagripe
+      app.kubernetes.io/component: server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: datagripe
+        app.kubernetes.io/component: server
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # External mode does not migrate itself — that is embedded mode's
+        # job — so this runs first, every start, and exits. Migrations are
+        # idempotent, so a restart with nothing to do costs a connection.
+        - name: migrate
+          image: ghcr.io/rick-the-alien/datagripe:latest
+          args: ["migrate"]
+          envFrom:
+            - configMapRef:
+                name: datagripe
+            - secretRef:
+                name: datagripe
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+      containers:
+        - name: datagripe
+          image: ghcr.io/rick-the-alien/datagripe:latest
+          ports:
+            - name: http
+              containerPort: 3001
+          envFrom:
+            - configMapRef:
+                name: datagripe
+            - secretRef:
+                name: datagripe
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          # Liveness only: /health reports that the process is serving,
+          # deliberately not what it can reach. A database outage should
+          # not become a restart loop on top of a database outage.
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 20
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+      volumes:
+        # Scratch in external mode: git datasource clones and nothing
+        # else, and they can be cloned again. Swap in a
+        # PersistentVolumeClaim before enabling git datasources in
+        # earnest — and you must, if you switch to the embedded database,
+        # which keeps the cluster and its generated secrets here.
+        - name: data
+          emptyDir: {}

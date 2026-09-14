@@ -14,7 +14,7 @@
 	"scripts": {
 		"dev": "bun run --hot src/index.ts",
 		"start": "bun run src/index.ts",
-		"db:migrate": "bun run src/db/app/migrate.ts",
+		"db:migrate": "bun run src/db/app/migrate.cli.ts",
 		"typecheck": "tsc --noEmit",
 		"test": "bun test"
 	},

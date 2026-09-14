@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: datagripe
+
+resources:
+  - namespace.yaml
+  - secret.yaml
+  - configmap.yaml
+  - postgres.yaml
+  - datagripe.yaml
+  # Uncomment once you have a hostname, a controller and a certificate
+  # issuer, and have set the same host in configmap.yaml's WEB_ORIGIN.
+  # - ingress.yaml
+
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/part-of: datagripe
+
+images:
+  - name: ghcr.io/rick-the-alien/datagripe
+    newTag: latest

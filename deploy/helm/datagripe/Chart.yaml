@@ -1,0 +1,21 @@
+apiVersion: v2
+name: datagripe
+description: A web-based database IDE inspired by DataGrip
+type: application
+# Chart version, bumped when the templates change. appVersion tracks the
+# DataGripe release the default image tag points at.
+version: 0.1.0
+appVersion: "0.0.5"
+home: https://datagripe.com
+sources:
+  - https://github.com/rick-the-alien/datagripe
+icon: https://datagripe.com/icon.svg
+keywords:
+  - database
+  - sql
+  - postgres
+  - mysql
+  - ide
+maintainers:
+  - name: rick-the-alien
+    url: https://github.com/rick-the-alien

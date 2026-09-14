@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: datagripe
+  namespace: datagripe
+data:
+  # The exact origin browsers reach DataGripe on — scheme, host, and port
+  # if it is not the default. Both the HTTP routes and the WebSocket
+  # upgrade compare against it, so getting this wrong gives an app that
+  # loads and then never connects.
+  WEB_ORIGIN: https://datagripe.example.com
+
+  # Adds `Secure` to the session cookie. Correct with the https origin
+  # above; change to `development` if you are reaching this over plain
+  # http, or sign-in will not stick.
+  NODE_ENV: production
+
+  # The first account is always allowed to sign up. This governs the ones
+  # after it.
+  ALLOW_SIGNUP: "false"
+
+  # No host filesystem: no domain export to disk, no datasource paths, no
+  # git datasources. The right default where the person pressing the
+  # button does not own the disk. docs/operations.md explains the three
+  # switches (HOST_FS_DISABLED, GIT_ENABLED, REPO_COMMANDS_ENABLED).
+  HOST_FS_DISABLED: "true"

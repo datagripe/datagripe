@@ -1,0 +1,27 @@
+{{- if .Values.persistence.enabled }}
+{{- /*
+   The embedded cluster and the secrets generated beside it, plus any git
+   datasource clones. Required for `database.mode: embedded`; optional in
+   external mode, where everything here can be fetched again.
+*/ -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "datagripe.fullname" . }}-data
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "datagripe.labels" . | nindent 4 }}
+  annotations:
+    # The embedded database lives here. Deleting the release should not
+    # delete it by implication.
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    {{- toYaml .Values.persistence.accessModes | nindent 4 }}
+  {{- with .Values.persistence.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size | quote }}
+{{- end }}

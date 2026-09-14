@@ -4,6 +4,36 @@ Deployment-facing procedures for DataGripe. Development setup lives in
 `docs/initial_idea.md` §13; this document covers keeping a deployment
 alive.
 
+## Shapes a deployment comes in
+
+Four, and they run the same server with the same environment variables —
+`deploy/README.md` has the commands.
+
+| | State lives in | Accounts |
+| --- | --- | --- |
+| `bunx @datagripe/cli` | an embedded cluster under the data dir | off |
+| `docker run … -v datagripe:/data` | the same, on a volume | off |
+| `deploy/compose.yaml` | a PostgreSQL container beside it | on |
+| `deploy/k8s`, `deploy/helm/datagripe` | a StatefulSet or a managed database | on |
+
+The npm package and the container image are the same build — `bun run
+build:dist` stages the bundled server, its migrations and the built web
+app into `dist/`, and both are made of that directory. There is no
+deployment where the code differs.
+
+Two settings decide whether a deployment works, and neither has a
+default that can be right everywhere:
+
+- **`WEB_ORIGIN`** is the exact origin browsers use, scheme and port
+  included. Both the HTTP routes and the WebSocket upgrade compare
+  against it, and everything in the app runs over that socket — so a
+  mismatch is not a degradation, it is an app that loads and then does
+  nothing. It is the first thing to check.
+- **`NODE_ENV=production`** puts `Secure` on the session cookie. Correct
+  behind TLS and wrong in front of plain http, where the browser will
+  not send the cookie back and sign-in will not stick. Set it when
+  `WEB_ORIGIN` is `https://`, and not before.
+
 ## Backup and restore
 
 DataGripe's durable state is the application PostgreSQL database
@@ -33,6 +63,19 @@ createdb datagripe_restore
 pg_restore --dbname=datagripe_restore datagripe-YYYYMMDD-HHMM.dump
 APP_DATABASE_URL=postgres://…/datagripe_restore bun run db:migrate
 ```
+
+From a deployment rather than a checkout, the migration runner is the
+image's second entry point and the CLI's second command:
+
+```bash
+docker run --rm -e APP_DATABASE_URL=… -e CONNECTION_ENCRYPTION_KEY=… \
+  -e SESSION_SECRET=… ghcr.io/rick-the-alien/datagripe migrate
+bunx @datagripe/cli migrate
+```
+
+The compose stack runs it as a one-shot service before the app starts;
+the Helm chart runs it as a `pre-install,pre-upgrade` hook Job; the plain
+Kubernetes manifests run it as an init container.
 
 Run `db:migrate` after every restore: migrations are idempotent and
 bring older backups up to the current schema before the server starts.
@@ -79,17 +122,23 @@ Pipe to your log stack and alert on `auth.login.failure` bursts and any
 
 ## Configuration checklist (production)
 
-- `NODE_ENV=production` (enables the `Secure` cookie attribute).
+- `NODE_ENV=production` (enables the `Secure` cookie attribute) — which
+  needs `WEB_ORIGIN` to be `https://`, or the browser will not send the
+  cookie back at all.
 - `ALLOW_SIGNUP=false` after provisioning accounts.
 - `TARGET_HOST_ALLOWLIST` empty unless private targets are intentional —
   the SSRF policy blocks private ranges by default. `SSRF_DISABLED=true`
   disables the policy entirely; use only on trusted networks, since the
   server will then connect to any host (including loopback and cloud
   metadata endpoints).
-- `CONNECTION_ENCRYPTION_KEY` from your secret manager; rotation
-  procedure: add the new key as version 2 in `crypto/keyring.ts`
-  wiring, restart, and re-save connections opportunistically (old
-  versions keep decrypting).
+- `CONNECTION_ENCRYPTION_KEY` from your secret manager — and note that
+  the Helm chart generates one if you do not, keeps it across upgrades,
+  and marks its Secret `helm.sh/resource-policy: keep` so an accidental
+  `helm uninstall` does not take it. Back it up anyway: losing it does
+  not sign people out, it orphans every datasource password in the
+  database. Rotation procedure: add the new key as version 2 in
+  `crypto/keyring.ts` wiring, restart, and re-save connections
+  opportunistically (old versions keep decrypting).
 - `WEB_ORIGIN` set to the exact origin the app is served from; both
   HTTP and the WebSocket upgrade enforce it.
 

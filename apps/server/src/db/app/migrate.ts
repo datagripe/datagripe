@@ -1,11 +1,16 @@
 import { readdir } from "node:fs/promises";
 import path from "node:path";
-import { type AppConfig, loadConfig, resolveRepoPath } from "../../config";
+import { type AppConfig, resolveRepoPath } from "../../config";
 import { log } from "../../log";
-import { type AppDb, createAppDb } from "./pool";
+import type { AppDb } from "./pool";
 
-/** Where the migrations sit in a checkout; `MIGRATIONS_DIR` overrides it. */
-const MIGRATIONS_DIR = path.join(import.meta.dir, "../../../migrations");
+/**
+ * Where the migrations sit in a checkout; `MIGRATIONS_DIR` overrides it.
+ * Resolved from the repository root rather than by counting `..` from
+ * this file, so a bundled server — which is one file, at a different
+ * depth — still finds them.
+ */
+const MIGRATIONS_DIR = resolveRepoPath("apps/server/migrations");
 
 /** The configured migrations directory, resolved, or the checkout's. */
 export function migrationsDir(
@@ -63,23 +68,4 @@ export async function migrate(
 		log.info("migration applied", { migration: file });
 	}
 	return newlyApplied;
-}
-
-// Run directly: `bun run src/db/app/migrate.ts`
-if (import.meta.main) {
-	const config = await loadConfig();
-	if (config.APP_DATABASE_URL === undefined) {
-		throw new Error(
-			"db:migrate targets an external database (APP_DATABASE_URL). Embedded mode migrates automatically at server startup.",
-		);
-	}
-	const db = createAppDb(config.APP_DATABASE_URL);
-	try {
-		const applied = await migrate(db, migrationsDir(config));
-		if (applied.length === 0) {
-			log.info("database already up to date");
-		}
-	} finally {
-		await db.close();
-	}
 }

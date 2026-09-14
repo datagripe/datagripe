@@ -4,6 +4,51 @@
 
 ### Added
 
+- **DataGripe runs from one command, anywhere.** `bunx @datagripe/cli`
+  — or `npx @datagripe/cli` — is the whole application: the server, the
+  web app it serves, and a PostgreSQL it starts for itself, with no
+  install, no configuration and no account to create. There is a
+  container image too, `ghcr.io/rick-the-alien/datagripe`, which does
+  the same thing with a volume mounted at `/data`.
+
+  The npm package and the image are the same build. `bun run build:dist`
+  stages a checkout-free distribution — the bundled server, its
+  migrations, the built web app, a launcher — and both are made of that
+  directory, so there is no deployment where the code differs.
+
+  The distribution reproduces the checkout's directory layout on
+  purpose. `config.ts` derives the repository root from its own location
+  and resolves every relative path against it, so putting the bundle
+  where the source was makes that root the distribution root; the
+  alternative was a package whose defaults for migrations, `.env` and
+  `connections.json` pointed three directories above wherever npm
+  happened to unpack it.
+
+  The launcher is written for plain node rather than Bun, because that
+  is what `npx` hands it to. It finds a Bun to run the server with — the
+  one you have, or one it installs as an optional dependency — and
+  otherwise stays out of the way.
+
+- **`deploy/` for the deployments that are not one person's laptop.** A
+  compose stack with its own PostgreSQL, accounts switched on and the
+  migration as a one-shot service; plain Kubernetes manifests meant to
+  be read top to bottom; and a Helm chart with the shapes a cluster
+  actually comes in — a managed database, the bundled StatefulSet, or
+  the embedded cluster on a volume — plus secrets it generates once and
+  then keeps, since rotating `CONNECTION_ENCRYPTION_KEY` does not sign
+  people out but orphans every datasource password in the database.
+
+  `WEB_ORIGIN` is the one setting with no default that can be right, and
+  every one of these says so: DataGripe compares it against the
+  browser's `Origin` on every WebSocket upgrade, and everything in the
+  app runs over that socket, so a mismatch is not a degradation but an
+  app that loads and then does nothing.
+
+- **`datagripe migrate`** as a second entry point, for the deployments
+  that do not migrate themselves. The compose stack runs it before the
+  app starts, the Helm chart as a pre-install hook, the plain manifests
+  as an init container.
+
 - **Sign in with a security key instead of a password.** A FIDO2 key — a
   YubiKey, or a passkey your laptop or phone holds — can create an
   account and sign into it, and one account may register as many keys as
@@ -26,6 +71,23 @@
   Deployment knobs are `WEBAUTHN_RP_ID`, `WEBAUTHN_RP_NAME` and
   `WEBAUTHN_EXTRA_ORIGINS`; all three have working defaults derived from
   `WEB_ORIGIN`. See [docs/spec/auth-and-hardening.md](docs/spec/auth-and-hardening.md).
+
+### Fixed
+
+- **A bundled server no longer runs the migration CLI on the way up.**
+  `migrate.ts` guarded it with `import.meta.main`, which is true for
+  every module in a single-file bundle rather than only the entry one —
+  so the packaged server applied migrations against `APP_DATABASE_URL`
+  before starting, and in embedded mode threw the error that explains
+  the CLI is for external databases. It is its own module now. The
+  desktop app's bundled server had the same defect.
+
+- **A bundled server no longer reads `connections.json` from outside
+  itself.** The default path counted `..` from the module's own
+  location, which bundling flattens, so the distribution resolved it
+  four directories up and could pick up a file belonging to something
+  else entirely. Both it and the migrations directory now go through
+  `resolveRepoPath`, so there is one definition of where the root is.
 
 ## 0.0.5 — 2026-09-12
 

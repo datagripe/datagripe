@@ -1,10 +1,9 @@
-import path from "node:path";
 import {
 	type PredefinedConnection,
 	predefinedConnectionsFileSchema,
 } from "@datagripe/contracts";
 import type { ResolvedConnection } from "@datagripe/database-adapters";
-import type { AppConfig } from "../config";
+import { type AppConfig, resolveRepoPath } from "../config";
 
 /**
  * Predefined connections (docs/spec/connection-sources.md): read-only
@@ -20,10 +19,13 @@ export interface PredefinedEntry {
 	loadedAt: string;
 }
 
-export const DEFAULT_CONNECTIONS_FILE = path.join(
-	import.meta.dir,
-	"../../../../connections.json",
-);
+/**
+ * Through `resolveRepoPath` rather than counting `..` from this file: a
+ * bundled server is one file, so a depth measured from this module's
+ * location would be measured from the bundle's instead and land outside
+ * the distribution. One definition of where the root is.
+ */
+export const DEFAULT_CONNECTIONS_FILE = resolveRepoPath("connections.json");
 
 export async function loadPredefinedConnections(
 	config: Pick<AppConfig, "CONNECTIONS_FILE">,

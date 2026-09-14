@@ -8,7 +8,18 @@ A web-based database IDE inspired by DataGrip. Bun + React 19 + TypeScript.
 
 ## Quickstart
 
-Personal/local use — zero config, no Docker, no accounts:
+No install at all:
+
+```bash
+bunx @datagripe/cli              # or: npx @datagripe/cli
+```
+
+DataGripe on <http://localhost:3001>, with its own PostgreSQL under
+`~/.local/share/datagripe` and no accounts to create. `--port` and
+`--data-dir` are the only flags; everything else is an environment
+variable.
+
+From a checkout — same thing, with the web app on Vite:
 
 ```bash
 bun install
@@ -37,6 +48,26 @@ Setting `APP_DATABASE_URL` selects external mode: account auth is on and
 Requires Bun 1.4 (`packageManager` is pinned). External mode expects
 PostgreSQL 17.
 
+## Deploying it
+
+```bash
+docker run -p 3001:3001 -v datagripe:/data \
+  ghcr.io/rick-the-alien/datagripe
+```
+
+The same zero-config DataGripe in a container. For a shared deployment —
+a real PostgreSQL, accounts, a hostname — [deploy/](deploy) has a
+compose stack, plain Kubernetes manifests, and a Helm chart, all running
+that image.
+
+The one setting no default can guess is `WEB_ORIGIN`: the exact origin
+browsers use. DataGripe compares it against the `Origin` header on every
+WebSocket upgrade, and everything in the app runs over that socket.
+
+The image and the npm package are both built from `bun run build:dist`,
+which stages the bundled server, its migrations and the built web app
+into `dist/` — see [scripts/packaging/build.ts](scripts/packaging/build.ts).
+
 ## Desktop app
 
 An Electrobun shell lives in [apps/desktop](apps/desktop): it spawns the
@@ -63,7 +94,8 @@ any static host, or `WEB_STATIC_DIR` on the server): frameless via
 status bar.
 
 Pushing a `v*` tag builds the web bundle and the desktop shell for
-Linux, macOS, and Windows and attaches them to a GitHub release (see
+Linux, macOS, and Windows, publishes `@datagripe/cli` to npm and the
+container image to GHCR, and attaches the rest to a GitHub release (see
 [.github/workflows/release.yml](.github/workflows/release.yml)).
 
 ## Documentation
@@ -71,6 +103,7 @@ Linux, macOS, and Windows and attaches them to a GitHub release (see
 - [brand/](brand) — the shipped brand assets (app icon, mascot), copied
   into `apps/` and `site/` by `bun run sync:brand`
 - [site/](site) — the datagripe.com landing page, deployed to GitHub Pages
+- [deploy/](deploy) — compose, Kubernetes manifests, Helm chart
 - [roadmap.md](roadmap.md) — phases, progress, scheduling
 - [docs/initial_idea.md](docs/initial_idea.md) — original engineering handoff
 - [docs/adr/](docs/adr/) — architecture decision records
