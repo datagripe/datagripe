@@ -177,13 +177,26 @@ jobs:
           test "$code" = "101"
           docker rm -f dg
 
+      # Not `kubectl --dry-run=client`: it still fetches the OpenAPI
+      # schema from a cluster, so on a runner with none it validates
+      # nothing and fails trying to. kubeconform carries the schemas, and
+      # `-strict` rejects an unknown field — which is the bug a YAML
+      # parse waves through and a deployment finds out about later.
+      - name: Install kubeconform
+        run: |
+          curl -fsSL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz \
+            | sudo tar -xz -C /usr/local/bin kubeconform
+
       - name: Deployment manifests are valid
         run: |
-          kubectl kustomize deploy/k8s | kubectl apply --dry-run=client -f -
+          kubectl kustomize deploy/k8s | kubeconform -strict -summary
+          # Not in the kustomization until somebody has a hostname, so it
+          # is the one manifest nothing else would look at.
+          kubeconform -strict -summary deploy/k8s/ingress.yaml
           helm lint deploy/helm/datagripe --set webOrigin=https://datagripe.example.com
           helm template dg deploy/helm/datagripe \
             --set webOrigin=https://datagripe.example.com \
-            | kubectl apply --dry-run=client -f -
+            | kubeconform -strict -summary
           docker compose -f deploy/compose.yaml config > /dev/null
         env:
           POSTGRES_PASSWORD: ci
