@@ -55,13 +55,34 @@ Publisher**, add a GitHub Actions publisher:
 | --- | --- |
 | Organization or user | `datagripe` |
 | Repository | `datagripe` |
-| Workflow filename | `release.yml` |
+| Workflow filename | `release.yml` — note `.yml`, not `.yaml` |
 | Environment | *(leave empty)* |
 
-The workflow filename is matched exactly, so **renaming
-`.github/workflows/release.yml` breaks publishing** until the trusted
-publisher is updated to match. The failure is a 403 at the publish step,
-which does not obviously say that, hence this paragraph.
+The workflow filename is matched **exactly**, extension included, and
+npm cannot edit it afterwards — a wrong one has to be deleted and added
+again. `release.yaml` for `release.yml` is a real hour lost, and so is
+renaming the workflow later without updating the publisher.
+
+What that failure looks like is the reason this paragraph is long. npm
+reports it as:
+
+```
+npm error code ENEEDAUTH
+npm error need auth You need to authorize this machine using `npm adduser`
+```
+
+which points at a missing token, and the token is not the problem. The
+line that says what happened only appears with `--loglevel verbose`,
+which the publish step now passes:
+
+```
+npm http fetch POST 404 .../oidc/token/exchange/package/@datagripe%2fcli
+npm verbose oidc Failed token exchange request: OIDC token exchange error - package not found
+```
+
+"package not found" means no trusted publisher matched the claims —
+organisation, repository, workflow filename, environment. It does not
+mean the package is missing.
 
 The other way to break it is to give `actions/setup-node` a
 `registry-url`. That input writes an `.npmrc` with

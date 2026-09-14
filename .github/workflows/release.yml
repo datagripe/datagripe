@@ -190,8 +190,14 @@ jobs:
       # The trust is registered against `release.yml` by name, so renaming
       # this file breaks publishing until it is re-registered — see
       # docs/releasing.md.
+      # --loglevel verbose so a trusted-publishing failure says so. By
+      # default npm reports a rejected OIDC exchange as ENEEDAUTH, "you
+      # need to authorize this machine using npm adduser" — which points
+      # at a missing token rather than at the exchange it just tried and
+      # was refused. Verbose prints the exchange and the registry's
+      # reason on the line above it.
       - name: Publish
-        run: npm publish --access public
+        run: npm publish --access public --loglevel verbose
         working-directory: dist
 
   # The chart is published as an OCI artifact beside the image it runs,
