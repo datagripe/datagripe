@@ -19,6 +19,7 @@ import {
 } from "react";
 import { wsClient } from "../api/ws";
 import { AccessPanel } from "../components/AccessPanel";
+import { AccountSettingsPanel } from "../components/AccountSettingsPanel";
 import { ActivityBar } from "../components/ActivityBar";
 import { ConnectionForm } from "../components/ConnectionForm";
 import { DocumentSidebar } from "../components/DocumentSidebar";
@@ -67,7 +68,11 @@ import {
 	registerEditorPanelApi,
 } from "./editorPanels";
 import { registerResultsOpener } from "./resultsPanel";
-import { openProjectSettings, registerViewPanelOpeners } from "./viewPanels";
+import {
+	openAccountSettings,
+	openProjectSettings,
+	registerViewPanelOpeners,
+} from "./viewPanels";
 
 const LAYOUT_SAVE_DELAY_MS = 500;
 
@@ -125,6 +130,7 @@ const components = {
 	connectionForm: ConnectionForm,
 	newProject: NewProjectForm,
 	projectSettings: ProjectSettingsPanel,
+	accountSettings: AccountSettingsPanel,
 	domainManager: DomainManager,
 	syncPanel: SyncPanel,
 	runPanel: RunPanel,
@@ -529,7 +535,18 @@ export function Workspace() {
 						<IconSettings />
 					</button>
 				)}
-				<span className="dg-header-meta">{sessionUser?.email}</span>
+				{authDisabled ? (
+					<span className="dg-header-meta">{sessionUser?.email}</span>
+				) : (
+					<button
+						type="button"
+						className="dg-header-account"
+						title="Account settings"
+						onClick={() => openAccountSettings()}
+					>
+						{sessionUser?.email}
+					</button>
+				)}
 				{!authDisabled && (
 					<button type="button" onClick={() => void logout()}>
 						Log out

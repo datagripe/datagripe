@@ -1,5 +1,32 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Sign in with a security key instead of a password.** A FIDO2 key — a
+  YubiKey, or a passkey your laptop or phone holds — can create an
+  account and sign into it, and one account may register as many keys as
+  it likes. The account settings tab (click your email in the header)
+  lists them, names them, and adds more.
+
+  Sign-in is usernameless: no email, no password, insert the key and
+  touch it. That means credentials are registered as discoverable, which
+  costs a slot on a hardware key — a YubiKey 5 holds around 25 — and it
+  buys a sign-in screen with nothing to type and no email addresses to
+  leak by asking about them.
+
+  The key always asks for its PIN. For an account created with a key and
+  no password there is nothing behind it, so possession of the key alone
+  must not be enough. For the same reason the server refuses to remove
+  an account's last credential.
+
+  A password account is unaffected, and adding a key to one does not
+  take the password away — this is another way in, not a second factor.
+  Deployment knobs are `WEBAUTHN_RP_ID`, `WEBAUTHN_RP_NAME` and
+  `WEBAUTHN_EXTRA_ORIGINS`; all three have working defaults derived from
+  `WEB_ORIGIN`. See [docs/spec/auth-and-hardening.md](docs/spec/auth-and-hardening.md).
+
 ## 0.0.5 — 2026-09-12
 
 ### Added

@@ -39,6 +39,7 @@ let importDatasourceOpener: (() => void) | null = null;
 let closeImport: (() => void) | null = null;
 let newProjectOpener: (() => void) | null = null;
 let projectSettingsOpener: (() => void) | null = null;
+let accountSettingsOpener: (() => void) | null = null;
 let domainManagerOpener: ((connectionRef: string) => void) | null = null;
 let syncOpener: ((connectionRef: string, name: string) => void) | null = null;
 let accessOpener: ((connectionRef: string, name: string) => void) | null = null;
@@ -151,6 +152,14 @@ export function registerViewPanelOpeners(api: DockviewApi): void {
 			params: { view: "projectSettings" },
 		});
 	};
+	accountSettingsOpener = () => {
+		focusOrAdd(api, {
+			id: "account:settings",
+			component: "accountSettings",
+			title: "Account",
+			params: { view: "accountSettings" },
+		});
+	};
 	// One tab per datasource for each of these: a domain list, a sync run
 	// and an access report all belong to one database, and two of them
 	// side by side is a legitimate thing to want.
@@ -229,6 +238,11 @@ export function openNewProject(): void {
 
 export function openProjectSettings(): void {
 	projectSettingsOpener?.();
+}
+
+/** The account's own settings — security keys, not the project's. */
+export function openAccountSettings(): void {
+	accountSettingsOpener?.();
 }
 
 export function openDomainManager(connectionRef: string): void {

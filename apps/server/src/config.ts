@@ -38,6 +38,22 @@ const envSchema = z.object({
 	 * `apps/server/migrations`, which a packaged build does not have: it
 	 * ships the migrations beside the bundled server and points here. */
 	MIGRATIONS_DIR: z.string().min(1).optional(),
+	/**
+	 * WebAuthn relying-party id for security keys: the registrable domain
+	 * the credential is scoped to, and it must be `WEB_ORIGIN`'s host or a
+	 * parent of it. Defaults to that host, which is what a single-origin
+	 * deployment wants; set it explicitly when the app is reachable at
+	 * several subdomains and the keys should work across all of them.
+	 */
+	WEBAUTHN_RP_ID: z.string().min(1).optional(),
+	/** The name the authenticator shows when it asks for a touch. */
+	WEBAUTHN_RP_NAME: z.string().min(1).default("DataGripe"),
+	/**
+	 * Extra origins accepted during a ceremony, comma separated.
+	 * `WEB_ORIGIN` is always accepted; this is for the second hostname a
+	 * reverse proxy answers on, or the desktop shell's own origin.
+	 */
+	WEBAUTHN_EXTRA_ORIGINS: z.string().default(""),
 	/** Allow account signup after the bootstrap user exists. */
 	ALLOW_SIGNUP: z
 		.enum(["true", "false"])
@@ -188,6 +204,8 @@ export interface AppConfig
 		| "GIT_ENABLED"
 		| "GIT_REPOS_DIR"
 		| "GIT_TIMEOUT_MS"
+		| "WEBAUTHN_RP_ID"
+		| "WEBAUTHN_EXTRA_ORIGINS"
 	> {
 	/** external: APP_DATABASE_URL was provided. embedded: the server starts
 	 * and manages its own PostgreSQL cluster (EMBEDDED_PG_*). */
@@ -206,6 +224,10 @@ export interface AppConfig
 	/** Resolved absolute path; clones go in one directory each under it. */
 	GIT_REPOS_DIR: string;
 	GIT_TIMEOUT_MS: number;
+	/** Resolved: explicit env wins, else WEB_ORIGIN's hostname. */
+	WEBAUTHN_RP_ID: string;
+	/** Every origin a security-key ceremony may come from; WEB_ORIGIN first. */
+	WEBAUTHN_ORIGINS: string[];
 }
 
 const REPO_ROOT = path.join(import.meta.dir, "../../..");
@@ -321,6 +343,22 @@ function gitSettings(parsed: EnvConfig): {
 	};
 }
 
+function webauthnSettings(parsed: EnvConfig): {
+	WEBAUTHN_RP_ID: string;
+	WEBAUTHN_ORIGINS: string[];
+} {
+	const extra = parsed.WEBAUTHN_EXTRA_ORIGINS.split(",")
+		.map((value) => value.trim())
+		.filter((value) => value.length > 0);
+	return {
+		WEBAUTHN_RP_ID:
+			parsed.WEBAUTHN_RP_ID ?? new URL(parsed.WEB_ORIGIN).hostname,
+		WEBAUTHN_ORIGINS: [
+			...new Set([new URL(parsed.WEB_ORIGIN).origin, ...extra]),
+		],
+	};
+}
+
 export interface LoadConfigOptions {
 	/** Merge the repository-root `.env` for missing keys (default true). */
 	envFile?: boolean;
@@ -371,6 +409,7 @@ export async function loadConfig(
 			SESSION_SECRET: parsed.SESSION_SECRET as string,
 			EMBEDDED_PG_PASSWORD: undefined,
 			...gitSettings(parsed),
+			...webauthnSettings(parsed),
 		};
 	}
 
@@ -386,5 +425,6 @@ export async function loadConfig(
 		SESSION_SECRET: parsed.SESSION_SECRET ?? local.sessionSecret,
 		EMBEDDED_PG_PASSWORD: local.embeddedPgPassword,
 		...gitSettings(parsed),
+		...webauthnSettings(parsed),
 	};
 }

@@ -7,6 +7,7 @@ import { ErrorCodes } from "@datagripe/contracts/errors";
 import {
 	createAccount,
 	defaultWorkspaceFor,
+	emailTaken,
 	findUserByEmail,
 	hashPassword,
 	MIN_PASSWORD_LENGTH,
@@ -88,12 +89,12 @@ export async function sessionFromRequest(
 	return sessions.lookup(token);
 }
 
-function clientIp(req: Request): string {
+export function clientIp(req: Request): string {
 	// Direct connections only; no proxy header trust (self-hosted v1).
 	return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 }
 
-function json(body: unknown, init?: ResponseInit): Response {
+export function json(body: unknown, init?: ResponseInit): Response {
 	return new Response(JSON.stringify(body), {
 		...init,
 		headers: {
@@ -120,6 +121,7 @@ export function createAuthRoutes(deps: AuthRouteDeps) {
 				bootstrap: count === 0,
 				allowSignup: config.ALLOW_SIGNUP,
 				authDisabled: localAuth !== null,
+				passkeysEnabled: localAuth === null,
 			};
 		}
 		const [userRow, workspace] = await Promise.all([
@@ -139,6 +141,7 @@ export function createAuthRoutes(deps: AuthRouteDeps) {
 			bootstrap: count === 0,
 			allowSignup: config.ALLOW_SIGNUP,
 			authDisabled: localAuth !== null,
+			passkeysEnabled: localAuth === null,
 		};
 	}
 
@@ -189,7 +192,7 @@ export function createAuthRoutes(deps: AuthRouteDeps) {
 					requestId,
 				);
 			}
-			if ((await findUserByEmail(appDb, email)) !== null) {
+			if (await emailTaken(appDb, email)) {
 				return errorResponse(
 					409,
 					ErrorCodes.Conflict,

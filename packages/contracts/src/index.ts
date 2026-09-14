@@ -19,4 +19,5 @@ export * from "./predefined";
 export * from "./repoCommands";
 export * from "./schemaChange";
 export * from "./tables";
+export * from "./webauthn";
 export * from "./ws";

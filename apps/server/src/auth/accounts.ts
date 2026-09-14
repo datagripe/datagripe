@@ -22,11 +22,54 @@ export function normalizeEmail(email: string): string {
 	return email.trim().toLowerCase();
 }
 
+/**
+ * Real accounts: those with a way to sign in. The pre-auth stub user has
+ * neither a password nor a security key, so it never counts — zero here
+ * is what puts the app in bootstrap mode.
+ */
 export async function userCount(appDb: AppDb): Promise<number> {
 	const rows = await appDb<{ count: string | number }[]>`
-		SELECT count(*) AS count FROM users WHERE password_hash IS NOT NULL
+		SELECT count(*) AS count FROM users u
+		WHERE u.password_hash IS NOT NULL
+			OR EXISTS (
+				SELECT 1 FROM webauthn_credentials c WHERE c.user_id = u.id
+			)
 	`;
 	return Number(rows[0]?.count ?? 0);
+}
+
+/**
+ * Is this email spoken for? Unlike {@link findUserByEmail} this ignores
+ * how the account signs in — a key-only account still owns its address.
+ */
+export async function emailTaken(
+	appDb: AppDb,
+	email: string,
+): Promise<boolean> {
+	const rows = await appDb<{ id: string }[]>`
+		SELECT id FROM users WHERE email = ${email}
+	`;
+	return rows[0] !== undefined;
+}
+
+export async function findUserById(
+	appDb: AppDb,
+	userId: string,
+): Promise<{ id: string; email: string; hasPassword: boolean } | null> {
+	const rows = await appDb<
+		Array<{ id: string; email: string; password_hash: string | null }>
+	>`
+		SELECT id, email, password_hash FROM users WHERE id = ${userId}
+	`;
+	const row = rows[0];
+	if (row === undefined) {
+		return null;
+	}
+	return {
+		id: row.id,
+		email: row.email,
+		hasPassword: row.password_hash !== null,
+	};
 }
 
 export async function findUserByEmail(
@@ -49,18 +92,31 @@ export async function findUserByEmail(
  * Create a real account. The FIRST account additionally inherits the
  * pre-auth stub workspace (its connections, documents, history) as owner;
  * later accounts get their own default workspace.
+ *
+ * `passwordHash` is null for a security-key account, and `id` is set when
+ * the caller already committed to one — a WebAuthn registration hands the
+ * authenticator the account id as its user handle before the account
+ * exists, so the two have to agree.
  */
 export async function createAccount(
 	appDb: AppDb,
 	email: string,
-	passwordHash: string,
+	passwordHash: string | null,
+	id?: string,
 ): Promise<{ userId: string; workspaceId: string }> {
 	return appDb.begin(async (tx) => {
-		const users = await tx<{ id: string }[]>`
-			INSERT INTO users (email, password_hash)
-			VALUES (${email}, ${passwordHash})
-			RETURNING id
-		`;
+		const users =
+			id === undefined
+				? await tx<{ id: string }[]>`
+					INSERT INTO users (email, password_hash)
+					VALUES (${email}, ${passwordHash})
+					RETURNING id
+				`
+				: await tx<{ id: string }[]>`
+					INSERT INTO users (id, email, password_hash)
+					VALUES (${id}, ${email}, ${passwordHash})
+					RETURNING id
+				`;
 		const user = users[0];
 		if (user === undefined) {
 			throw new Error("User insert returned no row");

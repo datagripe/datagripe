@@ -115,6 +115,9 @@ beforeAll(async () => {
 			ALLOW_SIGNUP: false,
 			TARGET_HOST_ALLOWLIST: "",
 			SSRF_DISABLED: false,
+			WEBAUTHN_RP_ID: "localhost",
+			WEBAUTHN_RP_NAME: "DataGripe",
+			WEBAUTHN_ORIGINS: ["http://localhost:5173"],
 		},
 		sessions: createSessionStore(appDb),
 		rateLimiter: createRateLimiter({

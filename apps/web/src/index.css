@@ -2843,6 +2843,26 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	text-decoration: underline;
 }
 
+.dg-auth-or {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 2px 0;
+	color: var(--dg-ink-mute);
+	font-size: var(--dg-fs-tree);
+}
+
+.dg-auth-or::before,
+.dg-auth-or::after {
+	content: "";
+	flex: 1;
+	border-top: 1px solid var(--dg-rule);
+}
+
+.dg-auth-passkey {
+	width: 100%;
+}
+
 /* ---- members ------------------------------------------------------------ */
 
 .dg-member-list {
@@ -2873,6 +2893,35 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 .dg-member-add {
 	display: flex;
 	gap: 8px;
+}
+
+/* ---- security keys ------------------------------------------------------ */
+
+.dg-passkey-name {
+	flex: 1;
+	min-width: 0;
+	background: var(--dg-void);
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-tree);
+}
+
+.dg-passkey-meta {
+	color: var(--dg-ink-mute);
+	font-size: var(--dg-fs-tree);
+	white-space: nowrap;
+}
+
+.dg-header-account {
+	background: none;
+	border: none;
+	color: var(--dg-ink-mute);
+	padding: 0 4px;
+}
+
+.dg-header-account:hover:not(:disabled) {
+	background: none;
+	color: var(--dg-ink);
+	text-decoration: underline;
 }
 
 .dg-member-add input {

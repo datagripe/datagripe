@@ -9,6 +9,7 @@ import {
 import { serve } from "bun";
 import { defaultWorkspaceFor, workspaceForMember } from "./auth/accounts";
 import { createSessionStore } from "./auth/sessions";
+import { startChallengeSweep } from "./auth/webauthn";
 import { ensureLocalWorkspace } from "./bootstrap";
 import { loadConfig, resolveRepoPath } from "./config";
 import { loadPredefinedConnections } from "./connections/predefined";
@@ -28,6 +29,7 @@ import { createGitDatasourcesService } from "./git/service";
 import { disposePrevious, hotState } from "./hot";
 import { createAuthRoutes, sessionFromRequest } from "./http/auth";
 import { errorResponse } from "./http/errors";
+import { createPasskeyRoutes } from "./http/passkeys";
 import { log } from "./log";
 import type { McpDeps } from "./mcp/context";
 import { createMcpRoute } from "./mcp/route";
@@ -116,9 +118,14 @@ const presence = new PresenceTracker();
 const viewThrottle = new ViewBroadcastThrottle();
 const sessions = createSessionStore(appDb);
 hot.disposers.push(() => sessions.stopSweep());
+hot.disposers.push(startChallengeSweep(appDb));
 const rateLimiter = createRateLimiter({
 	"auth.login.ip": { capacity: 30, refillPerMinute: 30 },
 	"auth.login.email": { capacity: 5, refillPerMinute: 5 },
+	// Every step of a security-key ceremony, per IP. A ceremony is two
+	// calls and people retry, so the budget is looser than login's —
+	// there is no guessable secret here to brute force.
+	"auth.passkey.ip": { capacity: 60, refillPerMinute: 60 },
 	"connection.test": { capacity: 10, refillPerMinute: 10 },
 	"execution.start": { capacity: 30, refillPerMinute: 30 },
 	"schema.children": { capacity: 120, refillPerMinute: 120 },
@@ -292,6 +299,13 @@ const auth = createAuthRoutes({
 	closeSocketsForSession: (sessionId) => hub.closeForSession(sessionId),
 	localAuth,
 });
+const passkeys = createPasskeyRoutes({
+	appDb,
+	config,
+	sessions,
+	rateLimiter,
+	localAuth,
+});
 
 const server = serve<SocketData>({
 	port: config.PORT,
@@ -311,6 +325,27 @@ const server = serve<SocketData>({
 		},
 		"/api/auth/logout": {
 			POST: (req: Request) => auth.logout(req),
+		},
+		"/api/auth/passkey/register/options": {
+			POST: (req: Request) => passkeys.registerOptions(req),
+		},
+		"/api/auth/passkey/register/verify": {
+			POST: (req: Request) => passkeys.registerVerify(req),
+		},
+		"/api/auth/passkey/login/options": {
+			POST: (req: Request) => passkeys.loginOptions(req),
+		},
+		"/api/auth/passkey/login/verify": {
+			POST: (req: Request) => passkeys.loginVerify(req),
+		},
+		"/api/auth/passkeys": {
+			GET: (req: Request) => passkeys.list(req),
+		},
+		"/api/auth/passkeys/rename": {
+			POST: (req: Request) => passkeys.rename(req),
+		},
+		"/api/auth/passkeys/delete": {
+			POST: (req: Request) => passkeys.remove(req),
 		},
 	},
 
