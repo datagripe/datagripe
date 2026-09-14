@@ -8,67 +8,60 @@ reads your queries and your schema back to you and says what is wrong
 with them. It runs as a web app you host, a desktop app you install, or
 one command on your own machine.
 
-Three groups below, which are the same three the sidebar and the footer
-use. If you are here for the first time, [getting
-started](/docs/getting-started/) is twenty seconds and
-[the rules](/rules/) are what the whole thing is for.
+Every page is in the sidebar, and in the menu on the bar above on a
+narrow screen. This page is for working out which one you want.
 
-## Product
+## I want to try it
 
-What it does.
+[Getting started](/docs/getting-started/) is about twenty seconds and
+needs nothing installed. After that, [the rules](/rules/) are what the
+whole thing is for — the <!--dg:ruleCount--> things it complains about,
+and none of them are formatting.
 
-- [What it can do](/docs/features/) — the whole surface, including the
-  parts with no banner.
-- [The rules](/rules/) — everything it complains about, rendered from
-  the catalogue the app runs.
-- [Roadmap](/roadmap/) — the gripes it has about itself, including the
-  declined ones.
-- [Gripe levels](/docs/gripe-levels/) — the four-level dial, and why
-  `panic` resets on upgrade.
-- [Adapters](/docs/adapters/) — four engines and exactly what each can
-  do.
-- [Keyboard shortcuts](/docs/keyboard/) — including the two that are on
-  no button.
-- [Comparison](/docs/comparison/) — what to use instead, honestly.
+The two shortcuts nobody finds on their own are on the
+[keyboard page](/docs/keyboard/), and they are worth thirty seconds:
+`Ctrl/Cmd+Enter` runs the statement the caret is in without selecting
+it, and `Ctrl+Alt+L` reformats.
 
-## Deploy
+## I want to run it for other people
 
-How to run it.
+Start at [deploying](/docs/deploy/), which is the four shapes and how to
+pick one, then the page for whichever you picked.
 
-- [Getting started](/docs/getting-started/) — running it, and the first
-  five minutes after that.
-- [Deploying](/docs/deploy/) — the four shapes, and how to pick one.
-- [Docker](/docs/docker/) — one container.
-- [Compose](/docs/compose/) — the app and a PostgreSQL beside it.
-- [Kubernetes](/docs/kubernetes/) — Helm, manifests, and the ingress
-  setting that closes every websocket.
-- [Configuration](/docs/configuration/) — every environment variable.
-- [Upgrading](/docs/upgrading/) — migrations, backups, key rotation.
-- [Security](/docs/security/) — what is on, what is off, what to change.
+Two settings decide whether a deployment works at all and neither has a
+default that can be right everywhere — `WEB_ORIGIN` and
+`CONNECTION_ENCRYPTION_KEY`. Both are on
+[configuration](/docs/configuration/), along with every other variable,
+and [security](/docs/security/) is what to change before it faces
+anybody.
 
-## Learn
+## I want to know why it is like this
 
-Why it is like this.
+[Why it complains](/docs/why-it-complains/) is the one sentence the
+whole gripes feature follows from, and what it costs. From there:
+[gripe levels](/docs/gripe-levels/) for the four-level dial,
+[dismissing gripes](/docs/dismissing-gripes/) for turning one off, and
+[writing a rule](/docs/writing-a-rule/) for adding one.
 
-- [Why it complains](/docs/why-it-complains/) — the one sentence the
-  whole feature follows from.
-- [Writing a rule](/docs/writing-a-rule/) — a file, an entry, four
-  strings and three fixtures.
-- [Dismissing gripes](/docs/dismissing-gripes/) — three scopes, never
-  silently.
-- [FAQ](/docs/faq/) — including the answers nobody likes.
-- [Glossary](/docs/glossary/) — the words this project uses in a
-  particular way.
-- [Release notes](/docs/release-notes/) — every release, newest first.
+The [FAQ](/docs/faq/) has the questions that come back, including the
+ones with an answer nobody likes, and the [glossary](/docs/glossary/)
+has the words this project uses in a particular way.
 
-## For agents
+## I want to know what is missing
 
-Every page here is also Markdown: append `.md` to the path instead of the
-trailing slash, so this page is [`/docs.md`](/docs.md) and the rules are
-[`/rules.md`](/rules.md). No scraping and no JavaScript required.
+The [roadmap](/roadmap/) is the gripes DataGripe has about itself, in
+the same voice it uses on your schema — accepted, unscheduled, unfiled,
+and the ones deliberately declined, which stay on the page because the
+reason something was refused is the useful part.
+[Release notes](/docs/release-notes/) are what has already shipped.
 
-- [`/llms.txt`](/llms.txt) — the whole site indexed, with a sentence
-  each.
+## I am an agent
+
+Every page here is also Markdown: append `.md` to the path instead of
+the trailing slash, so this page is [`/docs.md`](/docs.md) and the rules
+are [`/rules.md`](/rules.md). No scraping and no JavaScript required.
+
+- [`/llms.txt`](/llms.txt) — the whole site indexed, a sentence each.
 - [`/llms-full.txt`](/llms-full.txt) — every page in one request.
 - [`/sitemap.xml`](/sitemap.xml)
 
@@ -76,7 +69,7 @@ DataGripe itself speaks MCP: a project can expose an endpoint an agent
 connects to, off until an owner turns it on and read-only until they say
 otherwise, with every call in the query history under the token's name.
 
-## If something is wrong
+## Something is wrong
 
 The app tells you what it refused and why, and the two settings that
 break a deployment most often are described where they are set. If a
@@ -84,16 +77,15 @@ gripe is wrong, that is a bug worth
 [reporting](https://github.com/datagripe/datagripe/issues) — a wrong
 gripe costs more trust than a missing one.
 
-## Building it rather than using it
+## I am building it, not using it
 
-These pages are for people using DataGripe. The
-[specifications](/specs/) are for people building it —
-<!--dg:specCountWord--> of them, one per subsystem, recording what each does, what it deliberately does
-not, and which alternatives were rejected and why. They are engineering
-documents and read like it.
+The [specifications](/specs/) are the other half of this site:
+<!--dg:specCountWord--> documents, one per subsystem, recording what each
+does, what it deliberately does not, and which alternatives were
+rejected and why. They are engineering documents and read like it.
 
 The rest of the repository's
 [`docs/`](https://github.com/datagripe/datagripe/tree/main/docs) holds
 the ADRs and the brand system, and
 [`roadmap.md`](https://github.com/datagripe/datagripe/blob/main/roadmap.md)
-is where the roadmap page above comes from.
+is where the roadmap page is rendered from.

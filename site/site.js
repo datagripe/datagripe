@@ -68,7 +68,10 @@
 	   reading. `-68%` on the bottom margin means a heading counts as
 	   current once it is in the top third, which is where a reader's eye
 	   is — not once it touches the bottom of the window. */
-	const links = [...document.querySelectorAll(".spy a, .docs-toc a")];
+	// `.spy-links` and not `.spy a`: the dropdown beside them holds links
+	// to other pages, and passing "/specs/domains/" to querySelector is
+	// not a selector — it throws and takes the whole script with it.
+	const links = [...document.querySelectorAll(".spy-links a, .docs-toc a")];
 	const targets = links
 		.map((link) => document.querySelector(link.getAttribute("href")))
 		.filter((target) => target !== null);
@@ -92,6 +95,24 @@
 		for (const target of targets) {
 			observer.observe(target);
 		}
+	}
+
+	/* The section bar's dropdown is a `details` element, so it opens and
+	   closes on its own. These two only add what `details` has no opinion
+	   about: clicking away, and Escape. */
+	const menu = document.querySelector(".spy-menu");
+	if (menu !== null) {
+		addEventListener("click", (event) => {
+			if (menu.open && !menu.contains(event.target)) {
+				menu.open = false;
+			}
+		});
+		addEventListener("keydown", (event) => {
+			if (event.key === "Escape" && menu.open) {
+				menu.open = false;
+				menu.querySelector("summary")?.focus();
+			}
+		});
 	}
 
 	/* ---- the hero canvas ------------------------------------------- */

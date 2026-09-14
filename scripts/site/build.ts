@@ -1016,20 +1016,64 @@ function footerColumn(group: Group, pages: Page[]): string {
 	return `<div><h2>${group}</h2>${items}</div>`;
 }
 
-function docsRail(pages: Page[], current: Page): string {
+/**
+ * The navigation for a railed page, as data: a heading for the whole
+ * set and then one area per group.
+ *
+ * Built once and rendered twice — down the left rail on a wide screen,
+ * and inside the dropdown in the section bar on a narrow one. Two
+ * renderers over one list rather than two lists, because a sidebar and
+ * a menu that disagree about what exists is the same class of bug as a
+ * nav that disagrees with itself.
+ */
+interface NavArea {
+	group: string;
+	items: Array<{ url: string; title: string; on: boolean }>;
+}
+
+interface RailNav {
+	/** The "all of them" link at the top, and the dropdown's label. */
+	root: { url: string; title: string; label: string; on: boolean };
+	areas: NavArea[];
+}
+
+function docsNav(pages: Page[], current: Page): RailNav {
+	return {
+		root: {
+			url: "/docs/",
+			title: "All documentation",
+			label: "Docs",
+			on: current.url === "/docs/",
+		},
+		areas: GROUPS.map((group) => ({
+			group,
+			items: pages
+				.filter((page) => page.group === group)
+				.sort((a, b) => a.order - b.order)
+				.map((page) => ({
+					url: page.url,
+					title: page.title,
+					on: page.url === current.url,
+				})),
+		})),
+	};
+}
+
+function railMarkup(nav: RailNav): string {
 	const sections: string[] = [
-		`<a class="all${current.url === "/docs/" ? " on" : ""}" href="/docs/">All documentation</a>`,
+		`<a class="all${nav.root.on ? " on" : ""}" href="${nav.root.url}">${escapeHtml(nav.root.title)}</a>`,
 	];
-	for (const group of GROUPS) {
-		const items = pages
-			.filter((page) => page.group === group)
-			.sort((a, b) => a.order - b.order)
-			.map((page) => {
-				const on = page.url === current.url;
-				return `<a href="${page.url}"${on ? ' class="on" aria-current="page"' : ""}>${escapeHtml(page.title)}</a>`;
-			})
+	for (const area of nav.areas) {
+		if (area.items.length === 0) {
+			continue;
+		}
+		const items = area.items
+			.map(
+				(item) =>
+					`<a href="${item.url}"${item.on ? ' class="on" aria-current="page"' : ""}>${escapeHtml(item.title)}</a>`,
+			)
 			.join("");
-		sections.push(`<p class="grp">${group}</p>${items}`);
+		sections.push(`<p class="grp">${escapeHtml(area.group)}</p>${items}`);
 	}
 	return sections.join("");
 }
@@ -1040,24 +1084,26 @@ function docsRail(pages: Page[], current: Page): string {
  * view spec wants the other seventeen specs beside them, not the
  * deployment guide.
  */
-function specsRail(pages: Page[], current: Page): string {
+function specsNav(pages: Page[], current: Page): RailNav {
 	const specs = pages.filter((page) => page.spec !== undefined);
-	const sections: string[] = [
-		`<a class="all${current.url === "/specs/" ? " on" : ""}" href="/specs/">All specifications</a>`,
-	];
-	for (const group of SPEC_GROUPS) {
-		const items = specs
-			.filter((page) => statusGroup(page.spec?.status ?? "") === group)
-			.map((page) => {
-				const on = page.url === current.url;
-				return `<a href="${page.url}"${on ? ' class="on" aria-current="page"' : ""}>${escapeHtml(page.title)}</a>`;
-			})
-			.join("");
-		if (items.length > 0) {
-			sections.push(`<p class="grp">${group}</p>${items}`);
-		}
-	}
-	return sections.join("");
+	return {
+		root: {
+			url: "/specs/",
+			title: "All specifications",
+			label: "Specs",
+			on: current.url === "/specs/",
+		},
+		areas: SPEC_GROUPS.map((group) => ({
+			group,
+			items: specs
+				.filter((page) => statusGroup(page.spec?.status ?? "") === group)
+				.map((page) => ({
+					url: page.url,
+					title: page.title,
+					on: page.url === current.url,
+				})),
+		})),
+	};
 }
 
 function contentsRail(page: Page): string {
@@ -1072,9 +1118,26 @@ function contentsRail(page: Page): string {
 	return `<p class="meta">On this page</p>${items}`;
 }
 
-function spyBar(page: Page): string {
-	const entries = page.spy ?? [];
-	if (entries.length === 0) {
+/**
+ * The sticky section bar under the header.
+ *
+ * On the landing page it is the page's own sections. On a documentation
+ * or spec page it is that page's headings plus, pinned to the right, a
+ * dropdown holding the navigation the left rail shows on a wide screen —
+ * because below the rail's breakpoint there is nowhere else for it to
+ * go, and twenty-one links stacked above the article is not an answer.
+ *
+ * The headings scroll horizontally and the dropdown does not move with
+ * them: what gets cut off when there are too many headings is a heading,
+ * never the way out of the page.
+ *
+ * A `details` element rather than a scripted menu, so it opens with no
+ * JavaScript at all. `site.js` only adds closing it by clicking away or
+ * pressing Escape, which is an improvement on the baseline rather than
+ * the thing that makes it work.
+ */
+function spyBar(entries: Heading[], nav?: RailNav): string {
+	if (entries.length === 0 && nav === undefined) {
 		return "";
 	}
 	const links = entries
@@ -1083,7 +1146,22 @@ function spyBar(page: Page): string {
 				`<a href="#${entry.id}"${index === 0 ? ' class="on"' : ""}>${escapeHtml(entry.text)}</a>`,
 		)
 		.join("");
-	return `<div class="spy"><div class="shell in">${links}</div></div>`;
+
+	const menu =
+		nav === undefined
+			? ""
+			: `<details class="spy-menu">
+<summary>${escapeHtml(nav.root.label)}</summary>
+<div class="spy-panel">${railMarkup(nav)}</div>
+</details>`;
+
+	// `spy-rails` marks the bar as the narrow-screen stand-in for the two
+	// rails, so the stylesheet can drop it once they are on screen. The
+	// landing page's bar has no rails behind it and stays at every width.
+	return `<div class="spy${nav === undefined ? "" : " spy-rails"}"><div class="shell in">
+<div class="spy-links">${links}</div>
+${menu}
+</div></div>`;
 }
 
 function layout(page: Page, pages: Page[]): string {
@@ -1103,9 +1181,17 @@ function layout(page: Page, pages: Page[]): string {
 		return `<a href="${item.href}"${on ? ' aria-current="page"' : ""}>${item.label}</a>`;
 	}).join("");
 
-	const main = railed
-		? `<div class="shell wide"><div class="docs">
-<nav class="docs-rail" aria-label="${isSpec ? "Specifications" : "Documentation"}">${isSpec ? specsRail(pages, page) : docsRail(pages, page)}</nav>
+	const nav = railed
+		? isSpec
+			? specsNav(pages, page)
+			: docsNav(pages, page)
+		: undefined;
+
+	const main =
+		railed && nav !== undefined
+			? `${spyBar(page.headings.length > 1 ? page.headings : [], nav)}
+<div class="shell wide"><div class="docs">
+<nav class="docs-rail" aria-label="${isSpec ? "Specifications" : "Documentation"}">${railMarkup(nav)}</nav>
 <article class="docs-body">
 <h1>${escapeHtml(page.title)}</h1>
 <p class="lede">${escapeHtml(page.description)}</p>
@@ -1114,7 +1200,7 @@ ${page.body}
 </article>
 <nav class="docs-toc" aria-label="On this page">${contentsRail(page)}</nav>
 </div></div>`
-		: `${spyBar(page)}\n${page.body}`;
+			: `${spyBar(page.spy ?? [])}\n${page.body}`;
 
 	return `<!doctype html>
 <html lang="en">

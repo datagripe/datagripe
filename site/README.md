@@ -168,6 +168,30 @@ site animates: the brand edge under the header is rendered `is-idle` on
 every page, because motion means the database is busy and there is no
 database here.
 
+## Two rails, or one bar
+
+A documentation or spec page is three columns on a wide screen: the site
+rail on the left, the article, and that page's headings on the right.
+
+Below 1000px both rails go away and the sticky bar under the header
+carries what they held — the page's headings in a row that scrolls
+sideways, and on the right a dropdown holding the whole rail. The
+dropdown does not scroll with the headings, so what gets cut off when a
+page has twenty of them is a heading and never the way out of the page.
+
+The rails and the dropdown render from one `RailNav` rather than two
+lists, for the same reason the footer and the sidebar share a page's
+`group`: a menu and a sidebar that disagree about what exists is the
+bug the whole build is arranged against.
+
+It is a `details` element, so it opens with no JavaScript. `site.js`
+only adds closing it on an outside click or Escape.
+
+An earlier version put the rail *below* the article on a narrow screen.
+That was better than twenty-one links above the first sentence and still
+wrong: navigation you have to reach the end of the page to find is
+navigation nobody uses.
+
 ## The wordmark
 
 The header lockup is the application's prompt, `>Datagripe`, using the

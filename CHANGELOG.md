@@ -58,6 +58,28 @@
   1440px one, so at full width the wordmark started a long way in from
   everything under it. All four now agree.
 
+- **Narrow screens get the navigation back.** Below the two-rail
+  breakpoint the documentation and spec rails now fold into the sticky
+  bar under the header: the page's own headings in a row that scrolls
+  sideways, and a **Docs** or **Specs** dropdown pinned to its right
+  holding the whole rail. The dropdown does not move with the headings,
+  so what gets cut off on a page with twenty of them is a heading, never
+  the way out of the page.
+
+  Both render from one list, so the menu and the sidebar cannot disagree
+  about what exists. It is a `details` element and opens with no
+  JavaScript; the script only adds closing it on an outside click or
+  Escape.
+
+- **The documentation index stopped repeating the navigation.** It
+  enumerated all twenty-one pages, which the sidebar, the new dropdown
+  and the footer all already do — four copies on one screen. It now
+  routes by what you are trying to do rather than restating the
+  directory.
+
+- **Documentation and spec pages have top padding**, and clear the
+  section bar instead of starting under it.
+
 - **The site no longer states the version by hand.** Two pages said
   `--version 0.0.6` on the day 0.0.7 shipped. The Helm examples are
   substituted from `package.json` like every other count on the site.

@@ -31,7 +31,9 @@
 
 html {
 	scroll-behavior: smooth;
-	scroll-padding-top: calc(var(--bar) + 48px);
+	/* The header and, where there is one, the section bar under it: an
+	   anchor that lands beneath a sticky bar has not landed. */
+	scroll-padding-top: calc(var(--bar) + 56px);
 }
 
 body {
@@ -396,17 +398,30 @@ header.tight ~ main .spy {
 
 .spy .in {
 	display: flex;
-	gap: 18px;
-	overflow-x: auto;
-	padding: 11px 24px;
+	align-items: center;
+	gap: 14px;
+	padding: 0 24px;
 	margin: 0 auto;
 	font-family: var(--dg-font-mono);
 	font-size: 12px;
 	color: var(--dg-ink-mute);
+	min-width: 0;
+}
+
+/* The headings scroll; the menu beside them does not move with them.
+   When there are more headings than fit, what gets cut off is a
+   heading — never the way out of the page. */
+.spy-links {
+	display: flex;
+	gap: 18px;
+	overflow-x: auto;
+	padding: 11px 0;
+	flex: 1;
+	min-width: 0;
 	scrollbar-width: none;
 }
 
-.spy .in::-webkit-scrollbar {
+.spy-links::-webkit-scrollbar {
 	display: none;
 }
 
@@ -419,6 +434,107 @@ header.tight ~ main .spy {
 .spy a.on {
 	color: var(--dg-green);
 	border-bottom-color: var(--dg-green);
+}
+
+/* ---- the section bar's dropdown ---------------------------------- */
+
+.spy-menu {
+	position: relative;
+	margin-left: auto;
+	flex: none;
+}
+
+.spy-menu summary {
+	list-style: none;
+	cursor: pointer;
+	white-space: nowrap;
+	padding: 5px 10px;
+	margin: 6px 0;
+	border: var(--dg-border) solid var(--dg-rule);
+	border-radius: 3px;
+	color: var(--dg-ink-dim);
+	background: var(--dg-void);
+}
+
+.spy-menu summary::-webkit-details-marker {
+	display: none;
+}
+
+/* The caret is the only thing saying this opens something, so it is
+   drawn rather than left to the browser's default triangle. */
+.spy-menu summary::after {
+	content: "▾";
+	margin-left: 7px;
+	color: var(--dg-ink-mute);
+}
+
+.spy-menu summary:hover {
+	border-color: var(--dg-violet);
+	color: var(--dg-ink);
+}
+
+.spy-menu[open] summary {
+	border-color: var(--dg-green);
+	color: var(--dg-ink);
+}
+
+.spy-menu[open] summary::after {
+	content: "▴";
+}
+
+.spy-panel {
+	position: absolute;
+	top: calc(100% + 4px);
+	right: 0;
+	z-index: 60;
+	min-width: 230px;
+	max-height: 70vh;
+	overflow-y: auto;
+	background: var(--dg-raised);
+	border: var(--dg-border) solid var(--dg-rule);
+	border-radius: var(--dg-radius-input);
+	padding: 10px 14px 14px;
+	font-size: 13.5px;
+	font-family: var(--dg-font-sans);
+}
+
+/* Explicitly hidden while closed. A `details` element hides its own
+   content, but `position: absolute` takes the panel out of the flow the
+   browser was hiding — it stopped painting and kept every link in the
+   tab order, which is twenty-two invisible tab stops on a closed menu. */
+.spy-menu:not([open]) .spy-panel {
+	display: none;
+}
+
+.spy-panel .grp {
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-meta);
+	color: var(--dg-ink-mute);
+	margin: 14px 0 var(--dg-space-2);
+}
+
+.spy-panel a {
+	display: block;
+	padding: 5px 0;
+	color: var(--dg-ink-dim);
+	white-space: normal;
+}
+
+.spy-panel a:hover {
+	color: var(--dg-ink);
+}
+
+.spy-panel a.on {
+	color: var(--dg-green);
+	border-bottom: 0;
+}
+
+.spy-panel a.all {
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-meta);
+	color: var(--dg-ink-mute);
+	padding-bottom: var(--dg-space-3);
+	border-bottom: var(--dg-border) solid var(--dg-rule-soft);
 }
 
 /* ---- hero -------------------------------------------------------- */
@@ -896,7 +1012,7 @@ canvas {
 .docs > * {
 	border-right: var(--dg-border) solid var(--dg-rule);
 	border-bottom: var(--dg-border) solid var(--dg-rule);
-	padding: 30px 26px;
+	padding: 40px 26px 30px;
 	min-width: 0;
 }
 
@@ -958,18 +1074,19 @@ canvas {
 }
 
 /* Below the two-rail breakpoint the documentation is one column, and
-   two things have to change with it.
-   
-   The padding is `.shell`'s and not also the cell's: 24px outside plus
-   26px inside is 13% of a 390px screen gone on each side. And the
-   lattice borders are removed, because a hairline down the edge of the
-   viewport is a rendering artefact rather than structure.
-   
-   The rails move below the article. In source order the site rail comes
-   first, which is right when it is a column beside the text and wrong
-   when it is twenty-one links stacked on top of it — nobody arriving at
-   a page wants to scroll past the whole table of contents to reach the
-   first sentence. */
+   both rails go away entirely — the section bar above carries what they
+   held: the page's headings in the row, and the whole navigation in the
+   dropdown on its right.
+
+   They used to move below the article instead. That was better than
+   twenty-one links above the first sentence and still wrong, because
+   navigation you have to reach the end of the page to find is
+   navigation nobody uses.
+
+   The padding here is `.shell`'s and not also the cell's: 24px outside
+   plus 26px inside is 13% of a 390px screen gone on each side. And the
+   lattice borders come off, because a hairline down the edge of the
+   viewport is a rendering artefact rather than structure. */
 @media (max-width: 999px) {
 	.docs {
 		border-left: 0;
@@ -977,21 +1094,26 @@ canvas {
 
 	.docs > * {
 		border-right: 0;
-		padding: 26px 0;
+		padding: 0;
 	}
 
+	/* Clear of the section bar rather than tucked under it. */
 	.docs-body {
-		order: 1;
-		padding-top: 4px;
+		padding-top: 32px;
 	}
 
+	.docs-rail,
 	.docs-toc {
-		order: 2;
+		display: none;
 	}
+}
 
-	.docs-rail {
-		order: 3;
-		border-bottom: 0;
+/* The section bar is the narrow-screen half of the rails, so it is not
+   drawn where the rails are. The landing page's own bar is not a rail
+   replacement and stays at every width. */
+@media (min-width: 1000px) {
+	.spy-rails {
+		display: none;
 	}
 }
 
