@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Added
+
+- **Google sign-in, and a switch for every other method.** Setting
+  `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` puts "Continue with
+  Google" on the sign-in screen: OIDC authorization code with PKCE,
+  ending in the same session cookie a password or a security key issues.
+  Identities are matched on Google's `sub` rather than the address, so
+  renaming it at Google does not strand the account, and a first sign-in
+  links to the local account owning a verified address before it
+  considers creating one. `GOOGLE_ALLOWED_DOMAINS` restricts sign-in to
+  your Workspace domains.
+
+  `PASSWORD_AUTH_DISABLED` and `PASSKEY_AUTH_DISABLED` turn off the
+  other two, which is how a deployment locks itself to Google, or to
+  keys, or to any combination. Off means the routes are absent and the
+  screen does not offer them. Turning off the last way in fails at
+  startup rather than at the login screen.
+
 ### Changed
 
 - **datagripe.com is rebuilt, and four of its pages are no longer

@@ -24,8 +24,8 @@ export function normalizeEmail(email: string): string {
 
 /**
  * Real accounts: those with a way to sign in. The pre-auth stub user has
- * neither a password nor a security key, so it never counts — zero here
- * is what puts the app in bootstrap mode.
+ * no password, no security key and no external identity, so it never
+ * counts — zero here is what puts the app in bootstrap mode.
  */
 export async function userCount(appDb: AppDb): Promise<number> {
 	const rows = await appDb<{ count: string | number }[]>`
@@ -33,6 +33,9 @@ export async function userCount(appDb: AppDb): Promise<number> {
 		WHERE u.password_hash IS NOT NULL
 			OR EXISTS (
 				SELECT 1 FROM webauthn_credentials c WHERE c.user_id = u.id
+			)
+			OR EXISTS (
+				SELECT 1 FROM oauth_identities o WHERE o.user_id = u.id
 			)
 	`;
 	return Number(rows[0]?.count ?? 0);
@@ -50,6 +53,22 @@ export async function emailTaken(
 		SELECT id FROM users WHERE email = ${email}
 	`;
 	return rows[0] !== undefined;
+}
+
+/**
+ * The account owning an address, however it signs in. Unlike
+ * {@link findUserByEmail} this does not require a password — an external
+ * identity linking itself to an existing account has to find key-only
+ * and Google-only accounts too.
+ */
+export async function findUserIdByEmail(
+	appDb: AppDb,
+	email: string,
+): Promise<string | null> {
+	const rows = await appDb<{ id: string }[]>`
+		SELECT id FROM users WHERE email = ${email}
+	`;
+	return rows[0]?.id ?? null;
 }
 
 export async function findUserById(

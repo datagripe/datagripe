@@ -32,9 +32,14 @@ export const sessionBootstrapSchema = z.object({
 	/** True when the server runs without accounts (embedded local mode):
 	 * the session is implicit and login/signup/logout do not exist. */
 	authDisabled: z.boolean(),
+	/** True when email+password sign-in exists here. False locks the
+	 * deployment to security keys and/or Google (PASSWORD_AUTH_DISABLED). */
+	passwordAuthEnabled: z.boolean(),
 	/** True when security keys are available on this server — the flip
 	 * side of authDisabled, plus whatever the deployment has turned off. */
 	passkeysEnabled: z.boolean(),
+	/** True when the deployment configured a Google OAuth client. */
+	googleAuthEnabled: z.boolean(),
 });
 
 export type SessionBootstrap = z.infer<typeof sessionBootstrapSchema>;

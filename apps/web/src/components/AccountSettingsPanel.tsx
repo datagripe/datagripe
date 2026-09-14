@@ -48,9 +48,13 @@ export function AccountSettingsPanel() {
 	const passkeysEnabled = useSessionStore(
 		(state) => state.bootstrap?.passkeysEnabled ?? false,
 	);
+	const authDisabled = useSessionStore(
+		(state) => state.bootstrap?.authDisabled ?? false,
+	);
 
 	const [passkeys, setPasskeys] = useState<Passkey[] | null>(null);
 	const [hasPassword, setHasPassword] = useState(true);
+	const [hasGoogle, setHasGoogle] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 
@@ -63,6 +67,7 @@ export function AccountSettingsPanel() {
 		const result = (await res.json()) as PasskeyListResult;
 		setPasskeys(result.passkeys);
 		setHasPassword(result.hasPassword);
+		setHasGoogle(result.hasGoogle);
 	}, []);
 
 	useEffect(() => {
@@ -77,8 +82,9 @@ export function AccountSettingsPanel() {
 				<div className="dg-form-body">
 					<h3 className="dg-form-title">Account</h3>
 					<p className="dg-form-lead">
-						This server runs without accounts, so there is nothing to sign in
-						with.
+						{authDisabled
+							? "This server runs without accounts, so there is nothing to sign in with."
+							: `${user?.email ?? "You"} — this server has security keys turned off, so there is nothing to manage here.`}
 					</p>
 				</div>
 			</div>
@@ -148,7 +154,7 @@ export function AccountSettingsPanel() {
 		await reload();
 	};
 
-	const onlyWayIn = !hasPassword && (passkeys?.length ?? 0) <= 1;
+	const onlyWayIn = !hasPassword && !hasGoogle && (passkeys?.length ?? 0) <= 1;
 
 	return (
 		<div className="dg-form dg-scroll">
@@ -163,10 +169,15 @@ export function AccountSettingsPanel() {
 						Signing in with one needs no email and no password: the key names
 						the account and asks for its PIN.
 					</p>
-					{!hasPassword && (
+					{!hasPassword && !hasGoogle && (
 						<p className="dg-form-note">
 							This account has no password. Keep a second key registered, or you
 							will be locked out if you lose the first.
+						</p>
+					)}
+					{hasGoogle && (
+						<p className="dg-form-note">
+							This account also signs in with Google.
 						</p>
 					)}
 					{error !== null && <p className="dg-test-failed">{error}</p>}

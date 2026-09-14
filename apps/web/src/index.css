@@ -2859,7 +2859,8 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	border-top: 1px solid var(--dg-rule);
 }
 
-.dg-auth-passkey {
+/* Every sign-in method that is not the password form: Google, a key. */
+.dg-auth-alternative {
 	width: 100%;
 }
 

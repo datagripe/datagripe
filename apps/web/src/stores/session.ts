@@ -55,6 +55,33 @@ export type SessionState = {
  * anything but localhost. */
 export const webAuthnAvailable = browserSupportsWebAuthn();
 
+/**
+ * A provider sign-in that failed comes back as a redirect, not a fetch,
+ * so its message arrives in the query string. Read — and scrubbed from
+ * the address bar — once, when this module first loads.
+ */
+function takeRedirectAuthError(): string | null {
+	// Imported by tests that run without a DOM.
+	if (typeof window === "undefined") {
+		return null;
+	}
+	const params = new URLSearchParams(window.location.search);
+	const message = params.get("auth_error");
+	if (message === null) {
+		return null;
+	}
+	params.delete("auth_error");
+	const query = params.toString();
+	window.history.replaceState(
+		null,
+		"",
+		`${window.location.pathname}${query === "" ? "" : `?${query}`}${window.location.hash}`,
+	);
+	return message;
+}
+
+export const redirectAuthError = takeRedirectAuthError();
+
 async function errorMessage(res: Response, fallback: string): Promise<string> {
 	try {
 		const body = (await res.json()) as { error?: { message?: string } };

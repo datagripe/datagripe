@@ -51,6 +51,11 @@ export interface AuthRouteDeps {
 	} | null;
 }
 
+/** Parse a request's `Cookie` header into a name → value map. */
+export function cookiesFrom(req: Request): Record<string, string> {
+	return parseCookies(req.headers.get("cookie"));
+}
+
 function parseCookies(header: string | null): Record<string, string> {
 	const cookies: Record<string, string> = {};
 	if (header === null) {
@@ -67,7 +72,7 @@ function parseCookies(header: string | null): Record<string, string> {
 }
 
 export function sessionTokenFrom(req: Request): string | null {
-	return parseCookies(req.headers.get("cookie"))[SESSION_COOKIE] ?? null;
+	return cookiesFrom(req)[SESSION_COOKIE] ?? null;
 }
 export async function sessionFromRequest(
 	sessions: SessionStore,
@@ -107,6 +112,15 @@ export function json(body: unknown, init?: ResponseInit): Response {
 export function createAuthRoutes(deps: AuthRouteDeps) {
 	const { appDb, config, sessions, rateLimiter, localAuth } = deps;
 	const secureCookie = config.NODE_ENV === "production";
+	/**
+	 * Email+password, as a whole. Off in direct-in mode, where there are
+	 * no accounts at all, and off when the deployment has locked sign-in
+	 * to Google or to security keys. Off means the routes are absent —
+	 * 404, not a form that refuses.
+	 */
+	const passwordAuth = localAuth === null && !config.PASSWORD_AUTH_DISABLED;
+	const passkeyAuth = localAuth === null && !config.PASSKEY_AUTH_DISABLED;
+	const googleAuth = localAuth === null && config.GOOGLE_AUTH_ENABLED;
 
 	async function bootstrapFor(
 		userId: string | null,
@@ -121,7 +135,9 @@ export function createAuthRoutes(deps: AuthRouteDeps) {
 				bootstrap: count === 0,
 				allowSignup: config.ALLOW_SIGNUP,
 				authDisabled: localAuth !== null,
-				passkeysEnabled: localAuth === null,
+				passwordAuthEnabled: passwordAuth,
+				passkeysEnabled: passkeyAuth,
+				googleAuthEnabled: googleAuth,
 			};
 		}
 		const [userRow, workspace] = await Promise.all([
@@ -141,7 +157,9 @@ export function createAuthRoutes(deps: AuthRouteDeps) {
 			bootstrap: count === 0,
 			allowSignup: config.ALLOW_SIGNUP,
 			authDisabled: localAuth !== null,
-			passkeysEnabled: localAuth === null,
+			passwordAuthEnabled: passwordAuth,
+			passkeysEnabled: passkeyAuth,
+			googleAuthEnabled: googleAuth,
 		};
 	}
 
@@ -153,7 +171,7 @@ export function createAuthRoutes(deps: AuthRouteDeps) {
 		},
 
 		async signup(req: Request): Promise<Response> {
-			if (localAuth !== null) {
+			if (!passwordAuth) {
 				return errorResponse(
 					404,
 					ErrorCodes.NotFound,
@@ -213,7 +231,7 @@ export function createAuthRoutes(deps: AuthRouteDeps) {
 		},
 
 		async login(req: Request): Promise<Response> {
-			if (localAuth !== null) {
+			if (!passwordAuth) {
 				return errorResponse(
 					404,
 					ErrorCodes.NotFound,

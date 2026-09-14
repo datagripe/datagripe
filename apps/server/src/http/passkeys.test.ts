@@ -188,6 +188,9 @@ const reachable = await probe();
 const pgTest = reachable ? test : test.skip;
 
 let appDb: AppDb;
+/** The config the routes under test were built with, so a test can
+ * rebuild them with one knob moved. */
+let testConfig: AppConfig;
 let auth: ReturnType<typeof createAuthRoutes>;
 let passkeys: ReturnType<typeof createPasskeyRoutes>;
 
@@ -326,8 +329,14 @@ beforeAll(async () => {
 		SSRF_DISABLED: false,
 		WEBAUTHN_RP_ID: RP_ID,
 		WEBAUTHN_RP_NAME: "DataGripe",
+		PASSWORD_AUTH_DISABLED: false,
+		PASSKEY_AUTH_DISABLED: false,
+		GOOGLE_AUTH_ENABLED: false,
+		GOOGLE_REDIRECT_URI: "http://localhost:5173/api/auth/google/callback",
+		GOOGLE_ALLOWED_DOMAINS: [],
 		WEBAUTHN_ORIGINS: [ORIGIN],
 	} satisfies AppConfig;
+	testConfig = config;
 	const sessions = createSessionStore(appDb);
 	const rateLimiter = createRateLimiter({
 		"auth.login.ip": { capacity: 30, refillPerMinute: 30 },
@@ -527,5 +536,22 @@ describe("security keys", () => {
 	pgTest("signup with an email that already exists is refused", async () => {
 		const res = await registerKey(new SoftKey(), { email: "key@example.com" });
 		expect(res.status).toBe(409);
+	});
+
+	pgTest("PASSKEY_AUTH_DISABLED removes every key route", async () => {
+		const locked = createPasskeyRoutes({
+			appDb,
+			config: { ...testConfig, PASSKEY_AUTH_DISABLED: true },
+			sessions: createSessionStore(appDb),
+			rateLimiter: createRateLimiter({
+				"auth.passkey.ip": { capacity: 200, refillPerMinute: 200 },
+			}),
+			localAuth: null,
+		});
+		const options = await locked.loginOptions(
+			req("/api/auth/passkey/login/options", { method: "POST", body: {} }),
+		);
+		expect(options.status).toBe(404);
+		expect((await locked.list(req("/api/auth/passkeys"))).status).toBe(404);
 	});
 });

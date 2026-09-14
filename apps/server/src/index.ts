@@ -29,6 +29,7 @@ import { createGitDatasourcesService } from "./git/service";
 import { disposePrevious, hotState } from "./hot";
 import { createAuthRoutes, sessionFromRequest } from "./http/auth";
 import { errorResponse } from "./http/errors";
+import { createGoogleRoutes } from "./http/google";
 import { createPasskeyRoutes } from "./http/passkeys";
 import { log } from "./log";
 import type { McpDeps } from "./mcp/context";
@@ -126,6 +127,9 @@ const rateLimiter = createRateLimiter({
 	// calls and people retry, so the budget is looser than login's —
 	// there is no guessable secret here to brute force.
 	"auth.passkey.ip": { capacity: 60, refillPerMinute: 60 },
+	// Both halves of a Google round trip, per IP. Same shape as a key
+	// ceremony: two calls, retried by people, no secret to guess.
+	"auth.oauth.ip": { capacity: 60, refillPerMinute: 60 },
 	"connection.test": { capacity: 10, refillPerMinute: 10 },
 	"execution.start": { capacity: 30, refillPerMinute: 30 },
 	"schema.children": { capacity: 120, refillPerMinute: 120 },
@@ -306,6 +310,13 @@ const passkeys = createPasskeyRoutes({
 	rateLimiter,
 	localAuth,
 });
+const google = createGoogleRoutes({
+	appDb,
+	config,
+	sessions,
+	rateLimiter,
+	localAuth,
+});
 
 const server = serve<SocketData>({
 	port: config.PORT,
@@ -326,6 +337,12 @@ const server = serve<SocketData>({
 		},
 		"/api/auth/logout": {
 			POST: (req: Request) => auth.logout(req),
+		},
+		"/api/auth/google/start": {
+			GET: (req: Request) => google.start(req),
+		},
+		"/api/auth/google/callback": {
+			GET: (req: Request) => google.callback(req),
 		},
 		"/api/auth/passkey/register/options": {
 			POST: (req: Request) => passkeys.registerOptions(req),

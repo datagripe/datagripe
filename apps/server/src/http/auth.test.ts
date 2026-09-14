@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import type { SessionBootstrap } from "@datagripe/contracts";
 import { SQL } from "bun";
 import { createSessionStore, SESSION_COOKIE } from "../auth/sessions";
+import type { AppConfig } from "../config";
 import { migrate } from "../db/app/migrate";
 import type { AppDb } from "../db/app/pool";
 import { createRateLimiter } from "../security/rateLimit";
@@ -25,6 +26,55 @@ async function probe(): Promise<boolean> {
 
 const reachable = await probe();
 const pgTest = reachable ? test : test.skip;
+
+const testConfig = {
+	NODE_ENV: "test",
+	PORT: 3001,
+	HOST: "0.0.0.0",
+	WEB_ORIGIN: "http://localhost:5173",
+	DATABASE_MODE: "external",
+	APP_DATABASE_URL: "",
+	EMBEDDED_PG_DATA_DIR: "./data/pg",
+	EMBEDDED_PG_PORT: 0,
+	EMBEDDED_PG_PASSWORD: undefined,
+	AUTH_DISABLED: false,
+	CONNECTION_ENCRYPTION_KEY: "test-key-0123456789abcdef0123",
+	SESSION_SECRET: "test-secret-0123456789abcdef01234",
+	QUERY_TIMEOUT_MS: 30_000,
+	QUERY_MAX_ROWS: 10_000,
+	QUERY_MAX_BYTES: 25_000_000,
+	MAX_CONCURRENT_QUERIES_PER_USER: 3,
+	MCP_ENABLED: true,
+	MCP_MAX_ROWS: 200,
+	MCP_MAX_BYTES: 1_000_000,
+	MCP_READ_MAX_BYTES: 65_536,
+	MCP_INSTRUCTIONS_MAX_BYTES: 16_384,
+	DOMAIN_EXPORT_ROOTS: "",
+	HOST_FS_ROOTS: "",
+	HOST_FS_DISABLED: false,
+	DOMAIN_EXPORT_GIT: false,
+	DOMAIN_GIT_TIMEOUT_MS: 60_000,
+	GIT_ENABLED: false,
+	GIT_REPOS_DIR: "./data/repos",
+	GIT_TIMEOUT_MS: 60_000,
+	GIT_CLONE_TIMEOUT_MS: 600_000,
+	REPO_COMMANDS_ENABLED: false,
+	REPO_COMMAND_TIMEOUT_MS: 600_000,
+	REPO_COMMAND_DEFAULT_TIMEOUT_MS: 120_000,
+	DOMAIN_EXPORT_MAX_DATA_ROWS: 10_000,
+	ACCESS_REPORT_MAX_CELLS: 250_000,
+	ALLOW_SIGNUP: false,
+	TARGET_HOST_ALLOWLIST: "",
+	SSRF_DISABLED: false,
+	WEBAUTHN_RP_ID: "localhost",
+	WEBAUTHN_RP_NAME: "DataGripe",
+	PASSWORD_AUTH_DISABLED: false,
+	PASSKEY_AUTH_DISABLED: false,
+	GOOGLE_AUTH_ENABLED: false,
+	GOOGLE_REDIRECT_URI: "http://localhost:5173/api/auth/google/callback",
+	GOOGLE_ALLOWED_DOMAINS: [],
+	WEBAUTHN_ORIGINS: ["http://localhost:5173"],
+} satisfies AppConfig;
 
 let appDb: AppDb;
 let routes: ReturnType<typeof createAuthRoutes>;
@@ -77,49 +127,7 @@ beforeAll(async () => {
 	closedSessions = [];
 	routes = createAuthRoutes({
 		appDb,
-		config: {
-			NODE_ENV: "test",
-			PORT: 3001,
-			HOST: "0.0.0.0",
-			WEB_ORIGIN: "http://localhost:5173",
-			DATABASE_MODE: "external",
-			APP_DATABASE_URL: "",
-			EMBEDDED_PG_DATA_DIR: "./data/pg",
-			EMBEDDED_PG_PORT: 0,
-			EMBEDDED_PG_PASSWORD: undefined,
-			AUTH_DISABLED: false,
-			CONNECTION_ENCRYPTION_KEY: "test-key-0123456789abcdef0123",
-			SESSION_SECRET: "test-secret-0123456789abcdef01234",
-			QUERY_TIMEOUT_MS: 30_000,
-			QUERY_MAX_ROWS: 10_000,
-			QUERY_MAX_BYTES: 25_000_000,
-			MAX_CONCURRENT_QUERIES_PER_USER: 3,
-			MCP_ENABLED: true,
-			MCP_MAX_ROWS: 200,
-			MCP_MAX_BYTES: 1_000_000,
-			MCP_READ_MAX_BYTES: 65_536,
-			MCP_INSTRUCTIONS_MAX_BYTES: 16_384,
-			DOMAIN_EXPORT_ROOTS: "",
-			HOST_FS_ROOTS: "",
-			HOST_FS_DISABLED: false,
-			DOMAIN_EXPORT_GIT: false,
-			DOMAIN_GIT_TIMEOUT_MS: 60_000,
-			GIT_ENABLED: false,
-			GIT_REPOS_DIR: "./data/repos",
-			GIT_TIMEOUT_MS: 60_000,
-			GIT_CLONE_TIMEOUT_MS: 600_000,
-			REPO_COMMANDS_ENABLED: false,
-			REPO_COMMAND_TIMEOUT_MS: 600_000,
-			REPO_COMMAND_DEFAULT_TIMEOUT_MS: 120_000,
-			DOMAIN_EXPORT_MAX_DATA_ROWS: 10_000,
-			ACCESS_REPORT_MAX_CELLS: 250_000,
-			ALLOW_SIGNUP: false,
-			TARGET_HOST_ALLOWLIST: "",
-			SSRF_DISABLED: false,
-			WEBAUTHN_RP_ID: "localhost",
-			WEBAUTHN_RP_NAME: "DataGripe",
-			WEBAUTHN_ORIGINS: ["http://localhost:5173"],
-		},
+		config: testConfig,
 		sessions: createSessionStore(appDb),
 		rateLimiter: createRateLimiter({
 			"auth.login.ip": { capacity: 30, refillPerMinute: 30 },
@@ -243,5 +251,35 @@ describe("auth routes", () => {
 			last = res.status;
 		}
 		expect(last).toBe(429);
+	});
+
+	pgTest("PASSWORD_AUTH_DISABLED removes login and signup", async () => {
+		const locked = createAuthRoutes({
+			appDb,
+			config: { ...testConfig, PASSWORD_AUTH_DISABLED: true },
+			sessions: createSessionStore(appDb),
+			rateLimiter: createRateLimiter({
+				"auth.login.ip": { capacity: 30, refillPerMinute: 30 },
+				"auth.login.email": { capacity: 5, refillPerMinute: 5 },
+			}),
+			closeSocketsForSession: () => {},
+			localAuth: null,
+		});
+		const login = await locked.login(
+			req("/api/auth/login", { method: "POST", body: ALICE }),
+		);
+		expect(login.status).toBe(404);
+		const signup = await locked.signup(
+			req("/api/auth/signup", { method: "POST", body: ALICE }),
+		);
+		expect(signup.status).toBe(404);
+
+		// And the sign-in screen is told, so it shows no password form.
+		const boot = (await (
+			await locked.session(req("/api/session"))
+		).json()) as SessionBootstrap;
+		expect(boot.passwordAuthEnabled).toBe(false);
+		expect(boot.passkeysEnabled).toBe(true);
+		expect(boot.googleAuthEnabled).toBe(false);
 	});
 });

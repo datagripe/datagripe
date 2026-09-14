@@ -67,6 +67,41 @@ const envSchema = z.object({
 		.enum(["true", "false"])
 		.default("false")
 		.transform((value) => value === "true"),
+	/**
+	 * Turn off email+password entirely: no login form, no password
+	 * signup, and the routes answer 404. What a deployment sets when
+	 * every account is supposed to arrive through Google or a security
+	 * key — see `PASSKEY_AUTH_DISABLED` for the other half.
+	 */
+	PASSWORD_AUTH_DISABLED: z
+		.enum(["true", "false"])
+		.default("false")
+		.transform((value) => value === "true"),
+	/** Turn off security keys, the same way and for the same reason. */
+	PASSKEY_AUTH_DISABLED: z
+		.enum(["true", "false"])
+		.default("false")
+		.transform((value) => value === "true"),
+	/**
+	 * Google sign-in (OIDC authorization code + PKCE). Both halves of the
+	 * OAuth client switch the feature on; neither one alone does, and
+	 * configuring exactly one is refused rather than silently ignored.
+	 */
+	GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+	GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+	/**
+	 * The redirect URI registered with the OAuth client. Defaults to
+	 * `WEB_ORIGIN` + `/api/auth/google/callback`, which is right whenever
+	 * the browser reaches the API on the origin it loads the app from.
+	 */
+	GOOGLE_REDIRECT_URI: z.url().optional(),
+	/**
+	 * Comma-separated Google Workspace domains allowed to sign in, matched
+	 * against the `hd` claim (and the email's domain when there is none).
+	 * Empty means any Google account — which, with `ALLOW_SIGNUP=true`,
+	 * means anyone on the internet.
+	 */
+	GOOGLE_ALLOWED_DOMAINS: z.string().default(""),
 	/** Comma-separated hostnames allowed despite SSRF private-range blocks. */
 	TARGET_HOST_ALLOWLIST: z.string().default(""),
 	/** Disable SSRF target-host blocking entirely (trusted-network deployments). */
@@ -214,6 +249,8 @@ export interface AppConfig
 		| "GIT_TIMEOUT_MS"
 		| "WEBAUTHN_RP_ID"
 		| "WEBAUTHN_EXTRA_ORIGINS"
+		| "GOOGLE_REDIRECT_URI"
+		| "GOOGLE_ALLOWED_DOMAINS"
 	> {
 	/** external: APP_DATABASE_URL was provided. embedded: the server starts
 	 * and manages its own PostgreSQL cluster (EMBEDDED_PG_*). */
@@ -236,6 +273,12 @@ export interface AppConfig
 	WEBAUTHN_RP_ID: string;
 	/** Every origin a security-key ceremony may come from; WEB_ORIGIN first. */
 	WEBAUTHN_ORIGINS: string[];
+	/** Resolved: both halves of the OAuth client are configured. */
+	GOOGLE_AUTH_ENABLED: boolean;
+	/** Resolved: explicit env wins, else WEB_ORIGIN + the callback path. */
+	GOOGLE_REDIRECT_URI: string;
+	/** Workspace domains allowed to sign in; empty means any. */
+	GOOGLE_ALLOWED_DOMAINS: string[];
 }
 
 const REPO_ROOT = path.join(import.meta.dir, "../../..");
@@ -367,6 +410,53 @@ function webauthnSettings(parsed: EnvConfig): {
 	};
 }
 
+/** Where Google sends the browser back; the default redirect URI's path. */
+export const GOOGLE_CALLBACK_PATH = "/api/auth/google/callback";
+
+function googleSettings(parsed: EnvConfig): {
+	GOOGLE_AUTH_ENABLED: boolean;
+	GOOGLE_REDIRECT_URI: string;
+	GOOGLE_ALLOWED_DOMAINS: string[];
+} {
+	const id = parsed.GOOGLE_CLIENT_ID !== undefined;
+	const secret = parsed.GOOGLE_CLIENT_SECRET !== undefined;
+	if (id !== secret) {
+		// Half a client is a deployment that thinks Google sign-in is on.
+		throw new Error(
+			`Invalid server configuration:\n  ${id ? "GOOGLE_CLIENT_SECRET" : "GOOGLE_CLIENT_ID"}: required alongside ${id ? "GOOGLE_CLIENT_ID" : "GOOGLE_CLIENT_SECRET"}`,
+		);
+	}
+	return {
+		GOOGLE_AUTH_ENABLED: id && secret,
+		GOOGLE_REDIRECT_URI:
+			parsed.GOOGLE_REDIRECT_URI ??
+			new URL(GOOGLE_CALLBACK_PATH, parsed.WEB_ORIGIN).toString(),
+		GOOGLE_ALLOWED_DOMAINS: parsed.GOOGLE_ALLOWED_DOMAINS.split(",")
+			.map((value) => value.trim().toLowerCase())
+			.filter((value) => value.length > 0),
+	};
+}
+
+/**
+ * A server with accounts needs at least one way to reach them. Turning
+ * off the last method is the kind of mistake that is only discovered at
+ * the login screen, so it fails at startup instead.
+ */
+function assertSomeWayIn(
+	parsed: EnvConfig,
+	authDisabled: boolean,
+	googleEnabled: boolean,
+): void {
+	if (authDisabled || googleEnabled) {
+		return;
+	}
+	if (parsed.PASSWORD_AUTH_DISABLED && parsed.PASSKEY_AUTH_DISABLED) {
+		throw new Error(
+			"Invalid server configuration:\n  PASSWORD_AUTH_DISABLED, PASSKEY_AUTH_DISABLED: no sign-in method is left. Configure GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET, re-enable one of them, or set AUTH_DISABLED=true.",
+		);
+	}
+}
+
 export interface LoadConfigOptions {
 	/** Merge the repository-root `.env` for missing keys (default true). */
 	envFile?: boolean;
@@ -409,30 +499,38 @@ export async function loadConfig(
 				`Invalid server configuration:\n  ${missing.join(", ")}: required in external mode`,
 			);
 		}
+		const google = googleSettings(parsed);
+		const authDisabled = parsed.AUTH_DISABLED ?? false;
+		assertSomeWayIn(parsed, authDisabled, google.GOOGLE_AUTH_ENABLED);
 		return {
 			...parsed,
 			DATABASE_MODE: databaseMode,
-			AUTH_DISABLED: parsed.AUTH_DISABLED ?? false,
+			AUTH_DISABLED: authDisabled,
 			CONNECTION_ENCRYPTION_KEY: parsed.CONNECTION_ENCRYPTION_KEY as string,
 			SESSION_SECRET: parsed.SESSION_SECRET as string,
 			EMBEDDED_PG_PASSWORD: undefined,
 			...gitSettings(parsed),
 			...webauthnSettings(parsed),
+			...google,
 		};
 	}
 
+	const google = googleSettings(parsed);
+	const authDisabled = parsed.AUTH_DISABLED ?? true;
+	assertSomeWayIn(parsed, authDisabled, google.GOOGLE_AUTH_ENABLED);
 	const local = await loadOrCreateLocalSecrets(
 		resolveRepoPath(parsed.EMBEDDED_PG_DATA_DIR),
 	);
 	return {
 		...parsed,
 		DATABASE_MODE: databaseMode,
-		AUTH_DISABLED: parsed.AUTH_DISABLED ?? true,
+		AUTH_DISABLED: authDisabled,
 		CONNECTION_ENCRYPTION_KEY:
 			parsed.CONNECTION_ENCRYPTION_KEY ?? local.connectionEncryptionKey,
 		SESSION_SECRET: parsed.SESSION_SECRET ?? local.sessionSecret,
 		EMBEDDED_PG_PASSWORD: local.embeddedPgPassword,
 		...gitSettings(parsed),
 		...webauthnSettings(parsed),
+		...google,
 	};
 }

@@ -156,4 +156,72 @@ describe("loadConfig", () => {
 			loadConfig({ ...validEnv, PORT: "70000" }, noEnvFile),
 		).rejects.toThrow(/PORT/);
 	});
+
+	test("Google sign-in needs both halves of the client", async () => {
+		const off = await loadConfig(validEnv, noEnvFile);
+		expect(off.GOOGLE_AUTH_ENABLED).toBe(false);
+		await expect(
+			loadConfig({ ...validEnv, GOOGLE_CLIENT_ID: "id" }, noEnvFile),
+		).rejects.toThrow(/GOOGLE_CLIENT_SECRET/);
+		await expect(
+			loadConfig({ ...validEnv, GOOGLE_CLIENT_SECRET: "secret" }, noEnvFile),
+		).rejects.toThrow(/GOOGLE_CLIENT_ID/);
+	});
+
+	test("the Google redirect URI defaults under WEB_ORIGIN", async () => {
+		const config = await loadConfig(
+			{
+				...validEnv,
+				WEB_ORIGIN: "https://datagripe.example.com",
+				GOOGLE_CLIENT_ID: "id",
+				GOOGLE_CLIENT_SECRET: "secret",
+				GOOGLE_ALLOWED_DOMAINS: "Example.com, corp.example.com",
+			},
+			noEnvFile,
+		);
+		expect(config.GOOGLE_AUTH_ENABLED).toBe(true);
+		expect(config.GOOGLE_REDIRECT_URI).toBe(
+			"https://datagripe.example.com/api/auth/google/callback",
+		);
+		expect(config.GOOGLE_ALLOWED_DOMAINS).toEqual([
+			"example.com",
+			"corp.example.com",
+		]);
+	});
+
+	test("refuses a server with accounts and no way to sign in", async () => {
+		await expect(
+			loadConfig(
+				{
+					...validEnv,
+					PASSWORD_AUTH_DISABLED: "true",
+					PASSKEY_AUTH_DISABLED: "true",
+				},
+				noEnvFile,
+			),
+		).rejects.toThrow(/no sign-in method is left/);
+		// Google is a way in, so the same pair is fine beside it.
+		const google = await loadConfig(
+			{
+				...validEnv,
+				PASSWORD_AUTH_DISABLED: "true",
+				PASSKEY_AUTH_DISABLED: "true",
+				GOOGLE_CLIENT_ID: "id",
+				GOOGLE_CLIENT_SECRET: "secret",
+			},
+			noEnvFile,
+		);
+		expect(google.PASSWORD_AUTH_DISABLED).toBe(true);
+		// So is direct-in mode, which has no accounts to sign in to.
+		const direct = await loadConfig(
+			{
+				...validEnv,
+				AUTH_DISABLED: "true",
+				PASSWORD_AUTH_DISABLED: "true",
+				PASSKEY_AUTH_DISABLED: "true",
+			},
+			noEnvFile,
+		);
+		expect(direct.AUTH_DISABLED).toBe(true);
+	});
 });

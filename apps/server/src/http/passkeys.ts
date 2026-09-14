@@ -25,6 +25,7 @@ import {
 	normalizeEmail,
 	userCount,
 } from "../auth/accounts";
+import { hasIdentity } from "../auth/oauth";
 import {
 	csrfMatches,
 	type SessionStore,
@@ -129,6 +130,9 @@ export function createPasskeyRoutes(deps: PasskeyRouteDeps) {
 	const secureCookie = config.NODE_ENV === "production";
 	const rpID = config.WEBAUTHN_RP_ID;
 	const origins = config.WEBAUTHN_ORIGINS;
+	/** No accounts at all, or a deployment that has locked sign-in to
+	 * something else. Either way every route here is absent. */
+	const disabled = localAuth !== null || config.PASSKEY_AUTH_DISABLED;
 
 	const notFound = () =>
 		errorResponse(404, ErrorCodes.NotFound, "Not found", crypto.randomUUID());
@@ -231,7 +235,7 @@ export function createPasskeyRoutes(deps: PasskeyRouteDeps) {
 	return {
 		/** Step one of registration, for a signed-in account or a signup. */
 		async registerOptions(req: Request): Promise<Response> {
-			if (localAuth !== null) {
+			if (disabled) {
 				return notFound();
 			}
 			const requestId = crypto.randomUUID();
@@ -347,7 +351,7 @@ export function createPasskeyRoutes(deps: PasskeyRouteDeps) {
 		/** Step two: store the credential, creating the account with it if
 		 * that is what the challenge was issued for. */
 		async registerVerify(req: Request): Promise<Response> {
-			if (localAuth !== null) {
+			if (disabled) {
 				return notFound();
 			}
 			const requestId = crypto.randomUUID();
@@ -530,7 +534,7 @@ export function createPasskeyRoutes(deps: PasskeyRouteDeps) {
 		/** Step one of sign-in. Usernameless: no allowCredentials, so the
 		 * browser offers whatever discoverable credentials it can find. */
 		async loginOptions(req: Request): Promise<Response> {
-			if (localAuth !== null) {
+			if (disabled) {
 				return notFound();
 			}
 			const requestId = crypto.randomUUID();
@@ -557,7 +561,7 @@ export function createPasskeyRoutes(deps: PasskeyRouteDeps) {
 		/** Step two: the credential names the account, so there is nothing
 		 * else to look it up by. */
 		async loginVerify(req: Request): Promise<Response> {
-			if (localAuth !== null) {
+			if (disabled) {
 				return notFound();
 			}
 			const requestId = crypto.randomUUID();
@@ -669,7 +673,7 @@ export function createPasskeyRoutes(deps: PasskeyRouteDeps) {
 		},
 
 		async list(req: Request): Promise<Response> {
-			if (localAuth !== null) {
+			if (disabled) {
 				return notFound();
 			}
 			const requestId = crypto.randomUUID();
@@ -677,18 +681,20 @@ export function createPasskeyRoutes(deps: PasskeyRouteDeps) {
 			if ("failure" in auth) {
 				return auth.failure;
 			}
-			const [credentials, user] = await Promise.all([
+			const [credentials, user, federated] = await Promise.all([
 				listCredentials(appDb, auth.userId),
 				findUserById(appDb, auth.userId),
+				hasIdentity(appDb, auth.userId),
 			]);
 			return json({
 				passkeys: credentials.map(toPasskey),
 				hasPassword: user?.hasPassword ?? false,
+				hasGoogle: federated,
 			});
 		},
 
 		async rename(req: Request): Promise<Response> {
-			if (localAuth !== null) {
+			if (disabled) {
 				return notFound();
 			}
 			const requestId = crypto.randomUUID();
@@ -728,7 +734,7 @@ export function createPasskeyRoutes(deps: PasskeyRouteDeps) {
 
 		/** Removing the last way into an account is not a thing we do. */
 		async remove(req: Request): Promise<Response> {
-			if (localAuth !== null) {
+			if (disabled) {
 				return notFound();
 			}
 			const requestId = crypto.randomUUID();
@@ -749,11 +755,12 @@ export function createPasskeyRoutes(deps: PasskeyRouteDeps) {
 					requestId,
 				);
 			}
-			const [credentials, user] = await Promise.all([
+			const [credentials, user, federated] = await Promise.all([
 				listCredentials(appDb, auth.userId),
 				findUserById(appDb, auth.userId),
+				hasIdentity(appDb, auth.userId),
 			]);
-			if (user?.hasPassword !== true && credentials.length <= 1) {
+			if (user?.hasPassword !== true && !federated && credentials.length <= 1) {
 				return errorResponse(
 					409,
 					ErrorCodes.Conflict,

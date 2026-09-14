@@ -64,9 +64,11 @@ export type Passkey = z.infer<typeof passkeySchema>;
 
 export const passkeyListResultSchema = z.object({
 	passkeys: z.array(passkeySchema),
-	/** False once the account would have no way back in — the UI blocks
-	 * removing the last credential. */
+	/** With neither of these and one key left, the account would have no
+	 * way back in — the UI blocks removing that last credential. */
 	hasPassword: z.boolean(),
+	/** A linked Google identity is also a way in. */
+	hasGoogle: z.boolean(),
 });
 
 export type PasskeyListResult = z.infer<typeof passkeyListResultSchema>;

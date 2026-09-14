@@ -1,14 +1,21 @@
 import { useState } from "react";
-import { useSessionStore, webAuthnAvailable } from "../stores/session";
+import {
+	redirectAuthError,
+	useSessionStore,
+	webAuthnAvailable,
+} from "../stores/session";
 import { Mascot } from "./Mascot";
 
 /**
  * Login / signup screen. Bootstrap mode (zero users) asks for the first
  * account; otherwise signup shows only when the server allows it.
  *
- * A security key is an alternative to the password, not a second factor
- * on top of it: signing in with one needs no email, because the key
- * itself names the account (docs/spec/auth-and-hardening.md).
+ * Which methods appear is the deployment's decision: a password, a
+ * security key, Google, or any combination of them
+ * (docs/spec/auth-and-hardening.md). A security key and Google are both
+ * alternatives to the password rather than second factors on top of it —
+ * signing in with a key needs no email either, because the key itself
+ * names the account.
  */
 export function AuthScreen() {
 	const bootstrap = useSessionStore((state) => state.bootstrap);
@@ -21,21 +28,15 @@ export function AuthScreen() {
 
 	const canSignup =
 		bootstrap?.bootstrap === true || bootstrap?.allowSignup === true;
+	const passwords = bootstrap?.passwordAuthEnabled === true;
 	const passkeys = webAuthnAvailable && bootstrap?.passkeysEnabled === true;
+	const google = bootstrap?.googleAuthEnabled === true;
 	const [mode, setMode] = useState<"login" | "signup">(
 		bootstrap?.bootstrap === true ? "signup" : "login",
 	);
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [emailMissing, setEmailMissing] = useState(false);
-
-	const submit = () => {
-		if (mode === "login") {
-			void login(email, password);
-		} else {
-			void signup(email, password);
-		}
-	};
 
 	// Signup needs the address the account is created under; the browser's
 	// own validation never runs, because this is not the submit button.
@@ -46,6 +47,38 @@ export function AuthScreen() {
 		}
 		setEmailMissing(false);
 		void signupWithPasskey(email.trim());
+	};
+
+	// Nothing left to offer: a deployment locked to security keys, seen
+	// from a browser that cannot use one (WebAuthn needs a secure
+	// context, so plain http to anything but localhost has none).
+	const noMethod = !passwords && !google && !passkeys;
+	// A key signup needs the email field even with no password form on
+	// screen; a key sign-in needs nothing typed at all.
+	const needsEmail = passwords || (passkeys && mode === "signup" && canSignup);
+	// Google is a navigation rather than a fetch, so the whole flow is
+	// this one link out to the server's start route.
+	const startGoogle = () => {
+		window.location.assign("/api/auth/google/start");
+	};
+	// Switching between "sign in" and "create an account" is only a
+	// question when something on this screen asks for a password or an
+	// email; Google decides it at Google.
+	const switchable = canSignup && (passwords || passkeys);
+
+	const submit = () => {
+		if (!passwords) {
+			// Enter in the email field, with a key as the only way in.
+			if (passkeys && mode === "signup") {
+				startPasskeySignup();
+			}
+			return;
+		}
+		if (mode === "login") {
+			void login(email, password);
+		} else {
+			void signup(email, password);
+		}
 	};
 
 	return (
@@ -64,39 +97,43 @@ export function AuthScreen() {
 					</span>
 				</h1>
 				<p className="dg-auth-subtitle">
-					{mode === "signup"
+					{mode === "signup" && switchable
 						? bootstrap?.bootstrap === true
 							? "Create the first account"
 							: "Create an account"
 						: "Sign in"}
 				</p>
-				<label className="dg-field">
-					<span>Email</span>
-					<input
-						type="email"
-						required
-						autoComplete="email"
-						value={email}
-						onChange={(event) => {
-							setEmail(event.target.value);
-							setEmailMissing(false);
-						}}
-					/>
-				</label>
-				<label className="dg-field">
-					<span>Password</span>
-					<input
-						type="password"
-						required
-						minLength={mode === "signup" ? 12 : 1}
-						autoComplete={
-							mode === "signup" ? "new-password" : "current-password"
-						}
-						value={password}
-						onChange={(event) => setPassword(event.target.value)}
-					/>
-				</label>
-				{mode === "signup" && (
+				{needsEmail && (
+					<label className="dg-field">
+						<span>Email</span>
+						<input
+							type="email"
+							required
+							autoComplete="email"
+							value={email}
+							onChange={(event) => {
+								setEmail(event.target.value);
+								setEmailMissing(false);
+							}}
+						/>
+					</label>
+				)}
+				{passwords && (
+					<label className="dg-field">
+						<span>Password</span>
+						<input
+							type="password"
+							required
+							minLength={mode === "signup" ? 12 : 1}
+							autoComplete={
+								mode === "signup" ? "new-password" : "current-password"
+							}
+							value={password}
+							onChange={(event) => setPassword(event.target.value)}
+						/>
+					</label>
+				)}
+				{passwords && mode === "signup" && (
 					<p className="dg-modal-hint">At least 12 characters.</p>
 				)}
 				{emailMissing && (
@@ -104,16 +141,41 @@ export function AuthScreen() {
 						Enter the email for the new account first.
 					</p>
 				)}
+				{noMethod && (
+					<p className="dg-modal-hint">
+						{bootstrap?.passkeysEnabled === true
+							? "This server signs in with a security key, and this browser cannot use one here — it needs HTTPS, or localhost."
+							: "This server has no sign-in method configured. Check the server's configuration."}
+					</p>
+				)}
 				{error !== null && <p className="dg-test-failed">{error}</p>}
-				<button type="submit" disabled={busy}>
-					{busy ? "…" : mode === "login" ? "Sign in" : "Create account"}
-				</button>
-				{passkeys && (mode === "login" || canSignup) && (
+				{error === null && redirectAuthError !== null && (
+					<p className="dg-test-failed">{redirectAuthError}</p>
+				)}
+				{passwords && (
+					<button type="submit" disabled={busy}>
+						{busy ? "…" : mode === "login" ? "Sign in" : "Create account"}
+					</button>
+				)}
+				{google && (
 					<>
-						<p className="dg-auth-or">or</p>
+						{passwords && <p className="dg-auth-or">or</p>}
 						<button
 							type="button"
-							className="dg-auth-passkey"
+							className="dg-auth-alternative"
+							disabled={busy}
+							onClick={startGoogle}
+						>
+							Continue with Google
+						</button>
+					</>
+				)}
+				{passkeys && (mode === "login" || canSignup) && (
+					<>
+						{(passwords || google) && <p className="dg-auth-or">or</p>}
+						<button
+							type="button"
+							className="dg-auth-alternative"
 							disabled={busy}
 							onClick={() => {
 								if (mode === "login") {
@@ -134,7 +196,7 @@ export function AuthScreen() {
 						</p>
 					</>
 				)}
-				{canSignup && (
+				{switchable && (
 					<button
 						type="button"
 						className="dg-auth-switch"

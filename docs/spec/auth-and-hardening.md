@@ -13,7 +13,8 @@ that match the self-hosted deployment model.
 
 ## Non-goals
 
-- OIDC/SAML providers (later, behind the same session contract).
+- SAML, and OIDC providers other than Google (later, behind the same
+  session contract — `oauth_identities` already carries a `provider`).
 - Security keys as a *second* factor on top of a password (they are an
   alternative to one; nothing forces both).
 - Attestation checks against the FIDO metadata service — registration
@@ -27,7 +28,8 @@ that match the self-hosted deployment model.
 
 ### Accounts and sessions
 
-- Local email+password accounts (ADR 0002). `users.password_hash` uses
+- Local email+password accounts (ADR 0002), unless the deployment turned
+  them off (`PASSWORD_AUTH_DISABLED`). `users.password_hash` uses
   `Bun.password` (bcrypt). Minimum password length 12. A security-key
   account has no password at all: `password_hash` is null and the
   credentials in `webauthn_credentials` are the whole story.
@@ -100,6 +102,71 @@ feature on — it is available whenever accounts are
 Rename, delete and registration onto a signed-in account require the
 `x-csrf-token` header; listing is a read and does not. All of them are
 absent (404) when `AUTH_DISABLED`.
+
+### Google sign-in
+
+Optional, and off until a deployment configures an OAuth client:
+`GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` together switch it on, and
+setting exactly one of them is refused at startup rather than quietly
+ignored. Like a security key, it is an alternative to the password, not
+a factor on top of one.
+
+- **Authorization code with PKCE.** `GET /api/auth/google/start` issues
+  a state, a PKCE verifier and a nonce, seals all three into the
+  short-lived `dg_oauth` cookie (HMAC over `SESSION_SECRET`,
+  `SameSite=Lax` so it survives the trip back), and redirects to Google
+  with `scope=openid email` — the address is all DataGripe stores.
+- **The callback** (`GET /api/auth/google/callback`) needs the state it
+  issued, exchanges the code on a backchannel authenticated with the
+  client secret, and checks the id token's `iss`, `aud`, `exp` and
+  `nonce`. The token's signature is deliberately not verified: it came
+  back over TLS from Google's token endpoint rather than through the
+  browser, which is the case OIDC Core §3.1.3.7 exempts.
+- **Identities are matched on `sub`**, never on the email — people
+  rename their address and the subject does not move. A *first* sign-in
+  links to the existing account owning that address when Google reports
+  `email_verified`, and otherwise creates one under the same bootstrap /
+  `ALLOW_SIGNUP` rule as every other signup. An unverified address is
+  refused outright.
+- **`GOOGLE_ALLOWED_DOMAINS`** (comma separated) restricts sign-in to
+  Google Workspace domains, matched against the `hd` claim and falling
+  back to the email's domain. Empty means any Google account, which with
+  `ALLOW_SIGNUP=true` means anyone on the internet — a deployment that
+  opens signup to Google should set this.
+- Failures come back as a redirect to `WEB_ORIGIN` with an `auth_error`
+  query parameter, because a redirect is all a navigation can return;
+  the sign-in screen shows it and scrubs it from the address bar.
+
+Configuration: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
+`GOOGLE_REDIRECT_URI` (defaults to `WEB_ORIGIN` +
+`/api/auth/google/callback`), `GOOGLE_ALLOWED_DOMAINS`.
+
+| Route | Payload | Result |
+| --- | --- | --- |
+| `GET /api/auth/google/start` | – | 302 to Google + `dg_oauth` cookie |
+| `GET /api/auth/google/callback` | `?code&state` | session cookie, or 302 with `auth_error` |
+
+### Which methods a deployment offers
+
+Each method is independently switchable, so a server can be locked to
+one of them:
+
+| Variable | Effect |
+| --- | --- |
+| `PASSWORD_AUTH_DISABLED=true` | no login/signup routes, no password form |
+| `PASSKEY_AUTH_DISABLED=true` | every `/api/auth/passkey*` route is absent |
+| `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` | Google sign-in appears |
+
+Off means **absent** — 404, not a form that refuses. `GET /api/session`
+reports `passwordAuthEnabled`, `passkeysEnabled` and `googleAuthEnabled`
+so the sign-in screen only renders what exists. Turning off the last way
+in fails at startup: a server with accounts and no method to reach them
+is only discovered at the login screen otherwise. `AUTH_DISABLED=true`
+is exempt, having no accounts to sign in to.
+
+Removing a security key still refuses to remove the *only* way into an
+account — a linked Google identity now counts as one of those ways,
+alongside a password and a second key.
 
 ### CSRF and origin checks
 
