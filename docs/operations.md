@@ -69,7 +69,7 @@ image's second entry point and the CLI's second command:
 
 ```bash
 docker run --rm -e APP_DATABASE_URL=… -e CONNECTION_ENCRYPTION_KEY=… \
-  -e SESSION_SECRET=… ghcr.io/rick-the-alien/datagripe migrate
+  -e SESSION_SECRET=… ghcr.io/datagripe/datagripe migrate
 bunx @datagripe/cli migrate
 ```
 

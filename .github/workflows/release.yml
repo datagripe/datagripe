@@ -147,10 +147,19 @@ jobs:
         with:
           bun-version: "1.4.0"
 
+      # Node 24 for npm 11, which is what understands the OIDC exchange
+      # below; the registry-url is what writes the .npmrc that publish
+      # reads. Node here is only the publisher — DataGripe runs on Bun.
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs 11.5.1 or later and the runner's bundled
+      # npm is whatever Node shipped with. Pinned rather than @latest so a
+      # release does not depend on what npm published this morning.
+      - name: npm new enough for trusted publishing
+        run: npm install -g npm@^11.5.1
 
       - name: Install dependencies
         run: bun install --frozen-lockfile --ignore-scripts
@@ -169,14 +178,45 @@ jobs:
             exit 1
           fi
 
+      # No NPM_TOKEN: npm is a trusted publisher for this repository and
+      # this workflow filename, and exchanges the job's OIDC token for a
+      # short-lived one. Provenance comes with it and is not a flag.
+      #
+      # The trust is registered against `release.yml` by name, so renaming
+      # this file breaks publishing until it is re-registered — see
+      # docs/releasing.md.
       - name: Publish
-        run: npm publish --provenance --access public
+        run: npm publish --access public
         working-directory: dist
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # The chart is published as an OCI artifact beside the image it runs,
+  # so `helm install oci://…` needs no chart repository, no index.yaml
+  # and no GitHub Pages — and the two are always the same release.
+  chart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+
+      - name: Package and push
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          # Both versions come from the tag rather than Chart.yaml: the
+          # chart has no lifecycle of its own, and one of them silently
+          # lagging is how people install last month's manifests against
+          # this month's image.
+          helm package deploy/helm/datagripe \
+            --version "$version" --app-version "$version" \
+            --destination "$RUNNER_TEMP/chart"
+          helm registry login ghcr.io \
+            --username ${{ github.actor }} \
+            --password-stdin <<< "${{ secrets.GITHUB_TOKEN }}"
+          helm push "$RUNNER_TEMP/chart/datagripe-$version.tgz" \
+            "oci://ghcr.io/${{ github.repository_owner }}/charts"
 
   release:
-    needs: [web, desktop, image, npm]
+    needs: [web, desktop, image, npm, chart]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

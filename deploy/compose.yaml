@@ -14,7 +14,7 @@
 name: datagripe
 
 x-datagripe: &datagripe
-  image: ghcr.io/rick-the-alien/datagripe:${DATAGRIPE_VERSION:-latest}
+  image: ghcr.io/datagripe/datagripe:${DATAGRIPE_VERSION:-latest}
   # So that `docker compose up` works from a checkout with nothing
   # published yet. `docker compose pull` fetches the released image
   # instead, and once one is in the local store compose stops building.

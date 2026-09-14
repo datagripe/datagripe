@@ -10,7 +10,7 @@
 webOrigin: ""
 
 image:
-  repository: ghcr.io/rick-the-alien/datagripe
+  repository: ghcr.io/datagripe/datagripe
   # Defaults to the chart's appVersion.
   tag: ""
   pullPolicy: IfNotPresent

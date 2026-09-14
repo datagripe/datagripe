@@ -143,10 +143,10 @@ await writeFile(
 			engines: { node: ">=20" },
 			repository: {
 				type: "git",
-				url: "git+https://github.com/rick-the-alien/datagripe.git",
+				url: "git+https://github.com/datagripe/datagripe.git",
 			},
 			homepage: "https://datagripe.com",
-			bugs: { url: "https://github.com/rick-the-alien/datagripe/issues" },
+			bugs: { url: "https://github.com/datagripe/datagripe/issues" },
 			keywords: [
 				"database",
 				"sql",

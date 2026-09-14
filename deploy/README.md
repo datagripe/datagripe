@@ -25,7 +25,7 @@ configure.
 
 ```bash
 docker run -p 3001:3001 -v datagripe:/data \
-  ghcr.io/rick-the-alien/datagripe
+  ghcr.io/datagripe/datagripe
 ```
 
 The same thing in a container: embedded PostgreSQL, direct-in, state on
@@ -37,7 +37,7 @@ WebSocket upgrade checks the browser's origin against `WEB_ORIGIN`:
 
 ```bash
 docker run -p 8080:3001 -e WEB_ORIGIN=http://localhost:8080 \
-  -v datagripe:/data ghcr.io/rick-the-alien/datagripe
+  -v datagripe:/data ghcr.io/datagripe/datagripe
 ```
 
 ## compose
@@ -56,10 +56,22 @@ travel together: `DATAGRIPE_PORT` and `WEB_ORIGIN`.
 
 ## Kubernetes
 
-[k8s/](k8s) is plain manifests you can read top to bottom;
-[helm/datagripe](helm/datagripe) is the same deployment parameterised,
-with a managed-database option, an embedded-database option, generated
-secrets, and a migration hook. Each directory has its own README.
+```bash
+helm install datagripe oci://ghcr.io/datagripe/charts/datagripe \
+  --namespace datagripe --create-namespace \
+  --set webOrigin=https://datagripe.example.com
+```
+
+The chart is an OCI artifact published beside the image, so there is no
+`helm repo add` and no index to go stale — and its version is the
+DataGripe version, so `--version 0.0.6` is the chart that installs
+`0.0.6`. [helm/datagripe](helm/datagripe) has the values: a
+managed-database option, an embedded-database option, generated secrets,
+and a migration hook.
+
+[k8s/](k8s) is the same deployment as plain manifests, meant to be read
+top to bottom rather than parameterised. Each directory has its own
+README.
 
 ## The two things worth knowing up front
 

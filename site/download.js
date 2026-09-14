@@ -12,7 +12,7 @@
  * an outage all degrade to a page you can still download from.
  */
 
-const REPO = "rick-the-alien/datagripe";
+const REPO = "datagripe/datagripe";
 
 const PLATFORMS = [
 	{ key: "macos-arm64", label: "macOS (Apple silicon)" },

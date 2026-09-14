@@ -8,7 +8,7 @@
   — or `npx @datagripe/cli` — is the whole application: the server, the
   web app it serves, and a PostgreSQL it starts for itself, with no
   install, no configuration and no account to create. There is a
-  container image too, `ghcr.io/rick-the-alien/datagripe`, which does
+  container image too, `ghcr.io/datagripe/datagripe`, which does
   the same thing with a volume mounted at `/data`.
 
   The npm package and the image are the same build. `bun run build:dist`
@@ -49,6 +49,19 @@
   app starts, the Helm chart as a pre-install hook, the plain manifests
   as an init container.
 
+- **The Helm chart is a direct link.** It is published as an OCI
+  artifact beside the image it runs, so there is no `helm repo add` and
+  no `index.yaml` to go stale:
+
+  ```bash
+  helm install datagripe oci://ghcr.io/datagripe/charts/datagripe \
+    --set webOrigin=https://datagripe.example.com
+  ```
+
+  Its version is DataGripe's version — the chart has no lifecycle of its
+  own, and one of the two silently lagging is how people end up
+  installing last month's manifests against this month's image.
+
 - **Sign in with a security key instead of a password.** A FIDO2 key — a
   YubiKey, or a passkey your laptop or phone holds — can create an
   account and sign into it, and one account may register as many keys as
@@ -71,6 +84,28 @@
   Deployment knobs are `WEBAUTHN_RP_ID`, `WEBAUTHN_RP_NAME` and
   `WEBAUTHN_EXTRA_ORIGINS`; all three have working defaults derived from
   `WEB_ORIGIN`. See [docs/spec/auth-and-hardening.md](docs/spec/auth-and-hardening.md).
+
+### Changed
+
+- **DataGripe lives at `github.com/datagripe/datagripe`.** The image is
+  `ghcr.io/datagripe/datagripe` and the chart is under the same
+  organisation. GitHub redirects the old URLs, so existing clones and
+  installed desktop apps — which ask the releases URL for updates —
+  carry on working.
+
+  The packages stay in one repository. The chart's `appVersion`, the
+  image tag and the npm version are the same number bumped in one commit
+  and proven by one CI run; split across repositories, the failure mode
+  is a chart that installs an image it was never tested against, and it
+  is silent. See
+  [docs/adr/0003-one-distribution-three-registries.md](docs/adr/0003-one-distribution-three-registries.md).
+
+- **Nothing publishes with a long-lived credential.** npm publishes
+  through trusted publishing — the release workflow exchanges its OIDC
+  token for a short-lived npm one, and provenance comes with it rather
+  than being a flag — and GHCR through the job's own `GITHUB_TOKEN`.
+  There is no `NPM_TOKEN` in the repository to leak or rotate.
+  [docs/releasing.md](docs/releasing.md) has the one-time setup.
 
 ### Fixed
 

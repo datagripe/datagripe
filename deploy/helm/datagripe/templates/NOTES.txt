@@ -50,4 +50,4 @@ encrypted with it and cannot be recovered without it. Back it up:
 
 {{ end -}}
 Operations — backups, the audit log, the production checklist:
-https://github.com/rick-the-alien/datagripe/blob/main/docs/operations.md
+https://github.com/datagripe/datagripe/blob/main/docs/operations.md

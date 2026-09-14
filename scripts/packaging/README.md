@@ -5,8 +5,8 @@ tables, write SQL, keep documents beside the data — PostgreSQL, MySQL,
 SQLite and Redis.
 
 [datagripe.com](https://datagripe.com) ·
-[source](https://github.com/rick-the-alien/datagripe) ·
-[changelog](https://github.com/rick-the-alien/datagripe/blob/main/CHANGELOG.md)
+[source](https://github.com/datagripe/datagripe) ·
+[changelog](https://github.com/datagripe/datagripe/blob/main/CHANGELOG.md)
 
 ## Run it
 
@@ -52,12 +52,12 @@ them. `WEB_ORIGIN` must be the exact origin browsers reach the app on:
 both the HTTP routes and the WebSocket upgrade check it.
 
 For containers there is an image and a Helm chart:
-[deploy/](https://github.com/rick-the-alien/datagripe/tree/main/deploy).
+[deploy/](https://github.com/datagripe/datagripe/tree/main/deploy).
 
 Every other setting is an environment variable —
-[.env.example](https://github.com/rick-the-alien/datagripe/blob/main/.env.example)
+[.env.example](https://github.com/datagripe/datagripe/blob/main/.env.example)
 lists them, and
-[docs/operations.md](https://github.com/rick-the-alien/datagripe/blob/main/docs/operations.md)
+[docs/operations.md](https://github.com/datagripe/datagripe/blob/main/docs/operations.md)
 covers backups, the audit log and the production checklist.
 
 MIT licensed.

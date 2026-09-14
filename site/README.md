@@ -54,7 +54,7 @@ and, if the registrar supports AAAA:
 2606:50c0:8003::153
 ```
 
-Plus a CNAME for `www` → `rick-the-alien.github.io`, which GitHub
+Plus a CNAME for `www` → `datagripe.github.io`, which GitHub
 redirects to the apex. Then tick **Enforce HTTPS** (or
 `-F https_enforced=true`); the certificate is usually issued within
 minutes of the domain verifying, and enforcement cannot be set before

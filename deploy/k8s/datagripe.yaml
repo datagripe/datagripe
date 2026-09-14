@@ -47,7 +47,7 @@ spec:
         # job — so this runs first, every start, and exits. Migrations are
         # idempotent, so a restart with nothing to do costs a connection.
         - name: migrate
-          image: ghcr.io/rick-the-alien/datagripe:latest
+          image: ghcr.io/datagripe/datagripe:latest
           args: ["migrate"]
           envFrom:
             - configMapRef:
@@ -66,7 +66,7 @@ spec:
               memory: 512Mi
       containers:
         - name: datagripe
-          image: ghcr.io/rick-the-alien/datagripe:latest
+          image: ghcr.io/datagripe/datagripe:latest
           ports:
             - name: http
               containerPort: 3001

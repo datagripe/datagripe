@@ -372,7 +372,7 @@ unable to change a row no matter what it is asked to run.
       server to and installing one only if there is none
 - [x] `datagripe migrate` as a second entry point, for the deployments
       that do not migrate themselves
-- [x] `ghcr.io/rick-the-alien/datagripe`, multi-arch, non-root, with the
+- [x] `ghcr.io/datagripe/datagripe`, multi-arch, non-root, with the
       embedded cluster still available so `docker run` with a volume and
       nothing else is a working DataGripe
 - [x] `deploy/`: a compose stack with its own PostgreSQL and a one-shot
@@ -382,6 +382,11 @@ unable to change a row no matter what it is asked to run.
 - [x] Secrets generated once and kept across upgrades, because rotating
       `CONNECTION_ENCRYPTION_KEY` does not sign people out — it orphans
       every datasource password in the database
+- [x] The chart ships as an OCI artifact beside the image —
+      `oci://ghcr.io/datagripe/charts/datagripe`, no `helm repo add`, no
+      `index.yaml`, and its version is DataGripe's version
+- [x] Nothing publishes with a long-lived credential: npm through
+      trusted publishing (OIDC), GHCR through the job's own token
 - [x] CI builds the distribution and the image, boots the container, and
       validates the manifests, the chart and the compose file
 

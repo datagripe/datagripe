@@ -4,6 +4,10 @@ Living documentation for DataGripe. `docs/initial_idea.md` is the original
 engineering handoff; everything in `adr/`, `spec/`, and `rfc/` reflects
 decisions made after it and takes precedence where they conflict.
 
+Two documents sit outside those folders: [operations.md](operations.md)
+for running a deployment, and [releasing.md](releasing.md) for
+publishing one.
+
 ## Conventions
 
 | Folder | Contents | Lifecycle |

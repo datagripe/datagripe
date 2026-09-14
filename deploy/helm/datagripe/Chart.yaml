@@ -2,13 +2,14 @@ apiVersion: v2
 name: datagripe
 description: A web-based database IDE inspired by DataGrip
 type: application
-# Chart version, bumped when the templates change. appVersion tracks the
-# DataGripe release the default image tag points at.
-version: 0.1.0
+# Both are the DataGripe release. The chart has no lifecycle of its own —
+# `helm package` overwrites these from the git tag when it is published,
+# and these values are what a checkout installs in the meantime.
+version: 0.0.5
 appVersion: "0.0.5"
 home: https://datagripe.com
 sources:
-  - https://github.com/rick-the-alien/datagripe
+  - https://github.com/datagripe/datagripe
 icon: https://datagripe.com/icon.svg
 keywords:
   - database
@@ -17,5 +18,5 @@ keywords:
   - mysql
   - ide
 maintainers:
-  - name: rick-the-alien
-    url: https://github.com/rick-the-alien
+  - name: DataGripe
+    url: https://github.com/datagripe

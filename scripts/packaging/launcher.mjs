@@ -49,7 +49,7 @@ CONNECTION_ENCRYPTION_KEY and SESSION_SECRET, and migrations run at
 startup as usual.
 
 Every other knob is an environment variable:
-https://github.com/rick-the-alien/datagripe/blob/main/.env.example`;
+https://github.com/datagripe/datagripe/blob/main/.env.example`;
 
 /** Parse the handful of flags worth not making people spell as env vars. */
 function parseArgs(argv) {

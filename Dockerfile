@@ -7,7 +7,7 @@
 # container and `bunx @datagripe/cli` run identical code and take the same
 # environment variables. `bin/datagripe.mjs` is the entry point in both.
 #
-#   docker run -p 3001:3001 -v datagripe:/data ghcr.io/rick-the-alien/datagripe
+#   docker run -p 3001:3001 -v datagripe:/data ghcr.io/datagripe/datagripe
 #
 # is a working DataGripe with no configuration: it starts its own
 # PostgreSQL under /data and runs direct-in, with no accounts. Set

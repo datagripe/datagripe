@@ -3,7 +3,7 @@
 A web-based database IDE inspired by DataGrip. Bun + React 19 + TypeScript.
 
 [datagripe.com](https://datagripe.com) ·
-[downloads](https://github.com/rick-the-alien/datagripe/releases/latest) ·
+[downloads](https://github.com/datagripe/datagripe/releases/latest) ·
 [changelog](CHANGELOG.md)
 
 ## Quickstart
@@ -52,7 +52,7 @@ PostgreSQL 17.
 
 ```bash
 docker run -p 3001:3001 -v datagripe:/data \
-  ghcr.io/rick-the-alien/datagripe
+  ghcr.io/datagripe/datagripe
 ```
 
 The same zero-config DataGripe in a container. For a shared deployment —
@@ -93,10 +93,11 @@ any static host, or `WEB_STATIC_DIR` on the server): frameless via
 `window-controls-overlay`, with an update-available refresh button in the
 status bar.
 
-Pushing a `v*` tag builds the web bundle and the desktop shell for
-Linux, macOS, and Windows, publishes `@datagripe/cli` to npm and the
-container image to GHCR, and attaches the rest to a GitHub release (see
-[.github/workflows/release.yml](.github/workflows/release.yml)).
+Pushing a `v*` tag publishes everything: `@datagripe/cli` to npm, the
+container image and the Helm chart to GHCR, and the web bundle and
+desktop builds to a GitHub release. See
+[docs/releasing.md](docs/releasing.md) for the steps and the one-time
+registry setup.
 
 ## Documentation
 
@@ -109,6 +110,9 @@ container image to GHCR, and attaches the rest to a GitHub release (see
 - [docs/adr/](docs/adr/) — architecture decision records
 - [docs/moving-a-datasource.md](docs/moving-a-datasource.md) — export a
   datasource to git and import it elsewhere, without a password in the repo
+- [docs/operations.md](docs/operations.md) — backups, the audit log, the
+  production checklist
+- [docs/releasing.md](docs/releasing.md) — how a tag becomes a release
 - [docs/spec/](docs/spec/) — feature/subsystem specifications
 - [docs/rfc/](docs/rfc/) — proposals under discussion
 

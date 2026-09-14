@@ -49,8 +49,7 @@ export default {
 		// `apps/desktop/artifacts/stable-*` under the names the build gives
 		// them — `<channel>-<os>-<arch>-update.json` and the bundle it
 		// names — which is what `Updater.checkForUpdate` goes looking for.
-		baseUrl:
-			"https://github.com/rick-the-alien/datagripe/releases/latest/download",
+		baseUrl: "https://github.com/datagripe/datagripe/releases/latest/download",
 		// Full bundles, not deltas. A patch is diffed against the previous
 		// release's artifact at build time, and the release job builds each
 		// platform from a clean checkout with nothing to diff against.

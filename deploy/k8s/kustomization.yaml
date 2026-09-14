@@ -18,5 +18,5 @@ labels:
       app.kubernetes.io/part-of: datagripe
 
 images:
-  - name: ghcr.io/rick-the-alien/datagripe
+  - name: ghcr.io/datagripe/datagripe
     newTag: latest

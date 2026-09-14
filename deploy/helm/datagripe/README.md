@@ -1,7 +1,7 @@
 # DataGripe Helm chart
 
 ```bash
-helm install datagripe deploy/helm/datagripe \
+helm install datagripe oci://ghcr.io/datagripe/charts/datagripe \
   --namespace datagripe --create-namespace \
   --set webOrigin=https://datagripe.example.com \
   --set ingress.enabled=true \
@@ -12,9 +12,13 @@ That installs DataGripe, a PostgreSQL StatefulSet for its own state, and
 a pre-install Job that migrates the schema. The encryption key and
 session secret are generated on first install and kept across upgrades.
 
-The chart is not published to a repository yet; install it from a
-checkout, or `helm package deploy/helm/datagripe` and install the
-tarball.
+The chart is an OCI artifact beside the image it runs, so there is no
+`helm repo add` — the URL above is the chart. `--version` pins it, and
+its versions are DataGripe's: the chart has no lifecycle of its own, so
+`0.0.6` is the chart that installs `0.0.6`.
+
+From a checkout, `deploy/helm/datagripe` works as a path in place of the
+`oci://` URL.
 
 ## The one value with no default
 
@@ -81,7 +85,7 @@ not name go in `extraEnv`; the full list is in
 | `nodeEnv` | `production` | `production` marks the session cookie `Secure` |
 | `allowSignup` | `false` | The first account may always sign up |
 | `hostFsDisabled` | `true` | No export to disk, no datasource paths, no git |
-| `image.repository` | `ghcr.io/rick-the-alien/datagripe` | |
+| `image.repository` | `ghcr.io/datagripe/datagripe` | |
 | `image.tag` | `""` | Defaults to the chart's `appVersion` |
 | `database.mode` | `external` | or `embedded` |
 | `database.url` | `""` | Needed when `postgresql.enabled` is false |
