@@ -138,6 +138,12 @@ jobs:
           # it would run on the way up rather than staying out of the way.
           ! grep -q "import.meta.main" dist/apps/server/src/index.js
 
+      # The default `docker` driver cannot export a cache, and this job
+      # asks it to. buildx gives the `docker-container` driver, which
+      # can — and still loads the built image into the daemon for the
+      # smoke test below.
+      - uses: docker/setup-buildx-action@v3
+
       - name: Build the image
         uses: docker/build-push-action@v6
         with:
