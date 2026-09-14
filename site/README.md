@@ -168,6 +168,18 @@ site animates: the brand edge under the header is rendered `is-idle` on
 every page, because motion means the database is busy and there is no
 database here.
 
+## The wordmark
+
+The header lockup is the application's prompt, `>Datagripe`, using the
+`.dg-prompt__*` classes from `tokens.css` unchanged — the chevron in
+magenta, `Data` in ink, `gripe` in green (brand-system.md "The prompt").
+The site does not get its own opinion about what Datagripe looks like,
+and the two cannot drift because there is one definition.
+
+It carries no `:project_` tail: that half of the prompt is project
+identity, and a website has no project. `>Datagripe` is the stable half
+and is the whole lockup here.
+
 ## Assets
 
 `icon.svg` and `mascot/` are **copies** of `brand/app-icon/icon.svg` and

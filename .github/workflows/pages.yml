@@ -26,15 +26,15 @@ on:
       - "docs/spec/**"
       - "packages/gripes/**"
       - "packages/contracts/src/adapters.ts"
-  # Called by release.yml, so a release always lands a fresh site
-  # whatever the commit behind it touched — the documentation describes
-  # the version people can now install.
-  #
-  # Called rather than triggered on `release: published`, because that
-  # release is published by a workflow using GITHUB_TOKEN and GitHub
-  # does not let a token-created event start another run. The trigger
-  # would look right and never fire.
-  workflow_call:
+      # The version too: the Helm examples read it from here through
+      # `<!--dg:version-->` rather than stating it, so a version bump
+      # changes the site. This is also what makes a release redeploy —
+      # a release commit always touches package.json and the changelog,
+      # so the release workflow does not need to deploy the site itself
+      # and deliberately does not. Two runs racing for one Pages
+      # deployment means one of them loses, and the one that lost was
+      # reported as a failed release.
+      - "package.json"
   workflow_dispatch:
 
 permissions:

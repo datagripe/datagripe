@@ -235,15 +235,13 @@ jobs:
           helm push "$RUNNER_TEMP/chart/datagripe-$version.tgz" \
             "oci://ghcr.io/${{ github.repository_owner }}/charts"
 
-  # datagripe.com, rebuilt so its documentation describes the version
-  # that just shipped rather than the one before it.
-  site:
-    needs: [release]
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    uses: ./.github/workflows/pages.yml
+  # No site job. datagripe.com is rebuilt by pages.yml on the push to
+  # main, which a release always makes — it bumps package.json and the
+  # changelog, both of which the site is rendered from. Calling
+  # pages.yml from here as well put two runs into one Pages deployment
+  # for the same commit; the second was rejected before it ran a step,
+  # and a release that shipped every artifact correctly was reported as
+  # failed. See .github/workflows/pages.yml.
 
   release:
     needs: [web, desktop, image, npm, chart]

@@ -241,6 +241,14 @@ header .dg-abar {
 	background: transparent;
 }
 
+/* The header runs to the wide shell, the same as the section bar, the
+   footer and every lattice page. On the 960px default it sat 233px in
+   from content that started at 24px, which reads as a different site
+   wearing the same colours. */
+header .shell {
+	max-width: var(--shell);
+}
+
 .bar {
 	display: flex;
 	align-items: center;
@@ -253,23 +261,29 @@ header.tight .bar {
 	height: var(--bar-tight);
 }
 
+/* The wordmark is the application's prompt lockup, and the colours are
+   `.dg-prompt__*` from tokens.css untouched — the site does not get its
+   own opinion about what Datagripe looks like.
+
+   Sized above everything else on the row (nav 13px, chip 11.5px) rather
+   than level with it: on a toolbar the prompt is one control among
+   many, but here it is the only thing identifying the site, and a
+   wordmark that measures the same as a nav link is not a wordmark. */
 .logo {
 	font-family: var(--dg-font-mono);
-	font-size: 15px;
+	font-weight: 500;
+	font-size: 20px;
+	letter-spacing: -0.02em;
 	display: flex;
 	align-items: center;
-	gap: var(--dg-space-3);
 	white-space: nowrap;
+	line-height: 1;
 }
 
-.logo img {
-	width: 18px;
-	height: 18px;
-}
-
-.logo em {
-	color: var(--dg-green);
-	font-style: normal;
+@media (min-width: 900px) {
+	.logo {
+		font-size: 22px;
+	}
 }
 
 nav.main {
@@ -1211,6 +1225,8 @@ footer {
 footer .shell {
 	max-width: var(--shell);
 }
+
+/* (The header does the same, up beside the header rules.) */
 
 .fcols {
 	display: grid;

@@ -1144,7 +1144,16 @@ ${page.body}
      and the bar holds still (docs/brand/brand-system.md "Motion"). -->
 <div class="dg-abar is-idle" aria-hidden="true"><div class="dg-abar__colour"></div></div>
 <div class="shell bar">
-	<a class="logo" href="/"><img src="/icon.svg" alt="" width="18" height="18"> data<em>gripe</em></a>
+	<!-- The prompt lockup, the same one the application wears
+	     (brand-system.md "The prompt"): the chevron in magenta, Data in
+	     ink, gripe in green, in the mono face. The classes and their
+	     colours are tokens.css untouched, so the site's wordmark and the
+	     app's are one definition rather than two that agree today.
+
+	     No project tail: that half of the prompt carries project
+	     identity and a website has no project, so the stable half is the
+	     whole lockup here. -->
+	<a class="logo" href="/"><span class="dg-prompt__gt">&gt;</span><span class="dg-prompt__brand">Data<b>gripe</b></span></a>
 	<nav class="main" aria-label="Main">${navLinks}<a href="https://github.com/datagripe/datagripe">Source</a></nav>
 	<div class="right">
 		<a class="md-chip" href="${markdownUrl(page.url)}"><b>.md</b> for agents</a>

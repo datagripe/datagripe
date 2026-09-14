@@ -41,6 +41,23 @@
   a hairline down the edge of the viewport is an artefact, not
   structure.
 
+- **The wordmark is the application's prompt lockup.** `>Datagripe` in
+  the mono face, the chevron in magenta, `Data` in ink and `gripe` in
+  green — the same three colours, from the same `.dg-prompt__*` classes
+  in `tokens.css`, that the project switcher wears in the app. It
+  replaces an icon and a two-colour `datagripe`, and it is set larger
+  than everything else on the row rather than level with it: on a
+  toolbar the prompt is one control among many, but on a website it is
+  the only thing identifying the site.
+
+  There is no `:project_` tail, because that half of the prompt carries
+  project identity and a website has no project.
+
+- **The header was 233px narrower than the page.** It used the 960px
+  shell while the section bar, the content and the footer all used the
+  1440px one, so at full width the wordmark started a long way in from
+  everything under it. All four now agree.
+
 - **The site no longer states the version by hand.** Two pages said
   `--version 0.0.6` on the day 0.0.7 shipped. The Helm examples are
   substituted from `package.json` like every other count on the site.
