@@ -1,16 +1,28 @@
 name: Site
 
-# Deploys `site/` to GitHub Pages straight from main. No `gh-pages`
-# branch: Pages can publish a workflow artifact, so the site's source
-# lives beside the code it describes and cannot drift onto a branch
-# nobody looks at.
+# Builds `site/` and deploys it to GitHub Pages. No `gh-pages` branch:
+# Pages can publish a workflow artifact, so the site's source lives
+# beside the code it describes and cannot drift onto a branch nobody
+# looks at.
 #
 # Requires Settings → Pages → Source = "GitHub Actions", once.
 
 on:
   push:
     branches: [main]
-    paths: ["site/**", ".github/workflows/pages.yml"]
+    paths:
+      - "site/**"
+      - "scripts/site/**"
+      - ".github/workflows/pages.yml"
+  # Called by release.yml, so a release always lands a fresh site
+  # whatever the commit behind it touched — the documentation describes
+  # the version people can now install.
+  #
+  # Called rather than triggered on `release: published`, because that
+  # release is published by a workflow using GITHUB_TOKEN and GitHub
+  # does not let a token-created event start another run. The trigger
+  # would look right and never fire.
+  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -33,13 +45,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.0"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      # Renders site/content into site/dist, and fails on an internal
+      # link that does not resolve.
+      - name: Build the site
+        run: bun run build:site
+
       - uses: actions/configure-pages@v5
 
-      # The site is plain HTML, CSS and one script — there is nothing to
-      # build, and a build step would only be somewhere for it to break.
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: site/dist
 
       - id: deploy
         uses: actions/deploy-pages@v4

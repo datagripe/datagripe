@@ -397,6 +397,28 @@ unable to change a row no matter what it is asked to run.
 Exit: someone who has never seen the repository has DataGripe running
 from one command, and someone with a cluster has it running from three.
 
+## Phase 17 — Documentation site · shipped 2026-09-14
+
+- [x] datagripe.com is six pages rendered from markdown in
+      `site/content/`, not one hand-written page: landing, getting
+      started, keyboard, features, deploy, configuration
+- [x] A keyboard reference, because the two most useful bindings are on
+      no button — `Ctrl/Cmd+Enter` runs the statement at the caret
+      without selecting it, and `Ctrl+Alt+L` reformats
+- [x] "What it can do": the first complete account of the surface in one
+      place, including the parts with no banner — middle-click column
+      selection, domains, the access report, repo commands, MCP
+- [x] `scripts/site/build.ts` is one file and not a static-site
+      generator: no theme to override, and it emits the markup that was
+      already written by hand
+- [x] The build fails on a broken internal link, and CI runs it on every
+      pull request
+- [x] A release calls the Pages workflow, so the site describes the
+      version that just shipped
+
+Exit: somebody who has never used DataGripe can find out what it does
+and how to run it without opening the repository.
+
 ## Unscheduled / parking lot
 - SQLite type/nullability/default changes — need the 12-step table rebuild
 - Index, constraint and trigger editing — the preview-then-apply shape is

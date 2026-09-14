@@ -5,12 +5,12 @@
  *   bun run sync:brand     copy, reporting what changed
  *   bun run check:brand    fail if any copy has drifted (CI runs this)
  *
- * The copies stay tracked rather than generated at build time, because
- * the alternative is a build step in three places that do not have one:
- * the Pages deploy uploads `site/` verbatim on purpose, and Vite serves
- * `apps/web/public/` verbatim in dev. A tracked copy plus `check:brand`
- * costs a few hundred kilobytes and cannot break a deploy; a build step
- * cannot cost anything and can break every one of them.
+ * The copies stay tracked rather than generated at build time. The site
+ * does have a build now (`scripts/site/build.ts`), but it copies these
+ * rather than assembling them, and Vite serves `apps/web/public/`
+ * verbatim in dev. A tracked copy plus `check:brand` costs a few hundred
+ * kilobytes and cannot break a deploy; a brand step inside three
+ * different builds cannot cost anything and can break all three.
  */
 import { copyFile, mkdir, readdir, readFile } from "node:fs/promises";
 import path from "node:path";

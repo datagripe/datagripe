@@ -369,3 +369,227 @@ footer .spacer {
 		margin-left: 18px;
 	}
 }
+
+/* ---- documentation ----------------------------------------- */
+
+/* The landing page is one column at 880px. The docs are that column
+   again, with a navigation rail beside it — so the reading measure is
+   the same on both and the shell is the only thing that changes. */
+.docs-shell {
+	display: grid;
+	grid-template-columns: 210px minmax(0, 1fr);
+	gap: 48px;
+	max-width: 1000px;
+	margin: 0 auto;
+	padding: 0 24px;
+	align-items: start;
+}
+
+.docs-nav {
+	position: sticky;
+	top: 24px;
+	padding-top: 56px;
+	font-size: var(--dg-fs-ui);
+}
+
+.docs-nav h2 {
+	margin: 22px 0 8px;
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-meta);
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--dg-ink-faint);
+}
+
+.docs-nav ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.docs-nav li {
+	margin: 0 0 3px;
+}
+
+.docs-nav a {
+	display: block;
+	padding: 3px 0;
+	color: var(--dg-ink-mute);
+	text-decoration: none;
+}
+
+.docs-nav a:hover {
+	color: var(--dg-ink);
+}
+
+/* The severity-border treatment the application uses for the selected
+   row, so "you are here" reads the same in both places. */
+.docs-nav a[aria-current="page"] {
+	color: var(--dg-cyan);
+}
+
+.docs-nav .on-page {
+	margin: 2px 0 8px;
+	padding-left: 11px;
+	border-left: 1px solid var(--dg-rule);
+}
+
+.docs-nav .on-page a {
+	font-size: var(--dg-fs-meta);
+	color: var(--dg-ink-faint);
+}
+
+.docs-body {
+	max-width: 68ch;
+	padding: 56px 0 0;
+}
+
+.docs-body h1 {
+	margin: 0 0 10px;
+	font-family: var(--dg-font-display);
+	font-size: var(--dg-fs-display);
+	line-height: var(--dg-lh-heading);
+	font-weight: 500;
+}
+
+.docs-body > .lede {
+	margin: 0 0 40px;
+	font-size: 18px;
+	color: var(--dg-ink-mute);
+}
+
+.docs-body h2 {
+	margin: 44px 0 12px;
+	font-size: 22px;
+}
+
+.docs-body h3 {
+	margin: 28px 0 8px;
+	font-family: var(--dg-font-sans);
+	font-size: 16px;
+	font-weight: 500;
+}
+
+/* A heading is its own link, without the underline and the arrow that
+   usually announce it: the whole heading is the target, so a marker
+   beside it would be decoration. */
+.docs-body h2 a.anchor,
+.docs-body h3 a.anchor {
+	color: inherit;
+	text-decoration: none;
+}
+
+.docs-body h2 a.anchor:hover::after,
+.docs-body h3 a.anchor:hover::after {
+	content: " #";
+	color: var(--dg-ink-faint);
+}
+
+.docs-body p,
+.docs-body li {
+	color: var(--dg-ink-dim);
+}
+
+.docs-body ul,
+.docs-body ol {
+	padding-left: 20px;
+}
+
+.docs-body li {
+	margin-bottom: 6px;
+}
+
+.docs-body strong {
+	color: var(--dg-ink);
+	font-weight: 500;
+}
+
+.docs-body pre {
+	margin: 16px 0;
+}
+
+.docs-body table {
+	width: 100%;
+	margin: 16px 0 22px;
+	border-collapse: collapse;
+	font-size: 15px;
+}
+
+.docs-body th {
+	text-align: left;
+	font-weight: 500;
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-meta);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--dg-ink-faint);
+	border-bottom: 1px solid var(--dg-rule);
+	padding: 0 14px 7px 0;
+}
+
+/* Top-aligned because the right-hand cell is usually a sentence and the
+   left-hand one is usually a key name: baselines would drift apart. */
+.docs-body td {
+	vertical-align: top;
+	padding: 9px 14px 9px 0;
+	border-bottom: 1px solid var(--dg-rule-soft);
+	color: var(--dg-ink-dim);
+}
+
+.docs-body td:last-child,
+.docs-body th:last-child {
+	padding-right: 0;
+}
+
+/* A shortcut is the first cell of a two-column table often enough that
+   this is what keeps `Ctrl/Cmd` `Enter` on one line. */
+.docs-body td:first-child {
+	white-space: nowrap;
+	color: var(--dg-ink);
+}
+
+.docs-body td:first-child code {
+	white-space: nowrap;
+}
+
+.docs-body blockquote {
+	margin: 16px 0;
+	padding-left: 14px;
+	border-left: 3px solid var(--dg-rule);
+	color: var(--dg-ink-mute);
+}
+
+/* ---- header brand link ------------------------------------- */
+
+.brand {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	text-decoration: none;
+	color: inherit;
+}
+
+@media (max-width: 860px) {
+	.docs-shell {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0;
+	}
+
+	/* Above the page rather than beside it, and no longer sticky: a rail
+	   pinned to the top of a narrow screen is most of the screen. */
+	.docs-nav {
+		position: static;
+		padding-top: 40px;
+		padding-bottom: 8px;
+		border-bottom: 1px solid var(--dg-rule);
+	}
+
+	.docs-nav .on-page {
+		display: none;
+	}
+
+	.docs-body {
+		padding-top: 32px;
+	}
+}

@@ -104,7 +104,9 @@ registry setup.
 
 - [brand/](brand) — the shipped brand assets (app icon, mascot), copied
   into `apps/` and `site/` by `bun run sync:brand`
-- [site/](site) — the datagripe.com landing page, deployed to GitHub Pages
+- [site/](site) — datagripe.com: the landing page and the user
+  documentation, rendered from markdown and deployed to GitHub Pages.
+  User-facing; `docs/` below is for people building DataGripe
 - [deploy/](deploy) — compose, Kubernetes manifests, Helm chart
 - [roadmap.md](roadmap.md) — phases, progress, scheduling
 - [docs/initial_idea.md](docs/initial_idea.md) — original engineering handoff

@@ -215,6 +215,16 @@ jobs:
           helm push "$RUNNER_TEMP/chart/datagripe-$version.tgz" \
             "oci://ghcr.io/${{ github.repository_owner }}/charts"
 
+  # datagripe.com, rebuilt so its documentation describes the version
+  # that just shipped rather than the one before it.
+  site:
+    needs: [release]
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml
+
   release:
     needs: [web, desktop, image, npm, chart]
     runs-on: ubuntu-latest

@@ -1,31 +1,6 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Datagripe — a database IDE that reads your SQL back to you</title>
-<meta name="description" content="A database IDE for PostgreSQL, MySQL, SQLite and Redis. It reads your queries and your schema, and tells you what is wrong with them.">
-<link rel="icon" href="icon.svg">
-<link rel="stylesheet" href="style.css">
-<meta property="og:title" content="Datagripe">
-<meta property="og:description" content="A database IDE that reads your SQL back to you.">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://datagripe.com/">
-</head>
-<body>
-
-<header>
-	<img src="icon.svg" alt="">
-	<span class="wordmark">data<em>gripe</em></span>
-	<nav>
-		<a href="https://github.com/datagripe/datagripe">Source</a>
-		<a href="https://github.com/datagripe/datagripe/blob/main/CHANGELOG.md">Changelog</a>
-	</nav>
-</header>
-
-<main>
-
-	<div class="hero">
+<!-- The landing page's body. The header, footer and <head> come from
+     scripts/site/build.ts, which every page shares. -->
+<div class="hero">
 		<div class="hero-copy">
 			<h1>Your queries are fine.<br>Probably.</h1>
 			<p class="lede">A database IDE that reads your SQL back to you, and
@@ -168,14 +143,14 @@
 		and answers nothing but this machine.</p>
 <pre>bunx @datagripe/cli personal   <span class="c"># or: npx @datagripe/cli personal</span></pre>
 		<p class="note" style="padding-top:14px">Then open
-		<code>localhost:3001</code>. Your connections and files live in
-		<code>~/.local/share/datagripe</code> and are still there next time,
-		wherever you run the command from. The <code>npx</code> version works
-		with no Bun on the machine — it fetches one, because the server runs
-		on it.</p>
-		<p class="note" style="padding-top:14px">Or download the desktop app
-		above — the same thing in a window, with its own database underneath.
-		The web app also installs as a PWA.</p>
+		<code>localhost:3001</code>. The <code>npx</code> version works with
+		no Bun on the machine — it fetches one, because the server runs on it.
+		Or download the desktop app above: the same thing in a window. The web
+		app also installs as a PWA.</p>
+		<p class="note" style="padding-top:10px"><a href="/docs/getting-started/">Getting
+		started</a> has the first five minutes after that, and
+		<a href="/docs/keyboard/">the shortcuts</a> — including
+		<code>Ctrl+Alt+L</code>, which is not written on any button.</p>
 	</section>
 
 	<section>
@@ -186,22 +161,15 @@
 <pre><span class="c"># one container, its own database, nothing else to run</span>
 docker run -p 3001:3001 -v datagripe:/data ghcr.io/datagripe/datagripe
 
-<span class="c"># compose — the app, a Postgres, and the migration that goes first</span>
-curl -O https://raw.githubusercontent.com/datagripe/datagripe/main/deploy/compose.yaml
-curl -o .env https://raw.githubusercontent.com/datagripe/datagripe/main/deploy/.env.example
-$EDITOR .env   <span class="c"># three secrets, with the commands to generate them</span>
-docker compose up -d
-
 <span class="c"># kubernetes — the chart is the URL. no helm repo add, no index.yaml</span>
 helm install datagripe oci://ghcr.io/datagripe/charts/datagripe \
   --set webOrigin=https://datagripe.example.com</pre>
-		<p class="note" style="padding-top:14px">Plain manifests too, if you
-		would rather read a deployment than configure one.
-		<a href="https://github.com/datagripe/datagripe/tree/main/deploy">deploy/</a>
-		has all four, and the one setting nothing can guess for you:
-		<code>WEB_ORIGIN</code>, the exact origin browsers use. Everything in
-		the app runs over a websocket that checks it, so a deployment that
-		loads and then sits there is almost always that.</p>
+		<p class="note" style="padding-top:14px">Compose and plain manifests
+		too, if you would rather read a deployment than configure one. The
+		<a href="/docs/deploy/">deployment guide</a> has all four, and
+		<a href="/docs/configuration/">every setting</a> — starting with the
+		one nothing can guess for you: <code>WEB_ORIGIN</code>, the exact
+		origin browsers use.</p>
 	</section>
 
 	<section class="mascot-section">
@@ -227,21 +195,3 @@ helm install datagripe oci://ghcr.io/datagripe/charts/datagripe \
 		keeps the full list. If a gripe is wrong, that is a bug worth
 		reporting — a wrong gripe costs more trust than a missing one.</p>
 	</section>
-
-</main>
-
-<footer>
-	<span>Datagripe</span>
-	<a href="https://github.com/datagripe/datagripe">GitHub</a>
-	<a href="https://github.com/datagripe/datagripe/issues">Issues</a>
-	<a href="https://github.com/datagripe/datagripe/blob/main/LICENSE">MIT</a>
-	<!-- Required on every public surface, and deliberately names nobody:
-	     naming a vendor draws the association the line exists to deny
-	     (docs/brand/brand-system.md "Parody boundary"). -->
-	<span class="spacer">An independent parody. Not affiliated with,
-	endorsed by, or connected to any other software vendor.</span>
-</footer>
-
-<script src="download.js"></script>
-</body>
-</html>

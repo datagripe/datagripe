@@ -1,21 +1,55 @@
 # site
 
-The datagripe.com landing page. Plain HTML, CSS and one script — there
-is nothing to build, so there is nothing to break in a build.
+datagripe.com: a landing page and the documentation.
+
+```
+content/index.html   the landing page's body, hand-written markup
+content/*.md         one documentation page each, with frontmatter
+style.css            including the docs layout
+```
+
+`bun run build:site` renders those into `site/dist/` —
+`scripts/site/build.ts`, one file. The header, the navigation and the
+footer live there rather than in each page, which is the reason there is
+a build: a landing page and six documentation pages cannot be kept in
+step by hand, and a nav that disagrees with itself is worse than no nav.
+
+It used to say here that there was nothing to build and so nothing to
+break in a build. That was true of one page. What replaces it is a build
+that **fails on a broken internal link**, which is a docs site's
+characteristic rot and is cheaper to catch here than from a reader. CI
+runs it on every pull request for that reason alone.
 
 `icon.svg` and `mascot/` are **copies** of `brand/app-icon/icon.svg` and
 `brand/mascot/`, written by `bun run sync:brand`; CI fails if they drift.
 `tokens.css` is still a hand copy of `docs/brand/tokens.css`.
 
-The site deliberately does not import across the repo, because the
-deployed artifact is just this folder — which is also why the copies are
-committed rather than assembled at deploy time.
+## Writing a page
+
+Add a markdown file to `content/`. The filename is the URL —
+`keyboard.md` becomes `/docs/keyboard/`.
+
+```markdown
+---
+title: Keyboard shortcuts
+description: One sentence; it is the lede and the meta description.
+group: Start here
+order: 3
+---
+```
+
+`group` is the sidebar heading, `order` sorts within it. Internal links
+are absolute (`/docs/features/`) and are checked.
+
+These pages are for people using DataGripe. `docs/` at the repository
+root is for people building it — specs, ADRs and RFCs — and stays there.
 
 ## How it deploys
 
-`.github/workflows/pages.yml` publishes this folder to GitHub Pages on
-every push to `main` that touches `site/`. There is no `gh-pages`
-branch: Pages serves a workflow artifact.
+`.github/workflows/pages.yml` builds and publishes to GitHub Pages on
+every push to `main` that touches `site/` or the build script, and on
+every published release. There is no `gh-pages` branch: Pages serves a
+workflow artifact.
 
 One-time setup: **Settings → Pages → Source = "GitHub Actions"**.
 

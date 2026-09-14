@@ -63,6 +63,27 @@
   app starts, the Helm chart as a pre-install hook, the plain manifests
   as an init container.
 
+- **datagripe.com is a documentation site now, not a page.** Six pages
+  rendered from markdown in `site/content/`, with a
+  [keyboard reference](https://datagripe.com/docs/keyboard/) that exists
+  because two of the most useful bindings are written on no button:
+  `Ctrl/Cmd+Enter` runs the statement the caret is in without selecting
+  it, and `Ctrl+Alt+L` reformats. Also
+  [what it can do](https://datagripe.com/docs/features/), which is the
+  first complete list of the surface in one place, a
+  [deployment guide](https://datagripe.com/docs/deploy/) and a
+  [configuration reference](https://datagripe.com/docs/configuration/).
+
+  The build is one file, `scripts/site/build.ts`, and not a static-site
+  generator: there is no theme to override and the markup it emits is
+  the markup that was already written by hand, which is what keeps the
+  brand intact rather than reskinned. It **fails on a broken internal
+  link**, which is a docs site's characteristic rot and cheaper to catch
+  in CI than from a reader.
+
+  A release rebuilds it, so the documentation describes the version that
+  just shipped rather than the one before it.
+
 - **The Helm chart is a direct link.** It is published as an OCI
   artifact beside the image it runs, so there is no `helm repo add` and
   no `index.yaml` to go stale:

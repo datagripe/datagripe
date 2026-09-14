@@ -8,6 +8,13 @@ Two documents sit outside those folders: [operations.md](operations.md)
 for running a deployment, and [releasing.md](releasing.md) for
 publishing one.
 
+Everything here is for people **building** DataGripe. The documentation
+for people **using** it — getting started, keyboard shortcuts, what it
+can do, deploying — is [`site/content/`](../site/content), rendered to
+[datagripe.com/docs](https://datagripe.com/docs/). A change to behaviour
+usually touches both: the spec says what it does and why, the site page
+says how to use it.
+
 ## Conventions
 
 | Folder | Contents | Lifecycle |

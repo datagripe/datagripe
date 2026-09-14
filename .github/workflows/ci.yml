@@ -121,6 +121,11 @@ jobs:
       - name: Build the distribution
         run: bun run build:dist
 
+      # Also the link checker: the build fails on an internal link that
+      # does not resolve to a page it rendered or an asset it copied.
+      - name: Build the site
+        run: bun run build:site
+
       - name: The distribution is complete
         run: |
           test -f dist/bin/datagripe.mjs
