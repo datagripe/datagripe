@@ -20,28 +20,35 @@ message rather than assuming it.
 
 ### What is already automatic
 
-Four things are rendered from the repository and cannot drift. Change the
-source and the site follows on the next build — do **not** write a second
-copy of any of them into `site/content/`:
+Five things are rendered from the repository and cannot drift. Change
+the source and the site follows on the next build — do **not** write a
+second copy of any of them into `site/content/`:
 
 | Site page | Rendered from |
 | --- | --- |
 | `/rules/` | `packages/gripes` — `RULES` and `MESSAGES` |
 | `/roadmap/` | `roadmap.md`, "Gripes about Datagripe" |
+| `/specs/` and `/specs/<slug>/` | `docs/spec/*.md`, verbatim |
 | `/docs/release-notes/` | `CHANGELOG.md` |
 | `/docs/adapters/` capability table | `packages/contracts` — `ADAPTER_CAPABILITIES` |
 
-The counts on the landing page (`{{ruleCount}}`, `{{plannedCount}}` and
-their spelled-out forms) are substituted at build time for the same
-reason. Three places on this site said "eleven rules" on the day the
-catalogue reached eighteen, which is why none of them are typed by hand
-any more.
+Counts and the version are substituted at build time for the same
+reason. Write `<!--dg:ruleCount-->` or `<!--dg:version-->` in any page
+rather than the value; the available names are in `COUNTS` in the build,
+an unknown one fails the build, and so does a placeholder on a page
+nothing substituted.
+
+Two worked examples of why. Three places on this site said "eleven
+rules" on the day the catalogue reached eighteen. Two more said
+`--version 0.0.6` on the day 0.0.7 shipped. Neither is the kind of thing
+a reviewer catches.
 
 `bun run build:site` fails rather than publishes when any of this is
 inconsistent: a broken internal link, a roadmap line it cannot parse, a
-duplicate gripe slug, a page with no group, a landing-page placeholder
-nothing substitutes, or a rule listed as "not built yet" that has
-quietly shipped. CI runs it on every pull request.
+duplicate gripe slug, a page with no group, a placeholder nothing
+substitutes, a spec missing its status, phase or goal, or a rule listed
+as "not built yet" that has quietly shipped. CI runs it on every pull
+request.
 
 ### What is not automatic
 
@@ -96,9 +103,17 @@ Two habits that matter more than the format:
 it. Both are updated in the same change as the behaviour they describe —
 see [docs/README.md](docs/README.md).
 
-Specs carry a status line. A spec describing something that shipped says
-so; a spec describing something that did not is marked, not quietly left
-to read as fact.
+**`docs/spec/` is published.** Every spec is rendered to `/specs/<slug>/`
+on datagripe.com, with a Markdown twin, so a spec is now a public page
+and not only a file in a repository. Nothing about how they are written
+changes — but a spec left saying "planned" about something that shipped
+last month is now visibly wrong to a reader rather than quietly wrong to
+a contributor.
+
+The build reads four things out of every spec and fails if any is
+missing: an `# Spec — Title` heading, a `**Status:**` line, a
+`**Phase:**` line, and a `## Goal` section whose first sentence becomes
+the page's description. Keep that shape.
 
 ## Brand
 
@@ -137,7 +152,8 @@ place: a case that **looks like the finding and is not**. Every false
 positive this catalogue would have shipped was caught by that fixture
 class. See
 [`site/content/docs/writing-a-rule.md`](site/content/docs/writing-a-rule.md)
-for the full account, and `docs/spec/gripes.md` for the specification.
+for the full account, and `docs/spec/gripes.md` — published at
+`/specs/gripes/` — for the specification.
 
 Rule ids are a public contract. Renaming one silently un-dismisses it
 for every user, so a rule that changes meaning gets a new id.

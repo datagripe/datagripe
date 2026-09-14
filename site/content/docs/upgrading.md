@@ -78,7 +78,7 @@ depend on — an upgrade should be a thing you did, not a thing that
 happened.
 
 ```bash
-helm upgrade datagripe oci://ghcr.io/datagripe/charts/datagripe --version 0.0.6
+helm upgrade datagripe oci://ghcr.io/datagripe/charts/datagripe --version <!--dg:version-->
 ```
 
 ## Restoring

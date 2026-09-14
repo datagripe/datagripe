@@ -425,14 +425,19 @@ datagripe.com redrawn, and rebuilt so that the parts of it that can go
 stale no longer can. The trigger was finding "eleven rules" in three
 places on a day the catalogue held eighteen.
 
-- [x] Twenty-three pages in three groups — Product, Deploy, Learn —
+- [x] Forty-two pages in three groups — Product, Deploy, Learn —
       where `group` in a page's frontmatter is both the sidebar heading
       and the footer column, so a page cannot be added to one and
       forgotten in the other
-- [x] Four pages rendered from the repository rather than written:
+- [x] Five things rendered from the repository rather than written:
       `/rules/` from `packages/gripes`, `/roadmap/` from this file,
-      `/docs/release-notes/` from the changelog, and the adapter
-      capability table from `ADAPTER_CAPABILITIES`
+      `/specs/` from all eighteen of `docs/spec`, `/docs/release-notes/`
+      from the changelog, and the adapter capability table from
+      `ADAPTER_CAPABILITIES`
+- [x] The specs get a **Specs** entry in the top nav, their own rail
+      grouped by status, and their eighty-eight backticked
+      cross-references turned into real links — a path is a link inside
+      a repository and a dead end on a website
 - [x] The landing page's counts substituted at build time, so no
       headline states a number a human has to remember to change
 - [x] The build fails rather than publishes on: a broken internal link

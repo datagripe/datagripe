@@ -73,6 +73,7 @@ const NAV: Array<{ label: string; href: string }> = [
 	{ label: "Rules", href: "/rules/" },
 	{ label: "Roadmap", href: "/roadmap/" },
 	{ label: "Docs", href: "/docs/" },
+	{ label: "Specs", href: "/specs/" },
 ];
 
 interface Heading {
@@ -96,6 +97,8 @@ interface Page {
 	headings: Heading[];
 	/** Landing-style pages get a sticky section bar instead of a rail. */
 	spy?: Heading[];
+	/** Present on a spec page: it gets the specs rail, not the docs one. */
+	spec?: { status: string; phase: string };
 	/** Full-width layout with no documentation chrome. */
 	wide?: boolean;
 	/** Loads the hero canvas and the download button rewriter. */
@@ -684,6 +687,270 @@ async function releaseNotesPage(): Promise<Page> {
 }
 
 /* ------------------------------------------------------------------ */
+/* docs/spec — the specifications                                     */
+/* ------------------------------------------------------------------ */
+
+const specDir = path.join(root, "docs", "spec");
+
+/**
+ * Where a repository path that is not a spec should point. Specs link to
+ * each other on this site; everything else still goes to GitHub, because
+ * publishing the whole `docs/` tree is a different decision from
+ * publishing the specs and has not been made.
+ */
+const REPO_BLOB = "https://github.com/datagripe/datagripe/blob/main";
+
+interface Spec {
+	slug: string;
+	/** `Access report` — the `Spec — ` prefix is chrome, not a title. */
+	title: string;
+	status: string;
+	phase: string;
+	/** Everything after the metadata block. */
+	body: string;
+	/** First sentence of "## Goal", for the lede and the index. */
+	goal: string;
+}
+
+/**
+ * Read one spec. Every one of the eighteen has the same four things in
+ * the same order — an h1, a `**Status:**`, a `**Phase:**` and a
+ * `## Goal` — so this insists on all four rather than coping. A spec
+ * that has grown a different shape is worth knowing about at build time;
+ * silently publishing it with an empty status is not.
+ */
+async function readSpec(name: string): Promise<Spec> {
+	const slug = name.replace(/\.md$/, "");
+	const source = await readFile(path.join(specDir, name), "utf8");
+
+	const heading = /^#\s+(?:Spec\s+—\s+)?(.+)$/m.exec(source);
+	const status = /^\*\*Status:\*\*\s*(.+)$/m.exec(source);
+	const phase = /^\*\*Phase:\*\*\s*(.+)$/m.exec(source);
+	if (heading === null || status === null || phase === null) {
+		throw new Error(
+			`docs/spec/${name}: expected an "# Spec — …" heading with **Status:** and **Phase:** under it`,
+		);
+	}
+
+	// The goal's first sentence is the page description. Specs carry no
+	// frontmatter and are not going to grow any for the website's benefit.
+	const goalSection = /^## Goal\n+([\s\S]*?)(?=\n## )/m.exec(source);
+	if (goalSection === null) {
+		throw new Error(`docs/spec/${name}: no "## Goal" section`);
+	}
+	const goalText = (goalSection[1] as string)
+		.split("\n\n")[0]
+		?.replace(/\s+/g, " ")
+		.trim();
+	if (goalText === undefined || goalText.length === 0) {
+		throw new Error(`docs/spec/${name}: "## Goal" is empty`);
+	}
+	const sentence = /^(.+?\.)(?:\s|$)/.exec(goalText);
+	const goal = (sentence?.[1] ?? goalText).replace(/[`*]/g, "");
+
+	// Drop the h1 and the metadata block; both are re-rendered by the
+	// layout, and leaving them in prints the title twice.
+	const body = source
+		.slice(source.indexOf(phase[0]) + (phase[0] as string).length)
+		.replace(/^(\*\*Supersedes:\*\*[\s\S]*?)(?=\n\n)/, "")
+		.trim();
+
+	return {
+		slug,
+		title: heading[1] as string,
+		status: status[1] as string,
+		phase: phase[1] as string,
+		body,
+		goal,
+	};
+}
+
+/**
+ * Specs reference each other as backticked paths — ``docs/spec/domains.md``,
+ * eighty-eight times across the set — and never as links, because in a
+ * repository the path *is* the link. On a website it is a dead end, so
+ * every one that names a spec becomes a link to that spec's page, and
+ * every one that names anything else becomes a link to GitHub.
+ *
+ * Done on the rendered HTML rather than the markdown so it applies to
+ * exactly the inline-code spans marked's parser produced, and not to an
+ * identical run of characters inside a fenced block.
+ */
+function linkRepoPaths(html: string, slugs: Set<string>): string {
+	return html.replace(
+		/<code>(docs\/[A-Za-z0-9._/-]+\.md)<\/code>/g,
+		(_full, repoPath: string) => {
+			const spec = /^docs\/spec\/([a-z0-9-]+)\.md$/.exec(repoPath);
+			if (spec !== null && slugs.has(spec[1] as string)) {
+				return `<a href="/specs/${spec[1]}/"><code>${repoPath}</code></a>`;
+			}
+			return `<a href="${REPO_BLOB}/${repoPath}"><code>${repoPath}</code></a>`;
+		},
+	);
+}
+
+/** The same rewrite for the Markdown twin, where the link is real
+ * markdown and the target is the twin rather than the page. */
+function linkRepoPathsMarkdown(source: string, slugs: Set<string>): string {
+	return source.replace(
+		/`(docs\/[A-Za-z0-9._/-]+\.md)`/g,
+		(_full, repoPath: string) => {
+			const spec = /^docs\/spec\/([a-z0-9-]+)\.md$/.exec(repoPath);
+			if (spec !== null && slugs.has(spec[1] as string)) {
+				return `[\`${repoPath}\`](/specs/${spec[1]}.md)`;
+			}
+			return `[\`${repoPath}\`](${REPO_BLOB}/${repoPath})`;
+		},
+	);
+}
+
+/**
+ * The note at the top of every spec page.
+ *
+ * These are engineering documents written for whoever builds the thing,
+ * and publishing them does not make them user documentation. Saying so
+ * once, on every page, is cheaper than a reader working it out from the
+ * tone halfway down and cheaper still than them following a design
+ * decision as if it were an instruction.
+ */
+const SPEC_NOTE = `<div class="callout">
+<p><strong>This is an engineering document.</strong> Specs are written
+for people building DataGripe: they record what a subsystem does and why
+the alternatives were rejected, and some of them describe things that are
+not built yet. If you are using DataGripe, <a href="/docs/">the
+documentation</a> is the place to be — it is maintained for you and this
+is not.</p>
+</div>`;
+
+function specPage(spec: Spec, slugs: Set<string>): Page {
+	const rendered = renderMarkdown(spec.body);
+	const meta = `<dl class="spec-meta">
+<div><dt>Status</dt><dd>${escapeHtml(spec.status.replace(/[`*]/g, ""))}</dd></div>
+<div><dt>Phase</dt><dd>${escapeHtml(spec.phase.replace(/[`*]/g, ""))}</dd></div>
+<div><dt>Source</dt><dd><a href="${REPO_BLOB}/docs/spec/${spec.slug}.md">docs/spec/${spec.slug}.md</a></dd></div>
+</dl>`;
+
+	return {
+		url: `/specs/${spec.slug}/`,
+		title: spec.title,
+		description: spec.goal,
+		spec: { status: spec.status, phase: spec.phase },
+		order: 0,
+		body: `${meta}\n${SPEC_NOTE}\n${linkRepoPaths(rendered.html, slugs)}`,
+		markdown: [
+			`# Spec — ${spec.title}`,
+			"",
+			`**Status:** ${spec.status}`,
+			`**Phase:** ${spec.phase}`,
+			`**Source:** ${REPO_BLOB}/docs/spec/${spec.slug}.md`,
+			"",
+			"> An engineering document, not user documentation. It records what",
+			"> a subsystem does and why the alternatives were rejected, and some",
+			"> of it describes things that are not built. For using DataGripe,",
+			"> read [the documentation](/docs.md) instead.",
+			"",
+			linkRepoPathsMarkdown(spec.body, slugs),
+			"",
+		].join("\n"),
+		headings: rendered.headings,
+	};
+}
+
+/** `current`, `draft — …`, `superseded by …` → the word that groups it. */
+function statusGroup(status: string): string {
+	const first = status.toLowerCase().trim();
+	if (first.startsWith("current")) {
+		return "Current";
+	}
+	if (first.startsWith("draft")) {
+		return "Draft";
+	}
+	return "Other";
+}
+
+const SPEC_GROUPS = ["Current", "Draft", "Other"] as const;
+
+function specsIndexPage(specs: Spec[]): Page {
+	const byGroup = new Map<string, Spec[]>();
+	for (const spec of specs) {
+		const group = statusGroup(spec.status);
+		byGroup.set(group, [...(byGroup.get(group) ?? []), spec]);
+	}
+
+	const sections: string[] = [];
+	for (const group of SPEC_GROUPS) {
+		const members = byGroup.get(group);
+		if (members === undefined) {
+			continue;
+		}
+		const cards = members
+			.map(
+				(
+					spec,
+				) => `<div><h3><a href="/specs/${spec.slug}/">${escapeHtml(spec.title)}</a></h3>
+<p>${escapeHtml(spec.goal)}</p>
+<p class="meta">phase ${escapeHtml(spec.phase.replace(/[`*]/g, ""))} · ${escapeHtml(spec.status.replace(/[`*]/g, ""))}</p></div>`,
+			)
+			.join("\n");
+		sections.push(
+			`<h2 id="${slugify(group)}"><a class="anchor" href="#${slugify(group)}">${group}</a></h2>\n<div class="lat c2">\n${cards}\n</div>`,
+		);
+	}
+
+	const body = `<div class="shell sec">
+<div class="sec-head split">
+<div><p class="meta">Specifications</p>
+<h1>How it is built, and why</h1>
+<p class="lede">${specs.length} specifications, rendered from <a href="${REPO_BLOB}/docs/spec">docs/spec</a> in the repository. Each one records what a subsystem does, what it deliberately does not, and which alternatives were rejected and for what reason — that last part is usually the useful bit and it is almost never in the code.</p></div>
+<img class="mascot" src="/mascot/shocked.svg" alt="" width="566" height="550">
+</div>
+${SPEC_NOTE}
+${sections.join("\n")}
+<p class="after">Architecture decisions live in <a href="${REPO_BLOB}/docs/adr">docs/adr</a>, and the phase log is <a href="${REPO_BLOB}/roadmap.md">roadmap.md</a> — whose second half is the <a href="/roadmap/">roadmap page</a>.</p>
+</div>`;
+
+	const markdown = [
+		"# Specifications",
+		"",
+		`${specs.length} specifications, rendered from \`docs/spec\` in the repository.`,
+		"Each records what a subsystem does, what it deliberately does not, and",
+		"which alternatives were rejected and why.",
+		"",
+		"> Engineering documents, not user documentation. For using DataGripe,",
+		"> read [the documentation](/docs.md).",
+		"",
+		...SPEC_GROUPS.flatMap((group) => {
+			const members = byGroup.get(group);
+			if (members === undefined) {
+				return [];
+			}
+			return [
+				`## ${group}`,
+				"",
+				...members.map(
+					(spec) =>
+						`- [${spec.title}](/specs/${spec.slug}.md) — ${spec.goal} *(phase ${spec.phase.replace(/[`*]/g, "")})*`,
+				),
+				"",
+			];
+		}),
+	].join("\n");
+
+	return {
+		url: "/specs/",
+		title: "Specifications",
+		description: `${specs.length} engineering specifications, rendered from the repository — what each subsystem does and which alternatives were rejected.`,
+		order: 0,
+		body,
+		markdown,
+		headings: SPEC_GROUPS.filter((group) => byGroup.has(group)).map(
+			(group) => ({ id: slugify(group), text: group }),
+		),
+		wide: true,
+	};
+}
+
+/* ------------------------------------------------------------------ */
 /* ADAPTER_CAPABILITIES — the adapters table                          */
 /* ------------------------------------------------------------------ */
 
@@ -767,6 +1034,32 @@ function docsRail(pages: Page[], current: Page): string {
 	return sections.join("");
 }
 
+/**
+ * The rail on a spec page: every spec, grouped by status. Its own rail
+ * rather than the documentation's, because a reader deep in the object
+ * view spec wants the other seventeen specs beside them, not the
+ * deployment guide.
+ */
+function specsRail(pages: Page[], current: Page): string {
+	const specs = pages.filter((page) => page.spec !== undefined);
+	const sections: string[] = [
+		`<a class="all${current.url === "/specs/" ? " on" : ""}" href="/specs/">All specifications</a>`,
+	];
+	for (const group of SPEC_GROUPS) {
+		const items = specs
+			.filter((page) => statusGroup(page.spec?.status ?? "") === group)
+			.map((page) => {
+				const on = page.url === current.url;
+				return `<a href="${page.url}"${on ? ' class="on" aria-current="page"' : ""}>${escapeHtml(page.title)}</a>`;
+			})
+			.join("");
+		if (items.length > 0) {
+			sections.push(`<p class="grp">${group}</p>${items}`);
+		}
+	}
+	return sections.join("");
+}
+
 function contentsRail(page: Page): string {
 	if (page.headings.length < 2) {
 		return "";
@@ -794,7 +1087,10 @@ function spyBar(page: Page): string {
 }
 
 function layout(page: Page, pages: Page[]): string {
-	const docs = page.wide !== true && page.url !== "/";
+	const isSpec = page.spec !== undefined || page.url === "/specs/";
+	// The two-rail shell, used by the documentation and the specs alike.
+	// The landing page and the lattice pages opt out with `wide`.
+	const railed = page.wide !== true && page.url !== "/";
 	const title =
 		page.url === "/"
 			? "Datagripe — a database IDE that reads your SQL back to you"
@@ -802,13 +1098,14 @@ function layout(page: Page, pages: Page[]): string {
 	const navLinks = NAV.map((item) => {
 		const on =
 			item.href === page.url ||
-			(item.href === "/docs/" && docs && page.url !== "/docs/");
+			(item.href === "/docs/" && railed && !isSpec) ||
+			(item.href === "/specs/" && isSpec && page.url !== "/specs/");
 		return `<a href="${item.href}"${on ? ' aria-current="page"' : ""}>${item.label}</a>`;
 	}).join("");
 
-	const main = docs
+	const main = railed
 		? `<div class="shell wide"><div class="docs">
-<nav class="docs-rail" aria-label="Documentation">${docsRail(pages, page)}</nav>
+<nav class="docs-rail" aria-label="${isSpec ? "Specifications" : "Documentation"}">${isSpec ? specsRail(pages, page) : docsRail(pages, page)}</nav>
 <article class="docs-body">
 <h1>${escapeHtml(page.title)}</h1>
 <p class="lede">${escapeHtml(page.description)}</p>
@@ -872,6 +1169,7 @@ ${main}
 			<a href="${markdownUrl(page.url)}">This page as Markdown</a>
 			<a href="/sitemap.xml">sitemap.xml</a>
 			<h2 class="second">Project</h2>
+			<a href="/specs/">Specifications</a>
 			<a href="https://github.com/datagripe/datagripe">Source</a>
 			<a href="/docs/release-notes/">Changelog</a>
 			<a href="https://github.com/datagripe/datagripe/issues">Issues</a>
@@ -959,12 +1257,41 @@ async function checkLinks(pages: Page[]): Promise<void> {
 	}
 }
 
+/**
+ * No page ships a placeholder nothing replaced. `counts()` throws on a
+ * name it does not know, so this catches the other direction: a page
+ * that was never passed through it at all, which is what happens when
+ * somebody adds a third kind of page and forgets.
+ */
+function checkPlaceholders(pages: Page[]): void {
+	const left: string[] = [];
+	for (const page of pages) {
+		for (const source of [page.body, page.markdown]) {
+			for (const match of source.matchAll(/<!--dg:\w+-->|{{\w+}}/g)) {
+				left.push(`${page.url} → ${match[0]}`);
+			}
+		}
+	}
+	if (left.length > 0) {
+		throw new Error(
+			`site: ${left.length} unsubstituted placeholder(s):\n  ${left.join("\n  ")}`,
+		);
+	}
+}
+
 /** Every page has a group, so it appears in the footer and the rail —
  * an orphan page is one nothing links to. */
 function checkGrouping(pages: Page[]): void {
+	// Specs are reachable from the nav, the specs rail and the specs
+	// index, so they need no group. Everything else does, or nothing
+	// links to it.
 	const orphans = pages.filter(
 		(page) =>
-			page.group === undefined && page.url !== "/" && page.url !== "/docs/",
+			page.group === undefined &&
+			page.spec === undefined &&
+			page.url !== "/" &&
+			page.url !== "/docs/" &&
+			page.url !== "/specs/",
 	);
 	if (orphans.length > 0) {
 		throw new Error(
@@ -1035,10 +1362,24 @@ function llmsTxt(pages: Page[]): string {
 		}
 		lines.push("");
 	}
+	// Specs go under Optional, which is what llms.txt reserves for context
+	// a reader can skip: they are engineering documents, and an agent
+	// answering "how do I deploy this" should not be reading them first.
 	lines.push("## Optional");
 	lines.push("");
+	const specsIndex = pages.find((page) => page.url === "/specs/");
+	if (specsIndex !== undefined) {
+		lines.push(
+			`- [${specsIndex.title}](${markdownUrl(specsIndex.url)}): ${specsIndex.description}`,
+		);
+	}
+	for (const page of pages.filter((page) => page.spec !== undefined)) {
+		lines.push(
+			`- [Spec — ${page.title}](${markdownUrl(page.url)}): ${page.description}`,
+		);
+	}
 	lines.push(
-		"- [Source](https://github.com/datagripe/datagripe): the repository, including the specs and the roadmap this site is built from.",
+		"- [Source](https://github.com/datagripe/datagripe): the repository these pages are rendered from.",
 	);
 	lines.push("");
 	return lines.join("\n");
@@ -1084,9 +1425,34 @@ ${urls}
 /* build                                                              */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The released version, for the Helm examples. Two pages said
+ * `--version 0.0.6` on the day 0.0.7 shipped, which is the same failure
+ * as "eleven rules" and gets the same treatment.
+ */
+const VERSION = (
+	JSON.parse(await readFile(path.join(root, "package.json"), "utf8")) as {
+		version: string;
+	}
+).version;
+
 const roadmapSource = await readFile(path.join(root, "roadmap.md"), "utf8");
 const productGripes = parseGripes(roadmapSource, "About itself", true);
 const plannedRules = parseGripes(roadmapSource, "Rules not built yet", false);
+
+/** Read up front rather than beside the pages they become: the spec
+ * count is a substitutable placeholder, so `counts()` needs this before
+ * the first page renders. */
+const specs = await Promise.all(
+	(await readdir(specDir))
+		.filter((name) => name.endsWith(".md"))
+		.sort()
+		.map(readSpec),
+);
+if (specs.length === 0) {
+	throw new Error("site: docs/spec is empty");
+}
+const specSlugs = new Set(specs.map((spec) => spec.slug));
 
 const pages: Page[] = [];
 
@@ -1125,6 +1491,9 @@ const COUNTS: Record<string, () => string> = {
 	ruleCountWordCap: () => Words(RULES.length),
 	plannedCount: () => String(plannedRules.length),
 	plannedCountWord: () => words(plannedRules.length),
+	specCount: () => String(specs.length),
+	specCountWord: () => words(specs.length),
+	version: () => VERSION,
 };
 
 function counts(source: string): string {
@@ -1138,9 +1507,6 @@ function counts(source: string): string {
 }
 
 const landingBody = counts(landingHtml.trim());
-if (landingBody.includes("<!--dg:")) {
-	throw new Error("site: index.html has a placeholder nothing substitutes");
-}
 
 pages.push({
 	url: "/",
@@ -1163,7 +1529,7 @@ for (const name of (await readdir(path.join(contentDir, "docs"))).sort()) {
 	const slug = name.replace(/\.md$/, "");
 	const raw = await readFile(path.join(contentDir, "docs", name), "utf8");
 	const { data, body } = frontmatter(raw);
-	const substituted = body.replace("{{adapters}}", adapterTable());
+	const substituted = counts(body).replace("{{adapters}}", adapterTable());
 	const rendered = renderMarkdown(substituted);
 	const url = slug === "index" ? "/docs/" : `/docs/${slug}/`;
 	const group = data.group;
@@ -1187,6 +1553,11 @@ for (const name of (await readdir(path.join(contentDir, "docs"))).sort()) {
 	});
 }
 
+pages.push(specsIndexPage(specs));
+for (const spec of specs) {
+	pages.push(specPage(spec, specSlugs));
+}
+
 pages.push(rulesPage(plannedRules));
 pages.push(roadmapPage(productGripes, plannedRules));
 pages.push(await releaseNotesPage());
@@ -1199,10 +1570,15 @@ const groupRank = (page: Page): number =>
 		? -2
 		: page.url === "/docs/"
 			? -1
-			: GROUPS.indexOf(page.group as Group);
+			: page.url === "/specs/"
+				? GROUPS.length
+				: page.spec !== undefined
+					? GROUPS.length + 1
+					: GROUPS.indexOf(page.group as Group);
 pages.sort((a, b) => groupRank(a) - groupRank(b) || a.order - b.order);
 
 checkGrouping(pages);
+checkPlaceholders(pages);
 await checkLinks(pages);
 
 await rm(outDir, { recursive: true, force: true });
@@ -1235,5 +1611,5 @@ console.log(
 	`[site] ${pages.length} pages (+${pages.length} markdown) → ${outDir}`,
 );
 console.log(
-	`[site] ${RULES.length} rules, ${productGripes.length} gripes, ${plannedRules.length} planned rules`,
+	`[site] ${RULES.length} rules, ${productGripes.length} gripes, ${plannedRules.length} planned rules, ${specs.length} specs`,
 );

@@ -20,8 +20,8 @@ helm install datagripe oci://ghcr.io/datagripe/charts/datagripe \
 
 The chart is an OCI artifact published beside the image, so there is no
 `helm repo add` and no `index.yaml` to go stale. Its version is
-DataGripe's version: `--version 0.0.6` is the chart that installs
-`0.0.6`.
+DataGripe's version: `--version <!--dg:version-->` is the chart that
+installs `<!--dg:version-->`.
 
 ### A managed database
 

@@ -222,12 +222,6 @@ pre .c,
 	}
 }
 
-.lat h3 + p {
-	color: var(--dg-ink-dim);
-	font-size: 14.5px;
-	margin-top: var(--dg-space-2);
-}
-
 /* ---- header ------------------------------------------------------ */
 
 header {
@@ -685,8 +679,12 @@ canvas {
 
 /* ---- generic section --------------------------------------------- */
 
+/* `padding-top`, not the `padding: 64px 0 0` shorthand: every section
+   on this site also carries `.shell`, whose horizontal padding is the
+   only thing keeping text off the edge of a phone. The shorthand won on
+   source order and set it to zero. */
 .sec {
-	padding: 64px 0 0;
+	padding-top: 64px;
 }
 
 .sec-head {
@@ -945,6 +943,44 @@ canvas {
 	border-left-color: var(--dg-green);
 }
 
+/* Below the two-rail breakpoint the documentation is one column, and
+   two things have to change with it.
+   
+   The padding is `.shell`'s and not also the cell's: 24px outside plus
+   26px inside is 13% of a 390px screen gone on each side. And the
+   lattice borders are removed, because a hairline down the edge of the
+   viewport is a rendering artefact rather than structure.
+   
+   The rails move below the article. In source order the site rail comes
+   first, which is right when it is a column beside the text and wrong
+   when it is twenty-one links stacked on top of it — nobody arriving at
+   a page wants to scroll past the whole table of contents to reach the
+   first sentence. */
+@media (max-width: 999px) {
+	.docs {
+		border-left: 0;
+	}
+
+	.docs > * {
+		border-right: 0;
+		padding: 26px 0;
+	}
+
+	.docs-body {
+		order: 1;
+		padding-top: 4px;
+	}
+
+	.docs-toc {
+		order: 2;
+	}
+
+	.docs-rail {
+		order: 3;
+		border-bottom: 0;
+	}
+}
+
 @media (min-width: 1000px) {
 	.docs-rail,
 	.docs-toc {
@@ -955,6 +991,96 @@ canvas {
 		overflow-y: auto;
 		border-bottom: 0;
 	}
+}
+
+/* ---- specs ------------------------------------------------------- */
+
+/* Status and phase as a strip above the spec, rather than the two bold
+   lines the markdown file carries. In the repository those lines are
+   prose; on a page they are metadata and should read as such. */
+.spec-meta {
+	display: grid;
+	grid-template-columns: 1fr;
+	border: var(--dg-border) solid var(--dg-rule);
+	border-radius: var(--dg-radius-input);
+	margin: 0 0 var(--dg-space-5);
+	overflow: hidden;
+}
+
+@media (min-width: 640px) {
+	.spec-meta {
+		grid-template-columns: auto auto 1fr;
+	}
+}
+
+.spec-meta > div {
+	padding: 10px 14px;
+	border-bottom: var(--dg-border) solid var(--dg-rule);
+	min-width: 0;
+}
+
+.spec-meta > div:last-child {
+	border-bottom: 0;
+}
+
+@media (min-width: 640px) {
+	.spec-meta > div {
+		border-bottom: 0;
+		border-right: var(--dg-border) solid var(--dg-rule);
+	}
+
+	.spec-meta > div:last-child {
+		border-right: 0;
+	}
+}
+
+.spec-meta dt {
+	font-family: var(--dg-font-mono);
+	font-size: 10.5px;
+	color: var(--dg-ink-mute);
+	margin-bottom: 3px;
+}
+
+.spec-meta dd {
+	font-family: var(--dg-font-mono);
+	font-size: 12.5px;
+	color: var(--dg-ink-dim);
+	margin: 0;
+	overflow-wrap: anywhere;
+}
+
+/* Violet: the selection accent, and the one that is not a severity. This
+   note is context, not a warning — a magenta box at the top of every
+   spec would spend the alarm colour on eighteen pages that are fine. */
+.callout {
+	border-left: var(--dg-border-accent-row) solid var(--dg-violet);
+	background: var(--dg-sev-warning-bg);
+	padding: 13px 16px;
+	margin: 0 0 var(--dg-space-6);
+}
+
+.callout p {
+	font-size: 14px;
+	line-height: var(--dg-lh-gripe);
+	color: var(--dg-ink-dim);
+	margin: 0;
+	max-width: 74ch;
+}
+
+.callout strong {
+	color: var(--dg-ink);
+	font-weight: 500;
+}
+
+/* The specs index reuses the lattice; its cells are links with a lede. */
+.lat h3 a {
+	color: var(--dg-green);
+}
+
+.lat h3 + p {
+	color: var(--dg-ink-dim);
+	font-size: 14.5px;
+	margin-top: var(--dg-space-2);
 }
 
 /* ---- prose ------------------------------------------------------- */

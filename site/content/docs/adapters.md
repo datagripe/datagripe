@@ -129,5 +129,5 @@ it.
 
 - [What it can do](/docs/features/) — the surface all four share.
 - [The rules](/rules/) — which rules are dialect-gated.
-- [`docs/spec/adapters.md`](https://github.com/datagripe/datagripe/blob/main/docs/spec/adapters.md) —
-  the specification, in the repository.
+- [The adapters spec](/specs/adapters/) — the capability model, the
+  driver quirks, and the open questions.

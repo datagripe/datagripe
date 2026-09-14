@@ -86,8 +86,14 @@ gripe costs more trust than a missing one.
 
 ## Building it rather than using it
 
-These pages are for people using DataGripe. The repository's own
+These pages are for people using DataGripe. The
+[specifications](/specs/) are for people building it —
+<!--dg:specCountWord--> of them, one per subsystem, recording what each does, what it deliberately does
+not, and which alternatives were rejected and why. They are engineering
+documents and read like it.
+
+The rest of the repository's
 [`docs/`](https://github.com/datagripe/datagripe/tree/main/docs) holds
-the specs, the ADRs and the brand system, and
+the ADRs and the brand system, and
 [`roadmap.md`](https://github.com/datagripe/datagripe/blob/main/roadmap.md)
 is where the roadmap page above comes from.

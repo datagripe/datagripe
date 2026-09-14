@@ -1,5 +1,50 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **The specifications are published.** `docs/spec` — eighteen documents
+  recording what each subsystem does, what it deliberately does not, and
+  which alternatives were rejected and why — is now `/specs/` on
+  datagripe.com, with a Markdown twin for each and a **Specs** entry in
+  the top nav beside Docs. Pages that used to send you to GitHub for the
+  design now link to the page.
+
+  Specs cross-reference each other as backticked paths, eighty-eight
+  times across the set, which is a link inside a repository and a dead
+  end on a website; the build turns every one into a real link — to the
+  spec's page where it names a spec, and to GitHub where it does not.
+  Each page carries the spec's own status and phase as a strip, and a
+  note saying it is an engineering document, because publishing a spec
+  does not make it user documentation and a reader should not have to
+  infer that from the tone halfway down.
+
+  The build now insists every spec has a heading, a status, a phase and
+  a goal, and fails on one that does not; the goal's first sentence is
+  the page's description and its `llms.txt` entry. `docs/adr` is
+  deliberately not published — that is a separate decision and it has
+  not been made.
+
+### Fixed
+
+- **Every page but the landing one was flush against the edge of a
+  phone.** Sections carry `.shell` for their horizontal padding, and
+  `.sec`'s `padding: 64px 0 0` shorthand won on source order and set it
+  to zero. The hero escaped because it sets its own.
+
+  The documentation layout had the opposite problem and a worse one: it
+  paid 24px of shell padding *and* 26px of cell padding, 13% of a 390px
+  screen gone on each side, and it opened with twenty-one navigation
+  links above the title. Below the two-rail breakpoint the body now
+  comes first, the rails follow it, and the lattice borders come off —
+  a hairline down the edge of the viewport is an artefact, not
+  structure.
+
+- **The site no longer states the version by hand.** Two pages said
+  `--version 0.0.6` on the day 0.0.7 shipped. The Helm examples are
+  substituted from `package.json` like every other count on the site.
+
 ## 0.0.7 — 2026-09-14
 
 ### Added

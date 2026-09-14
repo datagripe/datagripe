@@ -13,14 +13,14 @@ site.js                   header, drawer, filters, scrollspy, hero canvas
 `bun run build:site` renders those into `site/dist/` —
 `scripts/site/build.ts`, one file. The header, the navigation and the
 footer live there rather than in each page, which is the reason there is
-a build: twenty-three pages cannot be kept in step by hand, and a nav
+a build: forty-two pages cannot be kept in step by hand, and a nav
 that disagrees with itself is worse than no nav.
 
 Deliberately not a static-site generator. No theme to override, no
 plugin API, and the markup it emits is the markup that was written by
 hand — which is what keeps the brand intact rather than reskinned.
 
-## Four pages nobody writes
+## Pages nobody writes
 
 These are rendered from the repository. Do not write a second copy of
 any of them into `content/`:
@@ -29,17 +29,22 @@ any of them into `content/`:
 | --- | --- |
 | `/rules/` | `packages/gripes` — `RULES` and `MESSAGES` |
 | `/roadmap/` | `roadmap.md`, "Gripes about Datagripe" |
+| `/specs/`, `/specs/<slug>/` | `docs/spec/*.md`, all eighteen, verbatim |
 | `/docs/release-notes/` | `CHANGELOG.md` |
 | `/docs/adapters/` capability table | `ADAPTER_CAPABILITIES`, via `{{adapters}}` |
 
-The landing page's rule counts are substituted too — `{{ruleCount}}`,
-`{{plannedCount}}`, and `{{ruleCountWord}}` / `{{ruleCountWordCap}}` for
-the spelled-out forms a headline wants.
+Counts and the version are substituted too, in any page: write
+`<!--dg:ruleCount-->` or `<!--dg:version-->` rather than the value. The
+names live in `COUNTS` in the build — `ruleCount`, `plannedCount`,
+`specCount`, `version`, and the `…Word` / `…WordCap` forms a headline
+wants. An unknown name fails the build, and so does a placeholder left
+on a page that nothing substituted.
 
 This is not gold-plating. This site said "eleven rules" in three places
-on the day the catalogue reached eighteen, which is how a number goes
-stale everywhere at once, and is exactly the drift a build can prevent
-and a reviewer cannot.
+on the day the catalogue reached eighteen, and `--version 0.0.6` in two
+more on the day 0.0.7 shipped. That is how a number goes stale
+everywhere at once, and it is exactly the drift a build can prevent and
+a reviewer cannot.
 
 ## What the build refuses to publish
 
@@ -57,7 +62,10 @@ that fails, rather than publishes, on:
   slug, or a status outside the five;
 - **a rule listed as "not built yet" that has quietly shipped**;
 - a rule in the catalogue with no wording;
-- a `{{placeholder}}` on the landing page that nothing substitutes;
+- a spec without an `# Spec — …` heading, a `**Status:**`, a
+  `**Phase:**` or a `## Goal`;
+- a `<!--dg:…-->` placeholder with no value behind it, or one left on
+  a page nothing substituted;
 - an `index.html` with no `data-spy` sections for the section bar.
 
 CI runs it on every pull request for that reason alone.
@@ -85,7 +93,37 @@ add a page to the sidebar and forget the footer.
 (`/docs/features/`) and are checked.
 
 These pages are for people using DataGripe. `docs/` at the repository
-root is for people building it — specs, ADRs and RFCs — and stays there.
+root is for people building it — and its specs are published too, but
+separately and under their own rail; see below.
+
+## The specs
+
+`docs/spec/*.md` is published verbatim at `/specs/<slug>/`, with the
+same Markdown twin every other page gets. Nothing is rewritten except
+the links.
+
+Specs reference each other as backticked paths — `` `docs/spec/domains.md` ``,
+eighty-eight times across the set — and never as markdown links, because
+inside a repository the path *is* the link. On a website it is a dead
+end, so the build turns every one that names a spec into a link to that
+spec's page, and every one that names anything else into a link to
+GitHub. It rewrites the rendered HTML rather than the markdown, so it
+touches exactly the inline-code spans marked produced and not an
+identical run of characters inside a fenced block.
+
+Each page gets a status/phase/source strip built from the spec's own
+header, and a note saying it is an engineering document — because
+publishing a spec does not make it user documentation, and a reader
+should not have to work that out from the tone halfway down.
+
+The build insists every spec has an `# Spec — Title`, a `**Status:**`,
+a `**Phase:**` and a `## Goal`. The goal's first sentence becomes the
+page description and the `llms.txt` entry. All eighteen have that shape
+today; one that grows a different one is worth failing a build over,
+because the alternative is publishing it with an empty description.
+
+`docs/adr/` is **not** published. That was a separate decision and it
+has not been made.
 
 ## Markdown, for agents
 

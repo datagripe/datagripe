@@ -9,8 +9,8 @@ DataGripe holds credentials for other people's databases. That is the
 threat model, and most of what follows comes from taking it seriously
 rather than from a checklist.
 
-This page is what an operator needs. The full design is in
-[`docs/spec/auth-and-hardening.md`](https://github.com/datagripe/datagripe/blob/main/docs/spec/auth-and-hardening.md),
+This page is what an operator needs. The full design is in the
+[authentication and hardening spec](/specs/auth-and-hardening/),
 and the production checklist is in
 [`docs/operations.md`](https://github.com/datagripe/datagripe/blob/main/docs/operations.md).
 

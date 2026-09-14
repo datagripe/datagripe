@@ -130,5 +130,5 @@ quiet.
 - [Why it complains](/docs/why-it-complains/) — what a rule has to earn.
 - [The rules](/rules/) — the current catalogue.
 - [Roadmap](/roadmap/) — rules written down and not built.
-- [`docs/spec/gripes.md`](https://github.com/datagripe/datagripe/blob/main/docs/spec/gripes.md) —
-  the full specification, in the repository.
+- [The gripes engine spec](/specs/gripes/) — the full design, including
+  the parts that are not built.

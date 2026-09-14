@@ -14,14 +14,16 @@ on:
       - "site/**"
       - "scripts/site/**"
       - ".github/workflows/pages.yml"
-      # Four pages are rendered from the repository rather than written
-      # in site/content, so a change to any of these changes the site
-      # without touching site/: the rules page comes from the gripes
+      # Several pages are rendered from the repository rather than
+      # written in site/content, so a change to any of these changes the
+      # site without touching site/: the rules page comes from the gripes
       # catalogue, the roadmap page from roadmap.md, the release notes
-      # from the changelog, and the adapters table from the contracts.
-      # Leaving these out means shipping a rule the website denies.
+      # from the changelog, the specs from docs/spec, and the adapters
+      # table from the contracts. Leaving these out means shipping a rule
+      # the website denies, or a spec it still describes as planned.
       - "roadmap.md"
       - "CHANGELOG.md"
+      - "docs/spec/**"
       - "packages/gripes/**"
       - "packages/contracts/src/adapters.ts"
   # Called by release.yml, so a release always lands a fresh site
