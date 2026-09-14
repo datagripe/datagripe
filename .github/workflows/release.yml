@@ -148,12 +148,17 @@ jobs:
           bun-version: "1.4.0"
 
       # Node 24 for npm 11, which is what understands the OIDC exchange
-      # below; the registry-url is what writes the .npmrc that publish
-      # reads. Node here is only the publisher — DataGripe runs on Bun.
+      # below. Node here is only the publisher — DataGripe runs on Bun.
+      #
+      # Deliberately no `registry-url`: that input writes an .npmrc
+      # containing `_authToken=${NODE_AUTH_TOKEN}` and exports a
+      # placeholder for it, and npm that finds a credential configured
+      # uses it rather than exchanging the OIDC token. The placeholder is
+      # not a credential, so the publish 404s with no hint that the
+      # trusted publishing it was told to do never happened.
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
-          registry-url: https://registry.npmjs.org
 
       # Trusted publishing needs 11.5.1 or later and the runner's bundled
       # npm is whatever Node shipped with. Pinned rather than @latest so a

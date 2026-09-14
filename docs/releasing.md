@@ -63,6 +63,14 @@ The workflow filename is matched exactly, so **renaming
 publisher is updated to match. The failure is a 403 at the publish step,
 which does not obviously say that, hence this paragraph.
 
+The other way to break it is to give `actions/setup-node` a
+`registry-url`. That input writes an `.npmrc` with
+`_authToken=${NODE_AUTH_TOKEN}` and exports a placeholder value for it —
+and npm that finds a credential configured uses it instead of exchanging
+the OIDC token. The publish then 404s, with nothing in the output saying
+that trusted publishing never happened. The job sets up Node and no
+registry for that reason.
+
 Two npm-side settings are worth checking while you are there: the
 `@datagripe` scope's packages must be **public** (the workflow passes
 `--access public`, which only works if the org allows it), and if the
