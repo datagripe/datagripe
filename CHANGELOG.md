@@ -44,6 +44,20 @@
   app runs over that socket, so a mismatch is not a degradation but an
   app that loads and then does nothing.
 
+- **`bunx @datagripe/cli personal`** — the shape somebody actually wants
+  when they are trying DataGripe on their own machine: its own database,
+  no accounts, and loopback only, because a DataGripe with no accounts
+  has no business answering the network it is plugged into. `HOST` is the
+  new setting under that; it still defaults to every interface, which is
+  what a container and a shared deployment need.
+
+  `personal` pins the shape rather than defaulting to it, and that is the
+  reason for the word. Most developers have an `APP_DATABASE_URL`
+  exported in their shell; without `personal` it is taken as an
+  instruction to run a shared deployment, and DataGripe stops asking for
+  two secrets nobody meant to need. Asking for the personal one should
+  not depend on what else is in your environment.
+
 - **`datagripe migrate`** as a second entry point, for the deployments
   that do not migrate themselves. The compose stack runs it before the
   app starts, the Helm chart as a pre-install hook, the plain manifests

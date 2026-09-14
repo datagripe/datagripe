@@ -309,6 +309,7 @@ const passkeys = createPasskeyRoutes({
 
 const server = serve<SocketData>({
 	port: config.PORT,
+	hostname: config.HOST,
 
 	routes: {
 		// Liveness only — no dependency details (basic.md §9).
@@ -465,6 +466,7 @@ hot.disposers.push(() => {
 });
 
 log.info("server listening", {
+	host: server.hostname,
 	port: server.port,
 	env: config.NODE_ENV,
 	predefinedConnections: predefined.size,

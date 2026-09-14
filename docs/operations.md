@@ -11,7 +11,7 @@ Four, and they run the same server with the same environment variables —
 
 | | State lives in | Accounts |
 | --- | --- | --- |
-| `bunx @datagripe/cli` | an embedded cluster under the data dir | off |
+| `bunx @datagripe/cli personal` | an embedded cluster under the data dir | off |
 | `docker run … -v datagripe:/data` | the same, on a volume | off |
 | `deploy/compose.yaml` | a PostgreSQL container beside it | on |
 | `deploy/k8s`, `deploy/helm/datagripe` | a StatefulSet or a managed database | on |
@@ -29,6 +29,10 @@ default that can be right everywhere:
   against it, and everything in the app runs over that socket — so a
   mismatch is not a degradation, it is an app that loads and then does
   nothing. It is the first thing to check.
+- **`HOST`** is the interface to listen on, and every one of them by
+  default — which is what a container needs and what a deployment with
+  accounts can afford. `datagripe personal` sets loopback instead,
+  because that shape has none.
 - **`NODE_ENV=production`** puts `Secure` on the session cookie. Correct
   behind TLS and wrong in front of plain http, where the browser will
   not send the cookie back and sign-in will not stick. Set it when

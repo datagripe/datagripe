@@ -287,6 +287,7 @@ beforeAll(async () => {
 	const config = {
 		NODE_ENV: "test",
 		PORT: 3001,
+		HOST: "0.0.0.0",
 		WEB_ORIGIN: ORIGIN,
 		DATABASE_MODE: "external",
 		APP_DATABASE_URL: "",

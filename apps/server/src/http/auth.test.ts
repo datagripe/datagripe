@@ -80,6 +80,7 @@ beforeAll(async () => {
 		config: {
 			NODE_ENV: "test",
 			PORT: 3001,
+			HOST: "0.0.0.0",
 			WEB_ORIGIN: "http://localhost:5173",
 			DATABASE_MODE: "external",
 			APP_DATABASE_URL: "",

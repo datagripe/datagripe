@@ -11,13 +11,14 @@ A web-based database IDE inspired by DataGrip. Bun + React 19 + TypeScript.
 No install at all:
 
 ```bash
-bunx @datagripe/cli              # or: npx @datagripe/cli
+bunx @datagripe/cli personal     # or: npx @datagripe/cli personal
 ```
 
 DataGripe on <http://localhost:3001>, with its own PostgreSQL under
-`~/.local/share/datagripe` and no accounts to create. `--port` and
-`--data-dir` are the only flags; everything else is an environment
-variable.
+`~/.local/share/datagripe`, no accounts to create, and loopback only.
+`personal` pins that shape rather than defaulting to it — without the
+word, an `APP_DATABASE_URL` already in your shell is taken as an
+instruction to run a shared deployment instead.
 
 From a checkout — same thing, with the web app on Vite:
 

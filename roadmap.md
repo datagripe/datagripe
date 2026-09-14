@@ -370,6 +370,10 @@ unable to change a row no matter what it is asked to run.
       no install, no configuration and no accounts. The launcher runs
       under plain node so `npx` works too, finding a Bun to hand the
       server to and installing one only if there is none
+- [x] `datagripe personal` — its own database, no accounts, loopback
+      only, and pinned rather than defaulted so an `APP_DATABASE_URL` in
+      the shell cannot turn it into a shared deployment that stops
+      asking for secrets. `HOST` is the new setting under it
 - [x] `datagripe migrate` as a second entry point, for the deployments
       that do not migrate themselves
 - [x] `ghcr.io/datagripe/datagripe`, multi-arch, non-root, with the

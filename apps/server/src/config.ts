@@ -8,6 +8,14 @@ const envSchema = z.object({
 		.enum(["development", "test", "production"])
 		.default("development"),
 	PORT: z.coerce.number().int().min(1).max(65535).default(3001),
+	/**
+	 * The interface to listen on. Every one of them by default, which is
+	 * what a container and a shared deployment need and what this has
+	 * always done. `datagripe personal` sets loopback instead: that shape
+	 * has no accounts, and a server with no accounts has no business
+	 * answering the network it happens to be plugged into.
+	 */
+	HOST: z.string().min(1).default("0.0.0.0"),
 	WEB_ORIGIN: z.url().default("http://localhost:5173"),
 	/** external: run against APP_DATABASE_URL. embedded: start a managed
 	 * PostgreSQL cluster. Default: external when APP_DATABASE_URL is set,

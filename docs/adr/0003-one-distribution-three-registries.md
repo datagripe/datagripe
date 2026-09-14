@@ -53,6 +53,13 @@ trusted publishing — the workflow exchanges its OIDC token for a
 short-lived npm one — and GHCR through the job's own `GITHUB_TOKEN`.
 There is no `NPM_TOKEN` to leak, rotate, or forget to rotate.
 
+**Named shapes, not inferred ones.** `datagripe personal` pins embedded
+mode, no accounts, and a loopback bind, rather than arriving at them by
+default. The bare command still reads the environment, which is what a
+deployment wants; the named one deliberately does not, because the
+environment a person types `personal` into usually has an
+`APP_DATABASE_URL` in it that they did not mean to aim at DataGripe.
+
 ## Consequences
 
 - A chart-only fix waits for the next DataGripe release. Acceptable: the

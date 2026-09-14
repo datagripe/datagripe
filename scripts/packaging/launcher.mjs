@@ -20,14 +20,22 @@ import { fileURLToPath } from "node:url";
 const require = createRequire(import.meta.url);
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const pkg = require(path.join(root, "package.json"));
+const server = path.join(root, "apps", "server", "src", "index.js");
 const entries = {
-	serve: path.join(root, "apps", "server", "src", "index.js"),
+	serve: server,
+	personal: server,
 	migrate: path.join(root, "apps", "server", "src", "migrate.js"),
 };
 
 const USAGE = `DataGripe ${pkg.version} — a web-based database IDE.
 
-  datagripe [options]          Start the server and serve the web app
+  datagripe personal           Just for you, on this machine: its own
+                               database, no accounts, and it answers
+                               nothing but localhost. Ignores any
+                               database configuration in the environment.
+  datagripe [options]          Start the server and serve the web app,
+                               taking its configuration from the
+                               environment.
   datagripe migrate            Apply pending migrations to APP_DATABASE_URL
                                and exit. Only for a shared deployment:
                                the embedded database migrates itself at
@@ -42,7 +50,8 @@ Options:
   -h, --help            Print this help and exit
 
 With no configuration DataGripe starts its own PostgreSQL cluster under
-the data directory and runs direct-in, with no accounts. Point
+the data directory and runs direct-in, with no accounts — which is what
+\`personal\` pins rather than merely defaults to. Point
 APP_DATABASE_URL at a PostgreSQL you manage to switch to a shared
 deployment with accounts and sign-in; that mode also needs
 CONNECTION_ENCRYPTION_KEY and SESSION_SECRET, and migrations run at
@@ -56,7 +65,7 @@ function parseArgs(argv) {
 	const options = { command: "serve" };
 	// One subcommand, and only in first position, so that a future
 	// `datagripe migrate --to 0021` reads the way it should.
-	if (argv[0] === "migrate" || argv[0] === "serve") {
+	if (argv[0] === "migrate" || argv[0] === "serve" || argv[0] === "personal") {
 		options.command = argv[0];
 		argv = argv.slice(1);
 	}
@@ -146,10 +155,8 @@ function defaultDataDir() {
  * A variable already in the environment always wins: this fills gaps, it
  * does not take the configuration over.
  */
-function serverEnv(options) {
+function serverEnv(options, port, dataDir) {
 	const env = { ...process.env };
-	const port = options.port ?? env.PORT ?? "3001";
-	const dataDir = options.dataDir ?? env.DATAGRIPE_DATA_DIR ?? defaultDataDir();
 	const defaults = {
 		PORT: port,
 		// One origin, because the server is also the web server here. The
@@ -166,6 +173,26 @@ function serverEnv(options) {
 			env[key] = value;
 		}
 	}
+
+	if (options.command === "personal") {
+		// Pinned rather than defaulted, and that is the whole point of
+		// naming the shape: an APP_DATABASE_URL left in the environment —
+		// which is most developers' environment — would otherwise turn
+		// `personal` into a shared deployment that stops on two secrets it
+		// has not got. Asking for the personal one should not depend on
+		// what else is exported in the shell.
+		env.DATABASE_MODE = "embedded";
+		env.AUTH_DISABLED = "true";
+		delete env.APP_DATABASE_URL;
+		// Defaulted rather than pinned, because the reasoning inverts: no
+		// shell exports HOST by accident, so one that does means it. A
+		// server with no accounts should not answer the network it is
+		// plugged into, and by default this one does not.
+		if (env.HOST === undefined || env.HOST === "") {
+			env.HOST = "127.0.0.1";
+		}
+	}
+
 	return env;
 }
 
@@ -280,7 +307,24 @@ function hydratePostgresBinaries() {
 
 const options = parseArgs(process.argv.slice(2));
 const entry = entries[options.command];
-const env = serverEnv(options);
+const port = options.port ?? process.env.PORT ?? "3001";
+const dataDir =
+	options.dataDir ?? process.env.DATAGRIPE_DATA_DIR ?? defaultDataDir();
+const env = serverEnv(options, port, dataDir);
+
+// The server logs JSON, which is right for a deployment and no way to
+// greet somebody who typed `personal`. Printed before it starts because
+// the first run initialises a PostgreSQL cluster and that is the part
+// where a silent terminal looks like a hang.
+if (options.command === "personal") {
+	process.stdout.write(
+		`\nDataGripe ${pkg.version} — personal\n\n` +
+			`  ${env.WEB_ORIGIN}\n` +
+			`  ${dataDir}\n\n` +
+			"  No accounts, and nothing but this machine can reach it.\n" +
+			"  The first run sets up a database; give it half a minute.\n\n",
+	);
+}
 
 // Only when an embedded cluster is what is about to start — the same
 // rule `config.ts` uses to choose the mode. A deployment with its own

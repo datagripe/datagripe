@@ -15,12 +15,14 @@ name: datagripe
 
 x-datagripe: &datagripe
   image: ghcr.io/datagripe/datagripe:${DATAGRIPE_VERSION:-latest}
-  # So that `docker compose up` works from a checkout with nothing
-  # published yet. `docker compose pull` fetches the released image
-  # instead, and once one is in the local store compose stops building.
-  build:
-    context: ..
+  # No `build:` — this file is meant to work on its own, downloaded next
+  # to a .env and nothing else. To run your own build instead, `docker
+  # build -t ghcr.io/datagripe/datagripe:latest .` from a checkout first;
+  # compose uses whatever is in the local store before it pulls.
   environment:
+    # POSTGRES_PASSWORD goes into a URL here, so it has to be URL-safe —
+    # a `/` or a `+` from `openssl rand -base64` ends the password early
+    # and the app cannot connect. .env.example generates hex for this one.
     APP_DATABASE_URL: postgres://datagripe:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}@postgres:5432/datagripe
     # Connection passwords are encrypted at rest with this. Lose it and
     # the datasources in the database cannot be opened again — back it up

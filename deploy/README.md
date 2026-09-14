@@ -6,7 +6,7 @@ same environment variables, and are built from the same
 
 | | For |
 | --- | --- |
-| `bunx @datagripe/cli` | One person, one machine, no container runtime |
+| `bunx @datagripe/cli personal` | One person, one machine, no container runtime |
 | `docker run` | One container, no database to operate |
 | [compose.yaml](compose.yaml) | A small shared deployment |
 | [k8s/](k8s) · [helm/](helm/datagripe) | A cluster |
@@ -14,12 +14,13 @@ same environment variables, and are built from the same
 ## bunx / npx
 
 ```bash
-bunx @datagripe/cli        # or: npx @datagripe/cli
+bunx @datagripe/cli personal      # or: npx @datagripe/cli personal
 ```
 
 DataGripe on <http://localhost:3001>, with its own PostgreSQL under
-`~/.local/share/datagripe` and no accounts to create. Nothing to
-configure.
+`~/.local/share/datagripe`, no accounts to create, and loopback only.
+Nothing to configure — and nothing in your environment can reconfigure
+it, which is what `personal` means over the bare command.
 
 ## docker run
 

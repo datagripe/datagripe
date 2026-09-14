@@ -163,21 +163,50 @@
 
 	<section>
 		<h2>Run it in about twenty seconds</h2>
-		<p class="note">No Docker, no accounts, no configuration. The server
-		starts its own PostgreSQL and opens without a login.</p>
-<pre><span class="c"># requires bun 1.4</span>
-git clone https://github.com/datagripe/datagripe
-cd datagripe
-bun install
-bun run dev        <span class="c"># web on :5173</span></pre>
+		<p class="note">Nothing to install, no Docker, no accounts, no
+		configuration. It starts its own PostgreSQL, opens without a login,
+		and answers nothing but this machine.</p>
+<pre>bunx @datagripe/cli personal   <span class="c"># or: npx @datagripe/cli personal</span></pre>
+		<p class="note" style="padding-top:14px">Then open
+		<code>localhost:3001</code>. Your connections and files live in
+		<code>~/.local/share/datagripe</code> and are still there next time,
+		wherever you run the command from. The <code>npx</code> version works
+		with no Bun on the machine — it fetches one, because the server runs
+		on it.</p>
 		<p class="note" style="padding-top:14px">Or download the desktop app
-		above — same thing in a window, with its own database underneath. The
-		web app also installs as a PWA.</p>
+		above — the same thing in a window, with its own database underneath.
+		The web app also installs as a PWA.</p>
+	</section>
+
+	<section>
+		<h2>Or run it for everyone else</h2>
+		<p class="note">The same server, a PostgreSQL you own, and accounts
+		switched on. The first person to open it creates the first account;
+		after that, signup is closed until you say otherwise.</p>
+<pre><span class="c"># one container, its own database, nothing else to run</span>
+docker run -p 3001:3001 -v datagripe:/data ghcr.io/datagripe/datagripe
+
+<span class="c"># compose — the app, a Postgres, and the migration that goes first</span>
+curl -O https://raw.githubusercontent.com/datagripe/datagripe/main/deploy/compose.yaml
+curl -o .env https://raw.githubusercontent.com/datagripe/datagripe/main/deploy/.env.example
+$EDITOR .env   <span class="c"># three secrets, with the commands to generate them</span>
+docker compose up -d
+
+<span class="c"># kubernetes — the chart is the URL. no helm repo add, no index.yaml</span>
+helm install datagripe oci://ghcr.io/datagripe/charts/datagripe \
+  --set webOrigin=https://datagripe.example.com</pre>
+		<p class="note" style="padding-top:14px">Plain manifests too, if you
+		would rather read a deployment than configure one.
+		<a href="https://github.com/datagripe/datagripe/tree/main/deploy">deploy/</a>
+		has all four, and the one setting nothing can guess for you:
+		<code>WEB_ORIGIN</code>, the exact origin browsers use. Everything in
+		the app runs over a websocket that checks it, so a deployment that
+		loads and then sits there is almost always that.</p>
 	</section>
 
 	<section class="mascot-section">
 		<img class="section-mascot" src="mascot/oh-my.svg" alt="" width="514" height="534">
-		<h2>What 0.0.1 means</h2>
+		<h2>What a 0.0.x means</h2>
 		<p class="note">It works and it is tested. Nothing in it is promised
 		to stay put, and these are the holes rather than a roadmap:</p>
 		<ul class="missing">
