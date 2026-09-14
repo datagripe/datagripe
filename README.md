@@ -104,9 +104,16 @@ registry setup.
 
 - [brand/](brand) — the shipped brand assets (app icon, mascot), copied
   into `apps/` and `site/` by `bun run sync:brand`
+- [AGENTS.md](AGENTS.md) — conventions for changing this repository,
+  including the rule that a change to behaviour is a change to
+  datagripe.com in the same commit
 - [site/](site) — datagripe.com: the landing page and the user
-  documentation, rendered from markdown and deployed to GitHub Pages.
-  User-facing; `docs/` below is for people building DataGripe
+  documentation, deployed to GitHub Pages. User-facing; `docs/` below is
+  for people building DataGripe. Four of its pages — the rules, the
+  roadmap, the release notes and the adapter capability table — are
+  rendered from this repository rather than written, so they cannot
+  describe a version that does not exist. Every page is also served as
+  Markdown for agents, indexed in `/llms.txt`
 - [deploy/](deploy) — compose, Kubernetes manifests, Helm chart
 - [roadmap.md](roadmap.md) — phases, progress, scheduling
 - [docs/initial_idea.md](docs/initial_idea.md) — original engineering handoff
@@ -120,4 +127,5 @@ registry setup.
 - [docs/rfc/](docs/rfc/) — proposals under discussion
 
 Documentation is updated in the same change as the behavior it describes;
-see [docs/README.md](docs/README.md) for conventions.
+see [docs/README.md](docs/README.md) for conventions and
+[AGENTS.md](AGENTS.md) for what else that change has to touch.

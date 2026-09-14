@@ -1,19 +1,37 @@
-/* Datagripe site. Tokens come from docs/brand/tokens.css unchanged, so
-   the site and the app cannot drift apart on colour or type.
-
-   Two brand rules bind here in particular: Space Grotesk is the display
-   face and appears nowhere in the application, and there is no motion.
-   Motion in Datagripe means the database is busy, and that meaning only
-   survives if it is never spent on decoration. */
+/* Datagripe site.
+ *
+ * Tokens come from docs/brand/tokens.css unchanged, so the site and the
+ * app cannot drift apart on colour or type. Every value below that looks
+ * like a colour is a var(); the literals here are geometry.
+ *
+ * Two brand rules bind in particular. Space Grotesk is the display face
+ * and appears nowhere in the application. And motion means the database
+ * is busy — the brand edge under the header is therefore `is-idle` and
+ * stays still, because there is no database on this page.
+ *
+ * The one exception is the hero canvas, which is a joke about hero
+ * canvases and is documented as such in brand-system.md "Motion".
+ */
 
 @import url("tokens.css");
 
 @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap");
 
+:root {
+	--shell: 1440px;
+	--bar: 64px;
+	--bar-tight: 52px;
+}
+
 *,
 *::before,
 *::after {
 	box-sizing: border-box;
+}
+
+html {
+	scroll-behavior: smooth;
+	scroll-padding-top: calc(var(--bar) + 48px);
 }
 
 body {
@@ -26,478 +44,956 @@ body {
 	-webkit-font-smoothing: antialiased;
 }
 
-main,
-header,
-footer {
-	max-width: 880px;
+a {
+	color: inherit;
+	text-decoration: none;
+}
+
+a:focus-visible,
+button:focus-visible {
+	outline: 2px solid var(--dg-green);
+	outline-offset: 2px;
+	border-radius: 2px;
+}
+
+h1,
+h2,
+h3 {
+	font-family: var(--dg-font-display);
+	font-weight: 500;
+	letter-spacing: -0.015em;
+	margin: 0;
+}
+
+h1 {
+	font-size: clamp(34px, 5.2vw, var(--dg-fs-display));
+	line-height: var(--dg-lh-display);
+	font-weight: 700;
+}
+
+h2 {
+	font-size: clamp(23px, 2.6vw, var(--dg-fs-heading));
+	line-height: var(--dg-lh-heading);
+}
+
+h3 {
+	font-size: 17px;
+	line-height: 1.35;
+}
+
+p {
+	margin: 0;
+}
+
+.shell {
+	max-width: 960px;
 	margin: 0 auto;
 	padding: 0 24px;
 }
 
-a {
-	color: var(--dg-cyan);
-	text-decoration-color: color-mix(in srgb, var(--dg-cyan) 40%, transparent);
-	text-underline-offset: 3px;
+/* The lattice pages — landing, rules, roadmap — run to the wide shell.
+   The documentation does not: a 66ch measure inside a 1440px column is
+   a column with a desert beside it. */
+.shell.wide,
+.hero,
+.spy .in {
+	max-width: var(--shell);
 }
 
-a:hover {
-	text-decoration-color: var(--dg-cyan);
+.mono,
+.meta {
+	font-family: var(--dg-font-mono);
 }
 
+.meta {
+	font-size: var(--dg-fs-meta);
+	line-height: var(--dg-lh-meta);
+	color: var(--dg-ink-mute);
+	letter-spacing: 0.01em;
+}
+
+.lede {
+	color: var(--dg-ink-dim);
+	font-size: 17px;
+	max-width: 66ch;
+}
+
+.skip {
+	position: absolute;
+	left: -9999px;
+	top: 0;
+	background: var(--dg-green);
+	color: var(--dg-void);
+	padding: 10px 16px;
+	z-index: 100;
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-ui);
+}
+
+.skip:focus {
+	left: 0;
+}
+
+/* Code, at element level, so every class-scoped rule below is later and
+   more specific — which is what keeps this file lint-clean and, more to
+   the point, predictable to edit. */
 code {
 	font-family: var(--dg-font-mono);
 	font-size: 0.9em;
 	color: var(--dg-cyan);
 }
 
-/* ---- header ------------------------------------------------ */
-
-header {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	padding-top: 28px;
-	font-family: var(--dg-font-mono);
-	font-size: var(--dg-fs-ui);
-	color: var(--dg-ink-mute);
-}
-
-header img {
-	width: 26px;
-	height: 26px;
-}
-
-header .wordmark {
-	color: var(--dg-ink);
-	font-weight: 500;
-}
-
-header .wordmark em {
-	color: var(--dg-magenta);
-	font-style: normal;
-}
-
-header nav {
-	margin-left: auto;
-	display: flex;
-	gap: 18px;
-}
-
-/* ---- hero -------------------------------------------------- */
-
-/* `main` already supplies the horizontal padding; repeating it here
-   inset the hero 24px further than every section heading below it. */
-.hero {
-	display: flex;
-	align-items: center;
-	gap: 44px;
-	padding: 76px 0 24px;
-}
-
-.hero-copy {
-	flex: 1;
-	min-width: 0;
-}
-
-h1 {
-	margin: 0 0 18px;
-	font-family: var(--dg-font-display);
-	font-size: var(--dg-fs-display);
-	line-height: var(--dg-lh-display);
-	font-weight: 700;
-	letter-spacing: -0.02em;
-}
-
-.lede {
-	margin: 0 0 10px;
-	max-width: 40ch;
-	font-size: 20px;
-	color: var(--dg-ink-dim);
-}
-
-.hero .sub {
-	margin: 0;
-	max-width: 62ch;
-	color: var(--dg-ink-mute);
-}
-
-/* ---- mascot ------------------------------------------------ */
-
-/* The painted set (docs/brand/brand-system.md "Two asset sets, not
-   one"), copied from brand/mascot by `sync:brand`. Marketing may show more of
-   it than the app does, but one per section and never the same pose
-   twice: "you should be pleased to see it" only holds while it is rare.
-
-   Every one is decorative — the heading beside it already says what the
-   section is — so they carry an empty alt and stay out of the reading
-   order. */
-.hero-mascot {
-	flex: none;
-	width: 200px;
-	height: auto;
-}
-
-/* Floated rather than laid out, so a section keeps its existing markup
-   and the copy simply flows past the mascot. */
-.section-mascot {
-	float: right;
-	width: 104px;
-	height: auto;
-	margin: 0 0 14px 26px;
-}
-
-/* ---- download ---------------------------------------------- */
-
-.download {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 14px;
-	padding: 32px 0 8px;
-}
-
-.button {
-	display: inline-block;
-	padding: 11px 20px;
-	border: 1px solid var(--dg-green);
-	border-radius: 4px;
-	background: color-mix(in srgb, var(--dg-green) 10%, transparent);
-	color: var(--dg-green);
-	font-family: var(--dg-font-mono);
-	font-size: 14px;
-	font-weight: 500;
-	text-decoration: none;
-}
-
-.button:hover {
-	background: color-mix(in srgb, var(--dg-green) 18%, transparent);
-}
-
-.download .meta {
-	font-family: var(--dg-font-mono);
-	font-size: var(--dg-fs-ui);
-	color: var(--dg-ink-mute);
-}
-
-.platforms {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 8px 20px;
-	padding: 6px 0 0;
-	font-family: var(--dg-font-mono);
-	font-size: var(--dg-fs-ui);
-	color: var(--dg-ink-mute);
-	list-style: none;
-	margin: 0;
-}
-
-/* ---- sections ---------------------------------------------- */
-
-section {
-	padding-top: 64px;
-}
-
-h2 {
-	margin: 0 0 8px;
-	font-family: var(--dg-font-display);
-	font-size: var(--dg-fs-heading);
-	line-height: var(--dg-lh-heading);
-	font-weight: 500;
-}
-
-h2 + .note {
-	margin: 0 0 26px;
-	max-width: 64ch;
-	color: var(--dg-ink-mute);
-}
-
-/* ---- gripe rows -------------------------------------------- */
-
-/* The same treatment the application uses: a 3px severity border, a ~4%
-   tint, square corners because the border is single-sided, and a glyph
-   so meaning survives without colour. */
-.gripe {
-	display: flex;
-	gap: 11px;
-	padding: 11px 14px;
-	border-left: 3px solid;
-	margin-bottom: 10px;
-	font-size: var(--dg-fs-gripe);
-	line-height: var(--dg-lh-gripe);
-}
-
-.gripe .glyph {
-	flex: none;
-	font-size: 9px;
-	line-height: 1.9;
-}
-
-.gripe .level {
-	display: block;
-	margin-top: 4px;
-	font-family: var(--dg-font-mono);
-	font-size: 11px;
-	color: var(--dg-ink-mute);
-}
-
-.gripe-blocker {
-	border-left-color: var(--dg-sev-blocker);
-	background: var(--dg-sev-blocker-bg);
-}
-
-.gripe-blocker .glyph {
-	color: var(--dg-sev-blocker);
-}
-
-.gripe-warning {
-	border-left-color: var(--dg-sev-warning);
-	background: var(--dg-sev-warning-bg);
-}
-
-.gripe-warning .glyph {
-	color: var(--dg-sev-warning);
-}
-
-.gripe-style {
-	border-left-color: var(--dg-sev-style);
-	background: var(--dg-sev-style-bg);
-}
-
-.gripe-style .glyph {
-	color: var(--dg-sev-style);
-}
-
-/* ---- feature list ------------------------------------------ */
-
-.features {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-	gap: 26px 34px;
-	padding: 0;
-	list-style: none;
-	margin: 0;
-}
-
-.features h3 {
-	margin: 0 0 4px;
-	font-size: 15px;
-	font-weight: 500;
-}
-
-.features p {
-	margin: 0;
-	font-size: 15px;
-	color: var(--dg-ink-mute);
-}
-
-/* ---- code block -------------------------------------------- */
-
 pre {
-	margin: 0;
-	padding: 16px 18px;
-	background: var(--dg-panel);
-	border: 1px solid var(--dg-rule);
-	border-radius: 4px;
-	overflow-x: auto;
 	font-family: var(--dg-font-mono);
-	font-size: 13px;
+	font-size: var(--dg-fs-ui);
 	line-height: 1.7;
-	color: var(--dg-ink-dim);
-}
-
-pre .c {
-	color: var(--dg-syn-comment);
-}
-
-/* ---- honesty list ------------------------------------------ */
-
-.missing {
-	margin: 0;
-	padding-left: 20px;
-	color: var(--dg-ink-mute);
-}
-
-.missing li {
-	margin-bottom: 8px;
-}
-
-.missing strong {
-	color: var(--dg-ink-dim);
-	font-weight: 500;
-}
-
-/* ---- footer ------------------------------------------------ */
-
-/* Top-level, not inside `main`, so this one keeps its own horizontal
-   padding — unlike the hero, which inherits it. */
-footer {
-	margin-top: 88px;
-	padding: 22px 24px 44px;
-	border-top: 1px solid var(--dg-rule);
-	font-family: var(--dg-font-mono);
-	font-size: var(--dg-fs-ui);
-	color: var(--dg-ink-mute);
-	display: flex;
-	flex-wrap: wrap;
-	gap: 8px 20px;
-}
-
-footer .spacer {
-	margin-left: auto;
-}
-
-@media (max-width: 620px) {
-	h1 {
-		font-size: 40px;
-	}
-
-	/* Reversed, so the mascot lands above the headline rather than
-	   below the paragraph it is meant to be reacting to. */
-	.hero {
-		flex-direction: column-reverse;
-		align-items: flex-start;
-		gap: 20px;
-		padding-top: 48px;
-	}
-
-	.hero-mascot {
-		width: 132px;
-	}
-
-	.section-mascot {
-		width: 76px;
-		margin-left: 18px;
-	}
-}
-
-/* ---- documentation ----------------------------------------- */
-
-/* The landing page is one column at 880px. The docs are that column
-   again, with a navigation rail beside it — so the reading measure is
-   the same on both and the shell is the only thing that changes. */
-.docs-shell {
-	display: grid;
-	grid-template-columns: 210px minmax(0, 1fr);
-	gap: 48px;
-	max-width: 1000px;
-	margin: 0 auto;
-	padding: 0 24px;
-	align-items: start;
-}
-
-.docs-nav {
-	position: sticky;
-	top: 24px;
-	padding-top: 56px;
-	font-size: var(--dg-fs-ui);
-}
-
-.docs-nav h2 {
-	margin: 22px 0 8px;
-	font-family: var(--dg-font-mono);
-	font-size: var(--dg-fs-meta);
-	font-weight: 500;
-	text-transform: uppercase;
-	letter-spacing: 0.08em;
-	color: var(--dg-ink-faint);
-}
-
-.docs-nav ul {
-	margin: 0;
-	padding: 0;
-	list-style: none;
-}
-
-.docs-nav li {
-	margin: 0 0 3px;
-}
-
-.docs-nav a {
-	display: block;
-	padding: 3px 0;
-	color: var(--dg-ink-mute);
-	text-decoration: none;
-}
-
-.docs-nav a:hover {
+	background: var(--dg-panel);
+	border: var(--dg-border) solid var(--dg-rule);
+	border-radius: var(--dg-radius-input);
+	padding: 14px 16px;
+	overflow-x: auto;
 	color: var(--dg-ink);
+	margin: var(--dg-space-5) 0;
+	max-width: 80ch;
 }
 
-/* The severity-border treatment the application uses for the selected
-   row, so "you are here" reads the same in both places. */
-.docs-nav a[aria-current="page"] {
-	color: var(--dg-cyan);
-}
-
-.docs-nav .on-page {
-	margin: 2px 0 8px;
-	padding-left: 11px;
-	border-left: 1px solid var(--dg-rule);
-}
-
-.docs-nav .on-page a {
-	font-size: var(--dg-fs-meta);
-	color: var(--dg-ink-faint);
-}
-
-.docs-body {
-	max-width: 68ch;
-	padding: 56px 0 0;
-}
-
-.docs-body h1 {
-	margin: 0 0 10px;
-	font-family: var(--dg-font-display);
-	font-size: var(--dg-fs-display);
-	line-height: var(--dg-lh-heading);
-	font-weight: 500;
-}
-
-.docs-body > .lede {
-	margin: 0 0 40px;
-	font-size: 18px;
+/* The one token in a shell block that carries meaning — the site does
+   not grow a syntax highlighter for it. */
+pre .c,
+.cmd .c {
 	color: var(--dg-ink-mute);
 }
 
-.docs-body h2 {
-	margin: 44px 0 12px;
-	font-size: 22px;
+/* Links in prose. Above the header deliberately: the header's own link
+   rules are more specific, and a stylesheet reads better — and lints
+   clean — when specificity ascends down the file. */
+.lede a,
+.after a,
+.docs-body a,
+.agents a:not(.btn) {
+	color: var(--dg-cyan);
+	text-decoration: underline;
+	text-decoration-color: color-mix(in srgb, var(--dg-cyan) 40%, transparent);
+	text-underline-offset: 3px;
 }
 
-.docs-body h3 {
-	margin: 28px 0 8px;
-	font-family: var(--dg-font-sans);
-	font-size: 16px;
-	font-weight: 500;
+.lede a:hover,
+.after a:hover,
+.docs-body a:hover,
+.agents a:not(.btn):hover {
+	text-decoration-color: var(--dg-cyan);
 }
 
-/* A heading is its own link, without the underline and the arrow that
-   usually announce it: the whole heading is the target, so a marker
-   beside it would be decoration. */
-.docs-body h2 a.anchor,
-.docs-body h3 a.anchor {
+.docs-body .anchor {
 	color: inherit;
 	text-decoration: none;
 }
 
-.docs-body h2 a.anchor:hover::after,
-.docs-body h3 a.anchor:hover::after {
-	content: " #";
-	color: var(--dg-ink-faint);
+/* ---- lattice: cells share one continuous hairline ---------------- */
+
+.lat {
+	display: grid;
+	border-left: var(--dg-border) solid var(--dg-rule);
+	border-top: var(--dg-border) solid var(--dg-rule);
+}
+
+.lat > * {
+	border-right: var(--dg-border) solid var(--dg-rule);
+	border-bottom: var(--dg-border) solid var(--dg-rule);
+	padding: var(--dg-space-6) var(--dg-space-6);
+	min-width: 0;
+}
+
+.c2,
+.c3 {
+	grid-template-columns: 1fr;
+}
+
+@media (min-width: 720px) {
+	.c2,
+	.c3 {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+@media (min-width: 1080px) {
+	.c3 {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
+.lat h3 + p {
+	color: var(--dg-ink-dim);
+	font-size: 14.5px;
+	margin-top: var(--dg-space-2);
+}
+
+/* ---- header ------------------------------------------------------ */
+
+header {
+	position: sticky;
+	top: 0;
+	z-index: 50;
+	background: color-mix(in srgb, var(--dg-void) 92%, transparent);
+	backdrop-filter: blur(10px);
+	border-bottom: var(--dg-border) solid var(--dg-rule);
+}
+
+/* The brand edge. `is-idle` is not a state here — it is the marketing
+   site's permanent condition, and tokens.css pauses every animation on
+   it. Nothing on this page is busy. */
+header .dg-abar {
+	height: 2px;
+	background: transparent;
+}
+
+.bar {
+	display: flex;
+	align-items: center;
+	gap: 22px;
+	height: var(--bar);
+	transition: height var(--dg-motion-fast) var(--dg-motion-ease);
+}
+
+header.tight .bar {
+	height: var(--bar-tight);
+}
+
+.logo {
+	font-family: var(--dg-font-mono);
+	font-size: 15px;
+	display: flex;
+	align-items: center;
+	gap: var(--dg-space-3);
+	white-space: nowrap;
+}
+
+.logo img {
+	width: 18px;
+	height: 18px;
+}
+
+.logo em {
+	color: var(--dg-green);
+	font-style: normal;
+}
+
+nav.main {
+	display: none;
+	gap: 20px;
+	font-size: var(--dg-fs-ui);
+	color: var(--dg-ink-dim);
+	margin-left: var(--dg-space-2);
+}
+
+@media (min-width: 900px) {
+	nav.main {
+		display: flex;
+	}
+}
+
+nav.main a:hover {
+	color: var(--dg-ink);
+}
+
+nav.main a[aria-current] {
+	color: var(--dg-ink);
+	box-shadow: inset 0 -1px 0 var(--dg-green);
+}
+
+.right {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: var(--dg-space-3);
+}
+
+/* The one piece of chrome that exists for a reader who is not a person.
+   Violet, because it is the selection accent and this is the page
+   selecting its own other representation. */
+.md-chip {
+	font-family: var(--dg-font-mono);
+	font-size: 11.5px;
+	color: var(--dg-ink-dim);
+	border: var(--dg-border) solid var(--dg-rule);
+	border-radius: 3px;
+	padding: 4px 9px;
+	display: flex;
+	align-items: center;
+	gap: var(--dg-space-2);
+	white-space: nowrap;
+}
+
+.md-chip:hover {
+	border-color: var(--dg-violet-text);
+	color: var(--dg-ink);
+}
+
+.md-chip b {
+	color: var(--dg-violet-text);
+	font-weight: 400;
+}
+
+.burger {
+	display: block;
+	background: none;
+	border: var(--dg-border) solid var(--dg-rule);
+	color: var(--dg-ink-dim);
+	border-radius: 3px;
+	padding: 5px 9px;
+	font-family: var(--dg-font-mono);
+	font-size: 12px;
+	cursor: pointer;
+}
+
+@media (min-width: 900px) {
+	.burger {
+		display: none;
+	}
+}
+
+#drawer {
+	display: none;
+	border-top: var(--dg-border) solid var(--dg-rule);
+	padding: var(--dg-space-2) 0 var(--dg-space-4);
+}
+
+#drawer.open {
+	display: block;
+}
+
+#drawer a {
+	display: block;
+	padding: var(--dg-space-3) 0;
+	color: var(--dg-ink-dim);
+	font-size: 15px;
+	border-bottom: var(--dg-border) solid var(--dg-rule-soft);
+}
+
+/* ---- section subnav (scrollspy) ---------------------------------- */
+
+.spy {
+	position: sticky;
+	top: var(--bar);
+	z-index: 40;
+	background: color-mix(in srgb, var(--dg-void) 94%, transparent);
+	backdrop-filter: blur(10px);
+	border-bottom: var(--dg-border) solid var(--dg-rule);
+	transition: top var(--dg-motion-fast) var(--dg-motion-ease);
+}
+
+header.tight ~ main .spy {
+	top: var(--bar-tight);
+}
+
+.spy .in {
+	display: flex;
+	gap: 18px;
+	overflow-x: auto;
+	padding: 11px 24px;
+	margin: 0 auto;
+	font-family: var(--dg-font-mono);
+	font-size: 12px;
+	color: var(--dg-ink-mute);
+	scrollbar-width: none;
+}
+
+.spy .in::-webkit-scrollbar {
+	display: none;
+}
+
+.spy a {
+	white-space: nowrap;
+	padding-bottom: 2px;
+	border-bottom: 1px solid transparent;
+}
+
+.spy a.on {
+	color: var(--dg-green);
+	border-bottom-color: var(--dg-green);
+}
+
+/* ---- hero -------------------------------------------------------- */
+
+.hero {
+	display: grid;
+	grid-template-columns: 1fr;
+	border-left: var(--dg-border) solid var(--dg-rule);
+	margin: 0 auto;
+}
+
+@media (min-width: 1000px) {
+	.hero {
+		grid-template-columns: 1.05fr 0.95fr;
+	}
+}
+
+.hero > div {
+	border-right: var(--dg-border) solid var(--dg-rule);
+	border-bottom: var(--dg-border) solid var(--dg-rule);
+	min-width: 0;
+}
+
+.hero-copy {
+	padding: 56px 24px 44px;
+}
+
+@media (min-width: 1000px) {
+	.hero-copy {
+		padding: 84px 48px 72px;
+	}
+}
+
+.hero h1 span {
+	display: block;
+	color: var(--dg-ink-mute);
+}
+
+.hero .lede {
+	margin-top: 22px;
+}
+
+.cmd {
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-ui);
+	color: var(--dg-green);
+	background: var(--dg-panel);
+	border: var(--dg-border) solid var(--dg-rule);
+	border-radius: var(--dg-radius-input);
+	padding: 12px 14px;
+	margin: 26px 0 18px;
+	overflow-x: auto;
+	max-width: 560px;
+}
+
+.cmd b {
+	color: var(--dg-ink-mute);
+	font-weight: 400;
+}
+
+.btn {
+	display: inline-block;
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-ui);
+	padding: 10px 18px;
+	border-radius: var(--dg-radius-input);
+	border: var(--dg-border) solid var(--dg-rule);
+	color: var(--dg-ink);
+}
+
+.btn.solid {
+	background: var(--dg-green);
+	color: var(--dg-void);
+	border-color: var(--dg-green);
+	font-weight: 500;
+}
+
+.btn:hover {
+	border-color: var(--dg-violet);
+}
+
+.btn.solid:hover {
+	border-color: var(--dg-green);
+	background: var(--dg-cyan);
+}
+
+.hero-vis {
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	background: var(--dg-panel);
+}
+
+.canvas-wrap {
+	position: relative;
+	flex: 1;
+	min-height: 230px;
+}
+
+@media (min-width: 1000px) {
+	.canvas-wrap {
+		min-height: 330px;
+	}
+}
+
+canvas {
+	display: block;
+	width: 100%;
+	height: 100%;
+	-webkit-mask-image: radial-gradient(
+		120% 110% at 50% 45%,
+		#000 52%,
+		transparent 94%
+	);
+	mask-image: radial-gradient(120% 110% at 50% 45%, #000 52%, transparent 94%);
+}
+
+.readout {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	border-top: var(--dg-border) solid var(--dg-rule);
+	margin: 0;
+}
+
+@media (min-width: 560px) {
+	.readout {
+		grid-template-columns: repeat(4, 1fr);
+	}
+}
+
+.readout div {
+	padding: 11px 14px;
+	border-right: var(--dg-border) solid var(--dg-rule);
+}
+
+.readout div:last-child {
+	border-right: 0;
+}
+
+.readout dt {
+	font-family: var(--dg-font-mono);
+	font-size: 10.5px;
+	color: var(--dg-ink-mute);
+	margin-bottom: 3px;
+}
+
+.readout dd {
+	font-family: var(--dg-font-mono);
+	font-size: 15px;
+	margin: 0;
+}
+
+.readout .live {
+	color: var(--dg-green);
+}
+
+.readout .nil {
+	color: var(--dg-magenta);
+}
+
+.impress {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--dg-space-4);
+	border-top: var(--dg-border) solid var(--dg-rule);
+	padding: 10px 14px;
+	flex-wrap: wrap;
+}
+
+.impress button {
+	background: none;
+	border: var(--dg-border) solid var(--dg-rule);
+	color: var(--dg-ink-dim);
+	font-family: var(--dg-font-mono);
+	font-size: 12px;
+	padding: 6px 11px;
+	border-radius: 3px;
+	cursor: pointer;
+}
+
+.impress button:hover {
+	border-color: var(--dg-magenta);
+	color: var(--dg-ink);
+}
+
+/* ---- gripe rows -------------------------------------------------- */
+
+/* Square corners, because the accent border is single-sided — the one
+   interface rule that shows up on the website too. The glyph is not
+   decoration: colour alone never carries severity. */
+.gripe {
+	border-left: var(--dg-border-accent-row) solid var(--dg-rule);
+	background: var(--dg-panel);
+	padding: 13px 16px;
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 0 10px;
+}
+
+.gripe p {
+	font-size: var(--dg-fs-gripe);
+	line-height: var(--dg-lh-gripe);
+	grid-column: 2;
+}
+
+.gripe .meta {
+	margin-top: var(--dg-space-2);
+}
+
+.gripe .glyph {
+	grid-column: 1;
+	grid-row: 1 / span 2;
+	font-size: 11px;
+	line-height: 1.7;
+	color: var(--dg-ink-mute);
+}
+
+.g-blocker {
+	border-left-color: var(--dg-sev-blocker);
+	background: var(--dg-sev-blocker-bg);
+}
+
+.g-blocker .glyph {
+	color: var(--dg-sev-blocker);
+}
+
+.g-warning {
+	border-left-color: var(--dg-sev-warning);
+	background: var(--dg-sev-warning-bg);
+}
+
+.g-warning .glyph {
+	color: var(--dg-sev-warning);
+}
+
+.g-style {
+	border-left-color: var(--dg-sev-style);
+	background: var(--dg-sev-style-bg);
+}
+
+.g-style .glyph {
+	color: var(--dg-sev-style);
+}
+
+.tag {
+	font-family: var(--dg-font-mono);
+	font-size: 11px;
+	border-radius: 2px;
+	padding: 1px 7px;
+	margin-right: var(--dg-space-3);
+	color: var(--dg-void);
+	white-space: nowrap;
+}
+
+.t-blocker {
+	background: var(--dg-sev-blocker);
+}
+
+.t-warning {
+	background: var(--dg-sev-warning);
+}
+
+.t-style {
+	background: var(--dg-sev-style);
+}
+
+.t-none {
+	background: var(--dg-rule);
+	color: var(--dg-ink-dim);
+}
+
+/* ---- generic section --------------------------------------------- */
+
+.sec {
+	padding: 64px 0 0;
+}
+
+.sec-head {
+	max-width: 78ch;
+	margin-bottom: 30px;
+}
+
+.sec-head.split {
+	display: flex;
+	gap: 20px;
+	align-items: flex-start;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	max-width: none;
+}
+
+.sec-head .meta {
+	margin-bottom: var(--dg-space-4);
+}
+
+.sec-head .lede {
+	margin-top: var(--dg-space-4);
+}
+
+.sec-head h1 + .lede,
+.sec-head h2 + .lede {
+	margin-top: var(--dg-space-4);
+}
+
+.mascot {
+	width: 88px;
+	height: auto;
+	opacity: 0.9;
+	flex: none;
+}
+
+.after {
+	color: var(--dg-ink-dim);
+	font-size: 14.5px;
+	margin-top: 22px;
+	max-width: 78ch;
+}
+
+/* ---- filters ----------------------------------------------------- */
+
+.filters {
+	display: flex;
+	gap: 7px;
+	flex-wrap: wrap;
+	margin-bottom: 22px;
+}
+
+.filters button {
+	background: none;
+	border: var(--dg-border) solid var(--dg-rule);
+	color: var(--dg-ink-dim);
+	font-family: var(--dg-font-mono);
+	font-size: 12px;
+	padding: 6px 12px;
+	border-radius: 20px;
+	cursor: pointer;
+}
+
+.filters button:hover {
+	border-color: var(--dg-violet);
+	color: var(--dg-ink);
+}
+
+.filters button .n {
+	color: var(--dg-ink-mute);
+}
+
+.filters button[aria-pressed="true"] {
+	background: var(--dg-green);
+	border-color: var(--dg-green);
+	color: var(--dg-void);
+}
+
+.filters button[aria-pressed="true"] .n {
+	color: color-mix(in srgb, var(--dg-void) 55%, transparent);
+}
+
+/* ---- rules table ------------------------------------------------- */
+
+.rules {
+	border-top: var(--dg-border) solid var(--dg-rule);
+}
+
+.rule-row {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 4px;
+	padding: 16px 0;
+	border-bottom: var(--dg-border) solid var(--dg-rule-soft);
+}
+
+@media (min-width: 900px) {
+	.rule-row {
+		grid-template-columns: 250px 1fr 230px;
+		gap: 24px;
+		align-items: baseline;
+	}
+}
+
+.rule-row .slug {
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-ui);
+	color: var(--dg-green);
+}
+
+.rule-row .why {
+	color: var(--dg-ink-dim);
+	font-size: 14.5px;
+}
+
+/* ---- agent strip ------------------------------------------------- */
+
+.agents {
+	background: var(--dg-panel);
+	border: var(--dg-border) solid var(--dg-rule);
+	border-radius: var(--dg-radius-input);
+	padding: 20px 22px;
+	display: grid;
+	gap: 14px;
+}
+
+@media (min-width: 820px) {
+	.agents {
+		grid-template-columns: 1fr auto;
+		align-items: center;
+	}
+}
+
+.agents p {
+	color: var(--dg-ink-dim);
+	font-size: 15px;
+}
+
+.agents code {
+	font-family: var(--dg-font-mono);
+	font-size: 12.5px;
+	color: var(--dg-violet-text);
+}
+
+.agents .btns {
+	display: flex;
+	gap: var(--dg-space-3);
+	flex-wrap: wrap;
+}
+
+/* ---- download button --------------------------------------------- */
+
+.download {
+	display: flex;
+	align-items: center;
+	gap: var(--dg-space-4);
+	flex-wrap: wrap;
+}
+
+.platforms {
+	list-style: none;
+	margin: var(--dg-space-4) 0 0;
+	padding: 0;
+	display: flex;
+	gap: var(--dg-space-4);
+	flex-wrap: wrap;
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-meta);
+}
+
+.platforms a {
+	color: var(--dg-ink-mute);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+.platforms a:hover {
+	color: var(--dg-ink);
+}
+
+/* ---- documentation layout ---------------------------------------- */
+
+.docs {
+	display: grid;
+	grid-template-columns: 1fr;
+	border-left: var(--dg-border) solid var(--dg-rule);
+}
+
+@media (min-width: 1000px) {
+	.docs {
+		grid-template-columns: 250px minmax(0, 1fr) 220px;
+	}
+}
+
+.docs > * {
+	border-right: var(--dg-border) solid var(--dg-rule);
+	border-bottom: var(--dg-border) solid var(--dg-rule);
+	padding: 30px 26px;
+	min-width: 0;
+}
+
+.docs-rail {
+	font-size: 14px;
+}
+
+.docs-rail .grp {
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-meta);
+	color: var(--dg-ink-mute);
+	margin: 20px 0 var(--dg-space-2);
+}
+
+.docs-rail a {
+	display: block;
+	padding: 5px 0;
+	color: var(--dg-ink-dim);
+}
+
+.docs-rail a:hover {
+	color: var(--dg-ink);
+}
+
+.docs-rail a.on {
+	color: var(--dg-green);
+}
+
+.docs-rail a.all {
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-meta);
+	color: var(--dg-ink-mute);
+	padding-bottom: var(--dg-space-4);
+	border-bottom: var(--dg-border) solid var(--dg-rule-soft);
+}
+
+.docs-toc {
+	font-size: 13px;
+}
+
+.docs-toc .meta {
+	margin-bottom: 10px;
+}
+
+.docs-toc a {
+	display: block;
+	padding: 5px 0 5px 10px;
+	border-left: 2px solid var(--dg-rule-soft);
+	color: var(--dg-ink-mute);
+}
+
+.docs-toc a:hover {
+	color: var(--dg-ink-dim);
+}
+
+.docs-toc a.on {
+	color: var(--dg-green);
+	border-left-color: var(--dg-green);
+}
+
+@media (min-width: 1000px) {
+	.docs-rail,
+	.docs-toc {
+		position: sticky;
+		top: calc(var(--bar) + 1px);
+		align-self: start;
+		max-height: calc(100vh - var(--bar));
+		overflow-y: auto;
+		border-bottom: 0;
+	}
+}
+
+/* ---- prose ------------------------------------------------------- */
+
+.docs-body {
+	font-size: 15.5px;
+}
+
+/* A documentation page's title is a label, not a billboard. The display
+   size belongs to the landing and the two lattice pages. */
+.docs-body h1 {
+	font-size: clamp(28px, 3.2vw, 38px);
+	line-height: 1.15;
+	margin-bottom: var(--dg-space-4);
+}
+
+.docs-body > .lede {
+	margin-bottom: 30px;
+	padding-bottom: 22px;
+	border-bottom: var(--dg-border) solid var(--dg-rule-soft);
+}
+
+.docs-body h2 {
+	margin: 44px 0 var(--dg-space-4);
+}
+
+.docs-body h3 {
+	margin: 30px 0 var(--dg-space-3);
+	color: var(--dg-ink);
 }
 
 .docs-body p,
 .docs-body li {
 	color: var(--dg-ink-dim);
+	max-width: 74ch;
 }
 
-.docs-body ul,
-.docs-body ol {
-	padding-left: 20px;
-}
-
-.docs-body li {
-	margin-bottom: 6px;
+.docs-body p {
+	margin: var(--dg-space-4) 0;
 }
 
 .docs-body strong {
@@ -505,48 +1001,51 @@ footer .spacer {
 	font-weight: 500;
 }
 
-.docs-body pre {
-	margin: 16px 0;
+.docs-body ul,
+.docs-body ol {
+	padding-left: 22px;
+	margin: var(--dg-space-4) 0;
+}
+
+.docs-body li {
+	margin: var(--dg-space-2) 0;
+}
+
+/* Tables scroll rather than pushing the page wide. See the build's
+   `scrollableTables` for why every table gets one. */
+.table-scroll {
+	overflow-x: auto;
+	max-width: 100%;
+	margin: var(--dg-space-5) 0;
 }
 
 .docs-body table {
-	width: 100%;
-	margin: 16px 0 22px;
 	border-collapse: collapse;
-	font-size: 15px;
+	width: 100%;
+	max-width: 80ch;
+	font-size: 14.5px;
 }
 
-.docs-body th {
-	text-align: left;
-	font-weight: 500;
-	font-family: var(--dg-font-mono);
-	font-size: var(--dg-fs-meta);
-	text-transform: uppercase;
-	letter-spacing: 0.06em;
-	color: var(--dg-ink-faint);
-	border-bottom: 1px solid var(--dg-rule);
-	padding: 0 14px 7px 0;
-}
-
-/* Top-aligned because the right-hand cell is usually a sentence and the
-   left-hand one is usually a key name: baselines would drift apart. */
+.docs-body th,
 .docs-body td {
+	text-align: left;
 	vertical-align: top;
-	padding: 9px 14px 9px 0;
-	border-bottom: 1px solid var(--dg-rule-soft);
+	padding: 10px 14px 10px 0;
+	border-bottom: var(--dg-border) solid var(--dg-rule-soft);
 	color: var(--dg-ink-dim);
 }
 
-.docs-body td:last-child,
-.docs-body th:last-child {
-	padding-right: 0;
+.docs-body th {
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-meta);
+	font-weight: 400;
+	color: var(--dg-ink-mute);
+	border-bottom-color: var(--dg-rule);
 }
 
-/* A shortcut is the first cell of a two-column table often enough that
-   this is what keeps `Ctrl/Cmd` `Enter` on one line. */
 .docs-body td:first-child {
-	white-space: nowrap;
 	color: var(--dg-ink);
+	white-space: nowrap;
 }
 
 .docs-body td:first-child code {
@@ -554,42 +1053,101 @@ footer .spacer {
 }
 
 .docs-body blockquote {
-	margin: 16px 0;
-	padding-left: 14px;
-	border-left: 3px solid var(--dg-rule);
+	margin: var(--dg-space-5) 0;
+	padding: 2px 0 2px 18px;
+	border-left: var(--dg-border-accent-row) solid var(--dg-violet);
+	color: var(--dg-ink-dim);
+}
+
+.docs-body hr {
+	border: 0;
+	border-top: var(--dg-border) solid var(--dg-rule);
+	margin: 36px 0;
+}
+
+.md-foot {
+	margin-top: 44px;
+	padding-top: 18px;
+	border-top: var(--dg-border) solid var(--dg-rule-soft);
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-meta);
 	color: var(--dg-ink-mute);
 }
 
-/* ---- header brand link ------------------------------------- */
+/* ---- footer ------------------------------------------------------ */
 
-.brand {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	text-decoration: none;
-	color: inherit;
+footer {
+	margin-top: 80px;
+	border-top: var(--dg-border) solid var(--dg-rule);
+	padding: 46px 0 34px;
 }
 
-@media (max-width: 860px) {
-	.docs-shell {
-		grid-template-columns: minmax(0, 1fr);
-		gap: 0;
+footer .shell {
+	max-width: var(--shell);
+}
+
+.fcols {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 30px 24px;
+}
+
+@media (min-width: 860px) {
+	.fcols {
+		grid-template-columns: repeat(4, 1fr);
+	}
+}
+
+.fcols h2 {
+	font-family: var(--dg-font-mono);
+	font-size: 11.5px;
+	color: var(--dg-ink-mute);
+	font-weight: 400;
+	letter-spacing: 0;
+	margin: 0 0 10px;
+}
+
+.fcols h2.second {
+	margin-top: 18px;
+}
+
+.fcols a {
+	display: block;
+	font-size: 14px;
+	color: var(--dg-ink-dim);
+	padding: 3px 0;
+}
+
+.fcols a:hover {
+	color: var(--dg-ink);
+}
+
+.fbase {
+	margin-top: 36px;
+	padding-top: 20px;
+	border-top: var(--dg-border) solid var(--dg-rule);
+	display: flex;
+	flex-wrap: wrap;
+	gap: 14px;
+	justify-content: space-between;
+}
+
+.fbase p {
+	font-size: 13px;
+	color: var(--dg-ink-mute);
+	max-width: 54ch;
+}
+
+/* The only two transitions on the site are the header tightening and the
+   section bar following it down. Named rather than blanked with a
+   wildcard, so this stays true by being wrong when it is not. */
+@media (prefers-reduced-motion: reduce) {
+	html {
+		scroll-behavior: auto;
 	}
 
-	/* Above the page rather than beside it, and no longer sticky: a rail
-	   pinned to the top of a narrow screen is most of the screen. */
-	.docs-nav {
-		position: static;
-		padding-top: 40px;
-		padding-bottom: 8px;
-		border-bottom: 1px solid var(--dg-rule);
-	}
-
-	.docs-nav .on-page {
-		display: none;
-	}
-
-	.docs-body {
-		padding-top: 32px;
+	.bar,
+	.spy {
+		transition: none;
 	}
 }

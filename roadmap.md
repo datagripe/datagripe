@@ -419,15 +419,117 @@ from one command, and someone with a cluster has it running from three.
 Exit: somebody who has never used DataGripe can find out what it does
 and how to run it without opening the repository.
 
-## Unscheduled / parking lot
-- SQLite type/nullability/default changes — need the 12-step table rebuild
-- Index, constraint and trigger editing — the preview-then-apply shape is
-  proven; the rest is dialect SQL
-- Danger zone execution — blocked on project class leaving localStorage
-  (`docs/spec/object-view.md` "Danger zone")
-- AI query generation (explicit MVP non-goal; revisit after Phase 4)
-- Arrow-based result transport (only after profiling JSON batches)
-- Visual schema design, DBA workflows
-- Migration generation — the domain export is a structure snapshot, not
-  an ordered rebuild (`docs/spec/domains.md` "What the export is not")
-- SSH tunnels, cloud IAM auth, customer network agents
+## Phase 18 — The site as a projection of the repository · shipped 2026-09-14
+
+datagripe.com redrawn, and rebuilt so that the parts of it that can go
+stale no longer can. The trigger was finding "eleven rules" in three
+places on a day the catalogue held eighteen.
+
+- [x] Twenty-three pages in three groups — Product, Deploy, Learn —
+      where `group` in a page's frontmatter is both the sidebar heading
+      and the footer column, so a page cannot be added to one and
+      forgotten in the other
+- [x] Four pages rendered from the repository rather than written:
+      `/rules/` from `packages/gripes`, `/roadmap/` from this file,
+      `/docs/release-notes/` from the changelog, and the adapter
+      capability table from `ADAPTER_CAPABILITIES`
+- [x] The landing page's counts substituted at build time, so no
+      headline states a number a human has to remember to change
+- [x] The build fails rather than publishes on: a broken internal link
+      in either representation, a nav entry pointing at nothing, an
+      ungrouped page, a colliding group and order, an unparseable
+      roadmap line, a duplicate gripe slug, a rule with no wording, an
+      unsubstituted placeholder, and **a rule listed as planned that has
+      already shipped**
+- [x] Every page also served as Markdown at the same path — `.md`
+      instead of the trailing slash — plus `/llms.txt`,
+      `/llms-full.txt`, `/sitemap.xml` and `/robots.txt`. A first-class
+      representation, not an export: half the readers of a tool like
+      this arrive as an agent
+- [x] The hairline lattice, the sticky section bar and the three-column
+      documentation layout, every colour a `var()` from `tokens.css` so
+      the site and the app cannot drift apart
+- [x] One hero canvas that animates, which is a joke about hero canvases
+      and is argued for by name in `docs/brand/brand-system.md` "Motion"
+      rather than quietly breaking the rule it suspends
+- [x] The unscheduled/parking-lot section replaced by "Gripes about
+      Datagripe" below — one list, in the product's own voice, rather
+      than a public roadmap and a private one that drift apart
+- [x] `AGENTS.md`: a change to behaviour is a change to datagripe.com in
+      the same commit, with a table of what to check for what you
+      touched
+- [x] `pages.yml` redeploys when the repository sources it renders
+      change, not only when `site/` does
+
+Exit: a page cannot describe a version that does not exist, and the
+build says which page and why.
+
+## Gripes about Datagripe
+
+It has opinions about your schema. These are the ones it has about
+itself, and this list is the only place they are written down: the
+roadmap page on datagripe.com is rendered from it, so the site and the
+repository cannot disagree about what is missing.
+
+This replaces the old "unscheduled / parking lot" heading. One list, in
+one voice, rather than a public roadmap and a private one that drift
+apart by the second release.
+
+Format, parsed by `scripts/site/build.ts` — the build fails on a line in
+this section it cannot read, on a duplicate slug, and on a status that
+is not one of the five:
+
+```
+- [status] area · slug — the gripe, in one or two sentences.
+```
+
+| Status | Means |
+| --- | --- |
+| `being written` | in progress now, in a phase above |
+| `accepted` | it is a real hole, it will be filled, no date |
+| `unscheduled` | worth doing, nothing is blocking it but nobody has |
+| `unfiled` | an idea. It may never be more than that |
+| `declined` | deliberately not doing it, and the reason is the point |
+
+Nothing here is a promise. A declined gripe stays on the list rather
+than being deleted, because the reason something was refused is more
+useful than its absence.
+
+### About itself
+
+- [being written] engine · server-side-gripes — Gripes stop at the query text. Nothing yet complains about how a query actually turned out, only about how it was written.
+- [being written] config · settings-server-side — Project class and attitude live in your browser's localStorage. Two machines, two personalities, and a per-project setting the server has never heard of.
+- [accepted] object-view · danger-zone-inert — The danger zone states real consequences and then does nothing. Truncate and drop are decoration until project class leaves the browser.
+- [accepted] brand · placeholder-icon — The app icon is a scowling cylinder drawn by hand. The mascot is real; the flat version that can animate in-app is not drawn.
+- [accepted] rules · catalogue-too-thin — Eighteen rules, and seven of them are about grants. A rules page wants about thirty before it stops looking like a sample.
+- [accepted] docs · counts-in-prose — The website no longer states a count it cannot derive. The specs still do, in prose, and prose is not checked by anything.
+- [unscheduled] engine · explain-aware-gripes — Nothing reads an execution plan. The worst queries in the database still look completely fine in text.
+- [unscheduled] rules · migration-lint — Migrations are not linted. The most dangerous SQL anyone writes gets the least attention from the thing that exists to complain about SQL.
+- [unscheduled] schema · diff-view — Two databases cannot be compared. You are diffing schemas in a text editor like it is 2009.
+- [unscheduled] adapters · mssql — Four engines, and none of them is the one your employer makes you use.
+- [unscheduled] adapters · sqlite-table-rebuild — SQLite cannot change a column's type, nullability or default here, because that needs the twelve-step table rebuild and nobody has written it.
+- [unscheduled] object-view · structure-editing — Columns can be edited. Indexes, constraints and triggers cannot. The preview-then-apply shape is proven; the rest is just dialect SQL nobody has typed.
+- [unscheduled] domains · migration-generation — The domain export is a structure snapshot, not an ordered rebuild. It will not tell you how to get from the old schema to this one.
+- [unscheduled] execution · arrow-transport — Results travel as JSON batches. Arrow would be faster and nobody has profiled the JSON to prove it is the problem.
+- [unscheduled] connections · ssh-tunnels — No SSH tunnels, no cloud IAM auth, no network agent. If the database is not reachable from the server, it is not reachable.
+- [unfiled] idea · result-shape-gripes — It never comments on what came back. Four million rows dropped into a grid is a gripe, and it is silent about it.
+- [unfiled] idea · silent-mode — There is no way to make it shut up entirely except switching it off, which is not the same thing and loses the dismissals.
+- [unfiled] idea · ci-mode — Gripes only exist inside the app. They could exist in a pull request, which is where somebody else would have to read them.
+- [unfiled] brand · light-theme — Dark theme only. That is an open item, not a stylistic position, and saying so is cheaper than pretending.
+- [declined] rules · formatting — No formatting rules, ever. Style filler is a formatter's job and the fastest way to get the whole thing switched off.
+- [declined] privacy · usage-analytics — No telemetry, ever. It answers nothing but this machine, and that is the entire point of it.
+- [declined] editor · ai-query-generation — It will not write your query. A tool whose thesis is that it reads SQL back to you critically cannot also be the thing that wrote it.
+- [declined] product · query-health-score — No grade, no "query health 62%". A number invites gaming and averages away the one blocker that mattered.
+- [declined] product · visual-schema-design — No ERD canvas, no DBA workflows. Drawing boxes is not the job and doing it badly is worse than not doing it.
+
+### Rules not built yet
+
+The same format, minus the area: these are rule ids, and the build fails
+if one of them has quietly shipped and is still listed here as planned.
+Sourced from `docs/spec/gripes.md` "Still on the list".
+
+- [unscheduled] index.missing — Nothing knows which indexes a relation has. The completion catalog does not carry them and the object describe result is not wired to the runner.
+- [unscheduled] execution.truncated — It cannot tell you that it stopped reading. Needs the server-side runner, which is being written.
+- [unscheduled] statement.over-ddl — A view created with `select *` is a finding the catalogue already has, and it fires in a query document but never on the view itself, which is the one place anyone would look.
+- [unscheduled] plan.seq-scan — Nothing reads an execution plan, so a sequential scan over forty million rows reads exactly like one over forty.
+- [declined] select.unqualified-star — `select * from t limit 100` is the single most common legitimate query there is. Griping at it is precisely the style filler this catalogue exists to avoid.

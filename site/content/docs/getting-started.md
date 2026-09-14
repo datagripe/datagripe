@@ -1,8 +1,8 @@
 ---
 title: Getting started
 description: Running DataGripe, and the first five minutes after that.
-group: Start here
-order: 2
+group: Deploy
+order: 1
 ---
 
 ## On your own machine

@@ -12,7 +12,7 @@
 		"dev:web": "bun run --cwd apps/web dev",
 		"dev:server": "bun run --cwd apps/server dev",
 		"test": "bun test",
-		"typecheck": "bun run --filter '*' typecheck",
+		"typecheck": "bun run --filter '*' typecheck && bun run typecheck:scripts",
 		"lint": "biome check .",
 		"brand:render": "bun run scripts/render-brand-icons.ts",
 		"sync:brand": "bun run scripts/sync-brand.ts",
@@ -22,7 +22,8 @@
 		"db:migrate": "bun run --cwd apps/server db:migrate",
 		"build:site": "bun run scripts/site/build.ts",
 		"build:dist": "bun run scripts/packaging/build.ts",
-		"build:image": "docker build -t datagripe:dev ."
+		"build:image": "docker build -t datagripe:dev .",
+		"typecheck:scripts": "tsc --noEmit --project scripts/tsconfig.json"
 	},
 	"trustedDependencies": [
 		"embedded-postgres",
@@ -34,6 +35,8 @@
 	],
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.11",
+		"@datagripe/contracts": "*",
+		"@datagripe/gripes": "*",
 		"@types/bun": "^1.2.21",
 		"marked": "^18.0.12",
 		"typescript": "^5.9.2"

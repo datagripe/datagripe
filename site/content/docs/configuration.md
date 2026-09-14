@@ -1,7 +1,7 @@
 ---
 title: Configuration
 description: Every environment variable, and the two that decide whether a deployment works.
-group: Running it for other people
+group: Deploy
 order: 6
 ---
 

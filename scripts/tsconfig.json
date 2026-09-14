@@ -1,0 +1,8 @@
+{
+	"// why": "scripts/ is not a workspace, so `bun run typecheck`'s --filter '*' never saw it. build.ts is a few hundred lines that renders the whole website and imports two workspace packages; it earns the same checking everything else gets.",
+	"extends": "../tsconfig.base.json",
+	"compilerOptions": {
+		"types": ["bun"]
+	},
+	"include": ["."]
+}

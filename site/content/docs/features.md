@@ -1,8 +1,8 @@
 ---
 title: What it can do
 description: The whole surface, including the parts that are not obvious.
-group: Start here
-order: 4
+group: Product
+order: 1
 ---
 
 Nearly everything here has a keyboard path and a menu; some of it has
@@ -12,17 +12,24 @@ neither a button nor a banner, which is what this page is for. The
 ## Gripes
 
 DataGripe reads your SQL back to you and says what is wrong with it.
-Eleven rules, and none of them are about formatting — a rule earns its
-place by knowing something the query text does not say, or by being
-about damage rather than tidiness.
+None of the rules are about formatting — a rule earns its place by
+knowing something the query text does not say, or by being about damage
+rather than tidiness. [The rules page](/rules/) is the whole catalogue,
+rendered from the code, so it is never a count somebody forgot to
+update.
 
 - **Statements**: a join with no condition, `NOT IN` against a subquery
   that can yield `NULL`, a write with no `WHERE`, an inequality against a
   nullable column.
 - **Schema**: a table with no primary key, a view built on `SELECT *`, a
   duplicate index, a non-concurrent index build, a `SECURITY DEFINER`
-  routine with no `search_path`, a routine declared volatile that only
-  reads, and grants that are wider than they look.
+  routine with no `search_path`, and a routine declared volatile that
+  only reads.
+- **Grants**: a routine PUBLIC can execute, an untrusted role that can
+  write, row security switched on with no policy behind it, a view that
+  reads its base tables as its owner. These stay silent until a role is
+  marked untrusted — guessing which role is the anonymous one would be
+  worse than saying nothing.
 
 **The volume is yours.** The same finding is re-worded at four levels —
 notice, warning, fatal and panic — and the wording is chosen when it is

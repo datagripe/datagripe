@@ -7,7 +7,7 @@
 
 > Built: `packages/gripes` (rule shape, runner, renderer, catalogue and
 > its assertions), the wire types in contracts, `scanTokens` in
-> sql-tools, eleven rules, a client `SchemaInput`, dismissal at all
+> sql-tools, the rule catalogue, a client `SchemaInput`, dismissal at all
 > three scopes, and four
 > surfaces — editor gutter and squiggle, annotation rail, gripes panel,
 > object-view annotations, status-bar count.

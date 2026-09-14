@@ -14,6 +14,16 @@ on:
       - "site/**"
       - "scripts/site/**"
       - ".github/workflows/pages.yml"
+      # Four pages are rendered from the repository rather than written
+      # in site/content, so a change to any of these changes the site
+      # without touching site/: the rules page comes from the gripes
+      # catalogue, the roadmap page from roadmap.md, the release notes
+      # from the changelog, and the adapters table from the contracts.
+      # Leaving these out means shipping a rule the website denies.
+      - "roadmap.md"
+      - "CHANGELOG.md"
+      - "packages/gripes/**"
+      - "packages/contracts/src/adapters.ts"
   # Called by release.yml, so a release always lands a fresh site
   # whatever the commit behind it touched — the documentation describes
   # the version people can now install.
@@ -52,8 +62,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile --ignore-scripts
 
-      # Renders site/content into site/dist, and fails on an internal
-      # link that does not resolve.
+      # Renders the site into site/dist, and refuses to publish a
+      # broken internal link, an unparseable roadmap line, or a rule
+      # listed as planned that has already shipped. See site/README.md.
       - name: Build the site
         run: bun run build:site
 

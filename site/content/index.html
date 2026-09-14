@@ -1,197 +1,226 @@
 <!-- The landing page's body. The header, footer and <head> come from
-     scripts/site/build.ts, which every page shares. -->
-<div class="hero">
+     scripts/site/build.ts, which every page shares.
+
+     Each <section> carrying an id and a data-spy label becomes an entry
+     in the sticky section bar, so the bar cannot list a section that was
+     renamed or removed. -->
+<div class="shell wide" style="padding: 0">
+	<div class="hero">
 		<div class="hero-copy">
-			<h1>Your queries are fine.<br>Probably.</h1>
+			<h1>Your queries are fine.<span>Probably.</span></h1>
 			<p class="lede">A database IDE that reads your SQL back to you, and
-			says what is wrong with it.</p>
-			<p class="sub">PostgreSQL, MySQL, SQLite and Redis. Browse and edit
-			your schema, run queries, share files with your team — and get told,
-			before you press run, that the delete you just wrote has no where
-			clause.</p>
+			says what is wrong with it. PostgreSQL, MySQL, SQLite and Redis.</p>
+			<div class="cmd">bunx @datagripe/cli personal <b># or: npx @datagripe/cli personal</b></div>
+			<div class="download">
+				<a class="btn solid" id="download-primary"
+				   href="https://github.com/datagripe/datagripe/releases/latest">Download</a>
+				<a class="btn" href="/docs/getting-started/">Read the docs</a>
+			</div>
+			<ul class="platforms" id="download-all">
+				<li><a href="https://github.com/datagripe/datagripe/releases/latest">All downloads</a></li>
+			</ul>
+			<p class="meta" id="download-meta" style="margin-top: 16px">Free and
+			open source, MIT · no account · answers nothing but this machine</p>
 		</div>
-		<!-- Decorative in every case, so alt is empty: the mascot's mood
-		     restates the headline it sits next to (docs/brand/brand-system.md
-		     "Mascot"). -->
-		<img class="hero-mascot" src="mascot/nothing-open.svg" alt=""
-		     width="482" height="542">
+
+		<!-- A joke about hero canvases, and the readout is the punchline:
+		     it counts what is actually there and reports its insights and
+		     its relevance at zero, which is the true figure for every
+		     animation of this kind. The brand rule it suspends is named
+		     and argued in docs/brand/brand-system.md "Motion". -->
+		<div class="hero-vis">
+			<div class="canvas-wrap"><canvas id="cv" aria-hidden="true"></canvas></div>
+			<dl class="readout">
+				<div><dt>particles</dt><dd class="live" id="r-particles">140</dd></div>
+				<div><dt>lines drawn</dt><dd class="live" id="r-lines">0</dd></div>
+				<div><dt>insights</dt><dd class="nil">0</dd></div>
+				<div><dt>relevance</dt><dd class="nil">0.00%</dd></div>
+			</dl>
+			<div class="impress">
+				<span class="meta" id="lvl">Impressiveness: 1x</span>
+				<button id="more" type="button">Make it more impressive</button>
+			</div>
+		</div>
 	</div>
+</div>
 
-	<div class="download">
-		<a class="button" id="download-primary"
-		   href="https://github.com/datagripe/datagripe/releases/latest">Download</a>
-		<span class="meta" id="download-meta">Free and open source, MIT.</span>
+<section class="shell wide sec" id="s-dial" data-spy="The dial">
+	<div class="sec-head split">
+		<div>
+			<p class="meta">Attitude</p>
+			<h2>It complains at a volume you choose</h2>
+			<p class="lede">Every finding is analysis, not a sentence. The
+			wording is picked when it is shown, so turning the dial re-words
+			the same finding and never re-analyses. This is one gripe — a join
+			with no condition — at all four levels.</p>
+		</div>
+		<img class="mascot" src="/mascot/shouting.svg" alt="" width="566" height="522">
 	</div>
-	<ul class="platforms" id="download-all">
-		<li><a href="https://github.com/datagripe/datagripe/releases/latest">All downloads</a></li>
-	</ul>
+	<div class="lat c2">
+		<div><div class="gripe g-blocker"><span class="glyph" aria-hidden="true">▲</span>
+			<p>This join has no condition. That is a cross product.</p>
+			<p class="meta">notice · dry, and still critical</p></div></div>
+		<div><div class="gripe g-blocker"><span class="glyph" aria-hidden="true">▲</span>
+			<p>This join has no condition. I'll allow it. I won't forget it.</p>
+			<p class="meta">warning · the default</p></div></div>
+		<div><div class="gripe g-blocker"><span class="glyph" aria-hidden="true">▲</span>
+			<p>No join condition. You've asked for every row times every row.
+			Absolute state of this.</p>
+			<p class="meta">fatal · swears. opt in.</p></div></div>
+		<div><div class="gripe g-blocker"><span class="glyph" aria-hidden="true">▲</span>
+			<p>NO JOIN CONDITION. Every row. Times every row. I want you to sit
+			and think about what that number is.</p>
+			<p class="meta">panic · a joke, deliberately</p></div></div>
+	</div>
+	<p class="after">Gripes criticise the query, never the person who wrote
+	it. Anything you disagree with is dismissable for that occurrence, that
+	table, or the whole project — and it always tells you it is hiding
+	something. <a href="/docs/gripe-levels/">How the dial works</a>.</p>
+</section>
 
-	<section class="mascot-section">
-		<img class="section-mascot" src="mascot/shouting.svg" alt="" width="566" height="522">
-		<h2>It complains at a volume you choose</h2>
-		<p class="note">Every finding is analysis, not a sentence. The wording
-		is picked when it is shown, so turning the dial re-words the same
-		finding and never re-analyses. This is one gripe — a join with no
-		condition — at all four levels.</p>
+<section class="shell wide sec" id="s-rules" data-spy="Rules">
+	<div class="sec-head split">
+		<div>
+			<p class="meta">Rules</p>
+			<h2><!--dg:ruleCountWordCap--> rules, none about formatting</h2>
+			<p class="lede">A rule earns its place by knowing something the
+			query text does not say, or by being about damage rather than
+			tidiness. Style filler is a formatter's job, and the fastest way to
+			get the whole thing switched off.</p>
+		</div>
+		<img class="mascot" src="/mascot/shocked.svg" alt="" width="566" height="550">
+	</div>
+	<div class="lat c3">
+		<div><p class="mono" style="font-size: 13px; color: var(--dg-green)">routine.definer-no-search-path</p>
+			<p style="color: var(--dg-ink-dim); font-size: 14.5px; margin-top: 6px">Security
+			definer, no search_path. Anyone who can add a schema owns this.</p>
+			<p class="meta" style="margin-top: 8px"><span class="tag t-blocker">blocker</span>object</p></div>
+		<div><p class="mono" style="font-size: 13px; color: var(--dg-green)">column.nullable-inequality</p>
+			<p style="color: var(--dg-ink-dim); font-size: 14.5px; margin-top: 6px">status
+			can be null, and null is not &lt;&gt; anything. Those rows vanish
+			here.</p>
+			<p class="meta" style="margin-top: 8px"><span class="tag t-warning">warning</span>statement + schema</p></div>
+		<div><p class="mono" style="font-size: 13px; color: var(--dg-green)">view.select-star</p>
+			<p style="color: var(--dg-ink-dim); font-size: 14.5px; margin-top: 6px">The
+			star in this view is expanded once, at creation. New columns never
+			appear.</p>
+			<p class="meta" style="margin-top: 8px"><span class="tag t-warning">warning</span>statement</p></div>
+	</div>
+	<p class="after"><a class="btn" href="/rules/">All <!--dg:ruleCount-->, plus <!--dg:plannedCount--> not
+	built yet</a></p>
+</section>
 
-		<div class="gripe gripe-blocker">
-			<span class="glyph" aria-hidden="true">▲</span>
-			<span>This join has no condition. That is a cross product.
-			<span class="level">notice · dry, and still critical</span></span>
-		</div>
-		<div class="gripe gripe-blocker">
-			<span class="glyph" aria-hidden="true">▲</span>
-			<span>This join has no condition. I'll allow it. I won't forget it.
-			<span class="level">warning · the default</span></span>
-		</div>
-		<div class="gripe gripe-blocker">
-			<span class="glyph" aria-hidden="true">▲</span>
-			<span>No join condition. You've asked for every row times every
-			row. Absolute state of this.
-			<span class="level">fatal · swears. opt in.</span></span>
-		</div>
-		<div class="gripe gripe-blocker">
-			<span class="glyph" aria-hidden="true">▲</span>
-			<span>NO JOIN CONDITION. Every row. Times every row. I want you to
-			sit and think about what that number is.
-			<span class="level">panic · a joke, deliberately</span></span>
-		</div>
+<section class="shell wide sec" id="s-ide" data-spy="The IDE">
+	<div class="sec-head">
+		<p class="meta">The rest of it</p>
+		<h2>It is also a database IDE</h2>
+		<p class="lede">The complaining is the part with a name on it. The
+		other nine tenths is the tool you would have opened anyway.</p>
+	</div>
+	<div class="lat c3">
+		<div><h3>Editor</h3><p>Movable tabs and splits, one model per
+		document, drafts and layout recovered across reloads.</p></div>
+		<div><h3>Query execution</h3><p>Run a selection, the statement at the
+		cursor, or the whole file. Streamed results, reliable cancellation,
+		CSV and JSON out.</p></div>
+		<div><h3>Table view</h3><p>Sort, filter, page, edit cells, insert and
+		delete rows. A side panel for the JSON column you cannot read in a
+		grid.</p></div>
+		<div><h3>Object view</h3><p>Columns, indexes, constraints, triggers,
+		grants, statistics and DDL from one catalog call. Column edits show
+		you the SQL first.</p></div>
+		<div><h3>Four engines, honestly</h3><p>Each adapter declares what it
+		can actually do. SQLite's narrow ALTER is reflected in the UI rather
+		than failing at runtime.</p></div>
+		<div><h3>Shared, if you want</h3><p>Workspace files, presence, follow
+		mode, and queries other people ran — each under their own identity,
+		with an audit trail.</p></div>
+	</div>
+	<p class="after">The complete surface, including the parts with no
+	banner, is <a href="/docs/features/">what it can do</a>.</p>
+</section>
 
-		<p class="note" style="padding-top:18px">Gripes criticise the query,
-		never the person who wrote it. Anything you disagree with is
-		dismissable for that one occurrence, that table, or the whole
-		project — and it always tells you it is hiding something.</p>
-	</section>
-
-	<section class="mascot-section">
-		<img class="section-mascot" src="mascot/shocked.svg" alt="" width="566" height="550">
-		<h2>Eleven rules, and none of them are about formatting</h2>
-		<p class="note">A rule earns its place by knowing something the query
-		text does not say, or by being about damage rather than tidiness.
-		Style filler is a formatter's job, and the fastest way to get the
-		whole thing switched off.</p>
-
-		<div class="gripe gripe-blocker">
-			<span class="glyph" aria-hidden="true">▲</span>
-			<span>Security definer, no search_path. Anyone who can add a
-			schema owns this.
-			<span class="level">blocker · routine · definer-no-search-path</span></span>
-		</div>
-		<div class="gripe gripe-warning">
-			<span class="glyph" aria-hidden="true">◆</span>
-			<span>status can be null, and null is not &lt;&gt; anything. Those
-			rows vanish here.
-			<span class="level">warning · column · nullable-inequality</span></span>
-		</div>
-		<div class="gripe gripe-warning">
-			<span class="glyph" aria-hidden="true">◆</span>
-			<span>The star in this view is expanded once, at creation. New
-			columns never appear.
-			<span class="level">warning · view · select-star</span></span>
-		</div>
-		<div class="gripe gripe-style">
-			<span class="glyph" aria-hidden="true">●</span>
-			<span>idx_orders_customer is already covered by
-			idx_orders_customer_placed. It costs writes and buys nothing.
-			<span class="level">style · index · duplicate</span></span>
-		</div>
-	</section>
-
-	<section>
-		<h2>The rest of it is a database IDE</h2>
-		<ul class="features">
-			<li>
-				<h3>Editor</h3>
-				<p>Movable tabs and splits, one model per document, drafts and
-				layout recovered across reloads.</p>
-			</li>
-			<li>
-				<h3>Query execution</h3>
-				<p>Run a selection, the statement at the cursor, or the whole
-				file. Streamed results, reliable cancellation, CSV and JSON out.</p>
-			</li>
-			<li>
-				<h3>Table view</h3>
-				<p>Sort, filter, page, edit cells, insert and delete rows. A
-				side panel for the JSON column you cannot read in a grid.</p>
-			</li>
-			<li>
-				<h3>Object view</h3>
-				<p>Columns, indexes, constraints, triggers, grants, statistics
-				and DDL from one catalog call. Edit columns with the SQL shown
-				to you first.</p>
-			</li>
-			<li>
-				<h3>Four engines, honestly</h3>
-				<p>Each adapter declares what it can actually do. SQLite's
-				narrow ALTER is reflected in the UI rather than failing at
-				runtime.</p>
-			</li>
-			<li>
-				<h3>Shared, if you want</h3>
-				<p>Workspace files, presence, follow mode, and queries other
-				people ran — each under their own identity, with an audit
-				trail.</p>
-			</li>
-		</ul>
-	</section>
-
-	<section>
+<section class="shell wide sec" id="s-run" data-spy="Run it">
+	<div class="sec-head">
+		<p class="meta">Install</p>
 		<h2>Run it in about twenty seconds</h2>
-		<p class="note">Nothing to install, no Docker, no accounts, no
-		configuration. It starts its own PostgreSQL, opens without a login,
-		and answers nothing but this machine.</p>
-<pre>bunx @datagripe/cli personal   <span class="c"># or: npx @datagripe/cli personal</span></pre>
-		<p class="note" style="padding-top:14px">Then open
-		<code>localhost:3001</code>. The <code>npx</code> version works with
-		no Bun on the machine — it fetches one, because the server runs on it.
-		Or download the desktop app above: the same thing in a window. The web
-		app also installs as a PWA.</p>
-		<p class="note" style="padding-top:10px"><a href="/docs/getting-started/">Getting
-		started</a> has the first five minutes after that, and
-		<a href="/docs/keyboard/">the shortcuts</a> — including
-		<code>Ctrl+Alt+L</code>, which is not written on any button.</p>
-	</section>
+		<p class="lede">Nothing to install, no Docker, no accounts, no
+		configuration. It starts its own PostgreSQL and opens without a
+		login.</p>
+	</div>
+	<div class="lat c2">
+		<div>
+			<p class="meta" style="margin-bottom: 10px">Just you</p>
+			<div class="cmd" style="margin: 0">bunx @datagripe/cli personal</div>
+			<p style="color: var(--dg-ink-dim); font-size: 14.5px; margin-top: 12px">Then
+			open localhost:3001. The npx version works with no Bun on the
+			machine — it fetches one, because the server runs on it. Or
+			download the desktop app: the same thing in a window.</p>
+		</div>
+		<div>
+			<p class="meta" style="margin-bottom: 10px">Everyone else</p>
+			<div class="cmd" style="margin: 0">docker run -p 3001:3001 -v datagripe:/data \<br>&nbsp;&nbsp;ghcr.io/datagripe/datagripe</div>
+			<p style="color: var(--dg-ink-dim); font-size: 14.5px; margin-top: 12px">The
+			same server, a PostgreSQL you own, accounts switched on. The first
+			person to open it creates the first account; after that signup is
+			closed until you say otherwise.</p>
+		</div>
+	</div>
+	<p class="after">Compose, Helm and plain manifests too — the
+	<a href="/docs/deploy/">deployment guide</a> has all four, and
+	<a href="/docs/configuration/">every setting</a>, starting with the one
+	nothing can guess for you: <code>WEB_ORIGIN</code>, the exact origin
+	browsers use.</p>
+</section>
 
-	<section>
-		<h2>Or run it for everyone else</h2>
-		<p class="note">The same server, a PostgreSQL you own, and accounts
-		switched on. The first person to open it creates the first account;
-		after that, signup is closed until you say otherwise.</p>
-<pre><span class="c"># one container, its own database, nothing else to run</span>
-docker run -p 3001:3001 -v datagripe:/data ghcr.io/datagripe/datagripe
+<section class="shell wide sec" id="s-agents" data-spy="For agents">
+	<div class="sec-head">
+		<p class="meta">Agents</p>
+		<h2>Every page here is also a file</h2>
+	</div>
+	<div class="agents">
+		<div>
+			<p>Append <code>.md</code> to any URL and you get that page as
+			Markdown, with links to every other page. No scraping, no
+			rendering, no JavaScript. The whole site is indexed in
+			<code>/llms.txt</code>, and <code>/llms-full.txt</code> is all of
+			it in one request.</p>
+			<p style="margin-top: 10px">DataGripe itself speaks
+			<a href="/docs/features/">MCP</a>: a project can expose an endpoint
+			an agent connects to, read-only until an owner says otherwise, with
+			every call in the history under the token's name.</p>
+		</div>
+		<div class="btns">
+			<a class="btn" href="/llms.txt">/llms.txt</a>
+			<a class="btn" href="/index.md">/index.md</a>
+		</div>
+	</div>
+</section>
 
-<span class="c"># kubernetes — the chart is the URL. no helm repo add, no index.yaml</span>
-helm install datagripe oci://ghcr.io/datagripe/charts/datagripe \
-  --set webOrigin=https://datagripe.example.com</pre>
-		<p class="note" style="padding-top:14px">Compose and plain manifests
-		too, if you would rather read a deployment than configure one. The
-		<a href="/docs/deploy/">deployment guide</a> has all four, and
-		<a href="/docs/configuration/">every setting</a> — starting with the
-		one nothing can guess for you: <code>WEB_ORIGIN</code>, the exact
-		origin browsers use.</p>
-	</section>
-
-	<section class="mascot-section">
-		<img class="section-mascot" src="mascot/oh-my.svg" alt="" width="514" height="534">
-		<h2>What a 0.0.x means</h2>
-		<p class="note">It works and it is tested. Nothing in it is promised
-		to stay put, and these are the holes rather than a roadmap:</p>
-		<ul class="missing">
-			<li><strong>The danger zone does not fire.</strong> Truncate and
-			drop are described in the object view and deliberately not
-			implemented.</li>
-			<li><strong>Gripes are client-side only.</strong> Nothing yet
-			complains about how a query actually turned out, only about how it
-			was written.</li>
-			<li><strong>Project class and attitude live in your browser.</strong>
-			Both need to move server-side before they can be relied on.</li>
-			<li><strong>The icon is a placeholder.</strong> A scowling
-			cylinder, drawn by hand. The mascot on this page is the real one;
-			the flat version that can animate in-app is not drawn yet.</li>
-		</ul>
-		<p class="note" style="padding-top:18px">The
-		<a href="https://github.com/datagripe/datagripe/blob/main/CHANGELOG.md">changelog</a>
-		keeps the full list. If a gripe is wrong, that is a bug worth
-		reporting — a wrong gripe costs more trust than a missing one.</p>
-	</section>
+<section class="shell wide sec" id="s-holes" data-spy="What is missing">
+	<div class="sec-head split">
+		<div>
+			<p class="meta">Version 0.0.x</p>
+			<h2>What a 0.0.x means</h2>
+			<p class="lede">It works and it is tested. Nothing in it is
+			promised to stay put, and it keeps its own list of what is wrong
+			with it — in the same voice it uses on your schema.</p>
+		</div>
+		<img class="mascot" src="/mascot/oh-my.svg" alt="" width="514" height="534">
+	</div>
+	<div class="lat c2">
+		<div><div class="gripe g-blocker"><span class="glyph" aria-hidden="true">▲</span>
+			<p>Gripes stop at the query text. Nothing yet complains about how a
+			query actually turned out.</p>
+			<p class="meta"><span class="tag t-blocker">being written</span>engine · server-side-gripes</p></div></div>
+		<div><div class="gripe g-warning"><span class="glyph" aria-hidden="true">◆</span>
+			<p>The danger zone states real consequences and then does nothing.
+			Truncate and drop are decoration.</p>
+			<p class="meta"><span class="tag t-warning">accepted</span>object-view · danger-zone-inert</p></div></div>
+	</div>
+	<p class="after"><a href="/roadmap/">All of them</a> — accepted,
+	unscheduled, unfiled, and the ones deliberately declined, which stay on
+	the page because the reason something was refused is the useful part.
+	What has shipped is in the <a href="/docs/release-notes/">release
+	notes</a>.</p>
+</section>

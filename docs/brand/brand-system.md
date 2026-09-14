@@ -295,10 +295,30 @@ Playback rate eases from 1.0 to 0.4 across the first ten minutes. Use the Web An
 - Never run two indicators at once.
 - Hold idle for the first 200ms so fast queries do not flash.
 - Never speed it up to signal urgency.
-- Marketing site uses the **static** rule. Motion means the database is busy, and that meaning only survives if it is never spent on decoration.
+- Marketing site uses the **static** rule. Motion means the database is busy, and that meaning only survives if it is never spent on decoration. The brand edge on datagripe.com is therefore rendered `is-idle` on every page and never animates — there is no database on the website, so there is nothing for it to be busy about.
 - Under `prefers-reduced-motion` everything collapses to the static gradient. The brand edge stays; only the weather stops.
 
 Full CSS in `tokens.css`. Live demo in `mocks/activity-bar.html`.
+
+### The one exception, and why it is not a precedent
+
+The landing page's hero canvas animates. It is the only moving thing on any Datagripe surface that is not the activity bar, and it is allowed for one reason: **it is a joke about the thing the rule prohibits.**
+
+The genre it parodies is the drifting particle mesh that appears behind roughly every developer-tool headline — decorative motion standing in for a claim the product cannot make. The canvas is that, rendered accurately, with a readout beside it counting what is actually there:
+
+```
+particles 140 · lines drawn 682 · insights 0 · relevance 0.00%
+```
+
+The last two are the punchline and they are hardcoded, because zero is the true figure. A button underneath offers to make it more impressive; it adds particles, six times, and then says that is enough.
+
+Three constraints keep it from becoming the exception that eats the rule:
+
+1. **It is the only one.** Nothing else on the site or in the application animates decoratively, and adding a second instance would mean this section was wrong rather than that the budget grew.
+2. **It carries no meaning.** It does not indicate state, progress, health, or activity. Anyone reading it as a status display has been told, on the page, that its relevance is zero. A decorative animation that also signalled something would be the actual violation, because it would put motion back in the business of meaning.
+3. **It stops under `prefers-reduced-motion`.** The mesh renders and does not drift. The joke survives as a still image, which is a fair test of whether it was a joke.
+
+The rule above is unchanged: motion means the database is busy. This does not mean anything, and says so.
 
 ### Interface motion
 

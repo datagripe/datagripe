@@ -1,8 +1,8 @@
 ---
 title: Keyboard shortcuts
 description: Everything with a binding, including the two nobody finds on their own.
-group: Start here
-order: 3
+group: Product
+order: 6
 ---
 
 `Ctrl` on Linux and Windows, `Cmd` on macOS — DataGripe accepts either,

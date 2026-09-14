@@ -1,5 +1,56 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **datagripe.com is rebuilt, and four of its pages are no longer
+  written.** The site said "eleven rules" in three places on a day the
+  catalogue held eighteen, which is the argument for all of this: the
+  rules page now renders from `packages/gripes`, the roadmap page from
+  `roadmap.md`, the release notes from this file, and the adapter
+  capability table from `ADAPTER_CAPABILITIES`. The landing page's
+  counts are substituted at build time. None of it can state a number a
+  human has to remember to change.
+
+  Twenty-three pages in three groups, where a page's `group` is both its
+  sidebar heading and its footer column — one field with two uses rather
+  than two fields that disagree. The build fails rather than publishes
+  on a broken internal link, a nav entry pointing at nothing, an
+  ungrouped page, an unparseable roadmap line, a duplicate gripe slug,
+  an unsubstituted placeholder, or a rule listed as planned that has
+  already shipped.
+
+  Visually it is a hairline lattice, a sticky section bar and a
+  three-column documentation layout, with every colour a `var()` from
+  `tokens.css` so the site and the application cannot drift apart on
+  colour or type.
+
+- **Every page is also a Markdown file.** Drop the trailing slash, add
+  `.md`: `/docs/faq/` is also `/docs/faq.md`, and the landing page is
+  `/index.md`. Plus `/llms.txt` indexing the whole site with a sentence
+  per page, `/llms-full.txt` for a client that would rather make one
+  request than twenty-three, `/sitemap.xml` and `/robots.txt`. Half the
+  readers of a tool like this arrive as an agent, and an agent should
+  not have to render a page to read it.
+
+- **The roadmap is one list now, in the product's own voice.** The
+  unscheduled/parking-lot section is replaced by "Gripes about
+  Datagripe" — twenty-four complaints it has about itself, at five
+  statuses, including the declined ones, which stay on the list because
+  the reason something was refused is more useful than its absence.
+
+- **`AGENTS.md`**, which exists mainly to say one thing: a change to
+  behaviour is a change to datagripe.com in the same commit, and here is
+  the table of what to check for whatever you touched.
+
+- **The landing page animates, once.** A particle canvas whose readout
+  counts what is actually there and reports its insights and its
+  relevance at zero. It is a joke about the genre and it suspends a real
+  brand rule, so `docs/brand/brand-system.md` "Motion" now argues for it
+  by name rather than being quietly contradicted. It stops drifting
+  under `prefers-reduced-motion`; nothing else on the site moves.
+
 ## 0.0.6 — 2026-09-14
 
 ### Added
