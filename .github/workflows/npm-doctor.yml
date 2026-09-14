@@ -30,3 +30,21 @@ jobs:
           echo "authToken   $(npm config get //registry.npmjs.org/:_authToken)"
           echo "userconfig  ${NPM_CONFIG_USERCONFIG:-none}"
           test -f "${NPM_CONFIG_USERCONFIG:-/nonexistent}" && cat "$NPM_CONFIG_USERCONFIG" || echo "(no userconfig file)"
+
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.0"
+
+      - run: bun install --frozen-lockfile --ignore-scripts
+
+      - run: bun run build:dist
+
+      # Expected to fail: the trusted publisher is bound to release.yml,
+      # not this file. The question is *how* it fails — whether npm
+      # attempts the exchange and is refused, or never attempts it.
+      - name: Publish, loudly
+        continue-on-error: true
+        run: npm publish --access public --loglevel silly 2>&1 | grep -viE "^npm sill.*(tarball|packing|notice)" | tail -60
+        working-directory: dist
