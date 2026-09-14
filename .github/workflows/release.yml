@@ -33,7 +33,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: web-bundle
+          name: asset-web
           path: release-assets/*
           if-no-files-found: error
 
@@ -93,7 +93,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: desktop-${{ matrix.platform }}
+          name: asset-desktop-${{ matrix.platform }}
           path: release-assets/*
           if-no-files-found: error
 
@@ -196,8 +196,17 @@ jobs:
       # at a missing token rather than at the exchange it just tried and
       # was refused. Verbose prints the exchange and the registry's
       # reason on the line above it.
+      # `|| already published` so re-running a release that got part way
+      # is not blocked by the one step that cannot be repeated. npm is
+      # the source of truth for what is published; a second attempt at
+      # the same version is a no-op, not a failure.
       - name: Publish
-        run: npm publish --access public --loglevel verbose
+        run: |
+          if npm view "@datagripe/cli@$(npm pkg get version | tr -d '"')" version > /dev/null 2>&1; then
+            echo "already published, nothing to do"
+            exit 0
+          fi
+          npm publish --access public --loglevel verbose
         working-directory: dist
 
   # The chart is published as an OCI artifact beside the image it runs,
@@ -240,8 +249,12 @@ jobs:
     needs: [web, desktop, image, npm, chart]
     runs-on: ubuntu-latest
     steps:
+      # `asset-*` and not everything: docker/build-push-action uploads a
+      # `.dockerbuild` build record of its own, and an unfiltered
+      # download both fails on it and would attach it to the release.
       - uses: actions/download-artifact@v4
         with:
+          pattern: asset-*
           path: release-assets
           merge-multiple: true
 

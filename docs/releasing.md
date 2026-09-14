@@ -123,6 +123,29 @@ redirects that URL after a repository transfer, so installed apps keep
 updating across a move — but the config should be corrected anyway,
 because a redirect is not a plan.
 
+## When a release gets part way
+
+Each registry is published by its own job, so a failure leaves some of
+them done. The jobs are written to be repeatable for that reason —
+`gh run rerun --failed <run-id>` picks up where it stopped, and the npm
+step skips a version the registry already has rather than failing on it.
+
+What is **not** repeatable is re-tagging: moving the tag re-runs
+everything, and the image and chart tags would be overwritten with an
+equivalent build while npm quietly no-ops. Re-tag only when the fix is
+to the workflow itself and nothing has published yet.
+
+If the `release` job is the one that failed and the artifacts are
+already built, the fastest path is to finish by hand — the assets are on
+the run:
+
+```bash
+for a in asset-web asset-desktop-linux-x64 asset-desktop-macos-arm64 asset-desktop-win-x64; do
+  gh run download <run-id> --name "$a" --dir release-assets
+done
+gh release create v0.0.6 --title v0.0.6 --generate-notes release-assets/*
+```
+
 ## Verifying a release
 
 ```bash
