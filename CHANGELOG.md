@@ -1,5 +1,55 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **The version moved to the bottom left, and says one number.** `●
+  0.0.8` when there is nothing to do; `● Update Available` when there
+  is. Three different things put a deployment behind — a newer release,
+  a page that has fallen behind its server, a downloaded build waiting
+  to be applied — and it says the same two words for all of them,
+  because the reader's next move is the same: open it. Inside are both
+  versions, the refresh, the restart button where it applies, and the
+  link to the upgrade page.
+
+  It took the place of the datasource, its namespace and the project
+  class, all three of which the sidebar's breadcrumb and the prompt
+  already say a foot up the same screen. A status bar that repeats the
+  chrome is a status bar nobody reads.
+
+  The check now runs **once when a project opens** rather than only when
+  somebody presses a button. That reverses a decision made one release
+  ago, and the status bar is why: a badge that lights up only after you
+  press something is a badge nobody sees, and "am I behind" is exactly
+  the question a person does not know to ask. There is still no interval
+  and no background thread, the server holds the answer for ten minutes
+  so a team is one request between them, and `UPDATE_CHECK_DISABLED`
+  removes the whole thing.
+
+- **The account menu is about you, not the build.** Project, role,
+  address, both settings panels, the way out — the versions have gone to
+  the other end of the window.
+
+- **The chrome scales with the type it carries.** The tab strip was a
+  fixed 29px, so at any scale above 1 it cropped its own labels; it is
+  now that height times the scale. The header is the same story in an
+  installed window, where it was pinned to the height the operating
+  system reserves for the titlebar — a floor now rather than a ceiling.
+
+- **The avatar button is the full height of the bar** and wears the
+  ordinary button radius rather than a circle: this is a square-cornered
+  interface, and one circle in it read as an import from another
+  product.
+
+### Added
+
+- **A name.** Account settings takes one, and the header button shows it
+  beside the avatar instead of the initials taken from your address. It
+  is stored in this browser like the scale, because it is how this
+  browser addresses you — it does not rename the account, and other
+  members still see the address.
+
 ## 0.0.8 — 2026-09-15
 
 ### Added

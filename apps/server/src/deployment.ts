@@ -117,10 +117,15 @@ export interface UpdateCheckDeps {
 }
 
 /**
- * Ask the release feed once, on request. Nothing here runs on a timer:
- * a database tool that phones home on its own schedule is a database
- * tool somebody has to write a firewall rule about, and the answer is
- * only ever wanted when a person is looking at the menu.
+ * Ask the release feed, at most once every ten minutes per server.
+ *
+ * The client asks when a workspace opens, because the status bar's job
+ * is to say whether this deployment is behind and a badge that only
+ * lights up after somebody presses a button is a badge nobody sees.
+ * That is the whole schedule: no interval, no background thread, and
+ * the cache here means a room full of people opening the same project
+ * is still one request. `UPDATE_CHECK_DISABLED` removes it outright,
+ * which is the answer for a deployment that must reach nothing.
  */
 export async function checkForUpdate(
 	config: AppConfig,

@@ -17,6 +17,9 @@ import { create } from "zustand";
  */
 
 export const SCALE_KEY = "dg.appearance.scale";
+export const NAME_KEY = "dg.appearance.name";
+/** Long enough for a name, short enough to sit in a header button. */
+export const NAME_MAX = 32;
 export const SCALE_MIN = 0.8;
 export const SCALE_MAX = 1.8;
 export const SCALE_STEP = 0.05;
@@ -29,6 +32,14 @@ export function clampScale(value: number): number {
 	}
 	const stepped = Math.round(value / SCALE_STEP) * SCALE_STEP;
 	return Math.min(SCALE_MAX, Math.max(SCALE_MIN, Number(stepped.toFixed(2))));
+}
+
+export function readName(): string {
+	try {
+		return (localStorage.getItem(NAME_KEY) ?? "").slice(0, NAME_MAX);
+	} catch {
+		return "";
+	}
 }
 
 export function readScale(): number {
@@ -51,11 +62,33 @@ export function applyScale(scale: number): void {
 
 export interface AppearanceState {
 	scale: number;
+	/**
+	 * What to call you in the header button. Empty means initials, which
+	 * is what an address gives us and not always a name.
+	 *
+	 * Local, like the scale and for the same reason — it is how this
+	 * browser addresses you, not who the server thinks you are. Other
+	 * members still see the address on presence and in history; changing
+	 * that is an accounts change, not a preference.
+	 */
+	name: string;
 	setScale: (scale: number) => void;
+	setName: (name: string) => void;
 }
 
 export const useAppearanceStore = create<AppearanceState>()((set) => ({
 	scale: readScale(),
+	name: readName(),
+	setName(name) {
+		const next = name.trim().slice(0, NAME_MAX);
+		try {
+			localStorage.setItem(NAME_KEY, next);
+		} catch {
+			// Storage blocked — the name holds for this session and no longer.
+		}
+		set({ name: next });
+	},
+
 	setScale(scale) {
 		const next = clampScale(scale);
 		applyScale(next);

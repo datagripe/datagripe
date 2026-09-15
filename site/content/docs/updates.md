@@ -5,14 +5,19 @@ group: Configuration
 order: 7
 ---
 
-The avatar in the top right opens the account menu, and the bottom half
-of it is about versions: which one the app is, which one the server is,
-and a **check for updates** button.
+Bottom left of the window is the version: `● 0.0.8` when there is
+nothing to do, and `● Update Available` when there is. Click it for both
+version numbers, what to do about them, and the way to do it.
 
-**Nothing checks on its own.** No timer, no startup call, no
-telemetry. The button is the only thing in DataGripe that reaches the
-internet on its own behalf, and it only does so when somebody presses
-it. A repeat press inside ten minutes gets the answer it already had.
+Three different things put you behind and it says the same two words for
+all of them, because your next move is the same: a newer release exists,
+the page has fallen behind the server, or a downloaded build is waiting
+to be applied.
+
+**The check asks once, when you open a project.** No interval, no
+background thread, no telemetry — and the server holds the answer for
+ten minutes, so a team opening the same project is one request between
+them. Close the tab and nothing asks again.
 
 A failed check says so. Reporting "up to date" when the request timed
 out is how a person misses a security release, so a check that could not
@@ -20,7 +25,7 @@ reach the release feed says that instead.
 
 | | Default | |
 | --- | --- | --- |
-| `UPDATE_CHECK_DISABLED` | `false` | Removes the button. What an airgapped deployment sets: an offer that cannot work is worse than no offer. |
+| `UPDATE_CHECK_DISABLED` | `false` | Removes the check and the button both. What an airgapped deployment sets: an offer that cannot work is worse than no offer. |
 
 ## Applying one
 
@@ -75,12 +80,20 @@ Four things about that button:
 The page then waits for the server to answer again and reloads, because
 a restart that pulled a new image also replaced the web bundle.
 
-## The avatar
+## The account menu
 
-The menu's avatar comes from Gravatar, by hash: your address never
-leaves the browser, only a SHA-256 of it does, and nothing is requested
-until you open the menu for the first time. An address with no Gravatar
-gets no generated image — the request asks for a 404 — so what you see
-is your initials on a coloured disc. That is also what you see offline,
-on an airgapped deployment, or behind a content-security policy that
-blocks it.
+The avatar in the top right is the other half: the project you are in
+and your role, your address, both settings panels and the way out. No
+versions — those are a property of the deployment, not of you, which is
+why they are at the other end of the window.
+
+It comes from Gravatar, by hash: your address never leaves the browser,
+only a SHA-256 of it does, and nothing is requested until you open the
+menu for the first time. An address with no Gravatar gets no generated
+image — the request asks for a 404 — so what you see is your initials.
+That is also what you see offline, on an airgapped deployment, or behind
+a content-security policy that blocks it.
+
+Set a **name** in Account settings and the button shows that instead of
+the initials. It is stored in this browser: it does not rename your
+account, and other members still see your address.

@@ -7,9 +7,12 @@ import { wsClient } from "../api/ws";
  * (docs/spec/updates.md): the two versions, the deployment's shape, and
  * the answer to the update button when somebody presses it.
  *
- * Nothing here polls and nothing checks on a timer. `version` is asked
- * for when the menu is first opened — it is three static fields — and
- * the release feed is reached only when a person asks it to be.
+ * Nothing here polls. The release feed is reached exactly once per
+ * workspace open, because the status bar's job is to say whether this
+ * deployment is behind and a badge that only lights up after somebody
+ * presses a button is a badge nobody sees. The server caches the answer
+ * for ten minutes, so a room full of people is still one request, and
+ * `UPDATE_CHECK_DISABLED` skips it entirely.
  */
 
 /** The bundle's version, substituted at build time (vite.config.ts). */
@@ -23,6 +26,9 @@ export interface AppState {
 	restarting: boolean;
 	error: string | null;
 	loadVersion: () => Promise<void>;
+	/** Both, on workspace open: the status bar needs the verdict, not the
+	 * version alone. Skips the network half when the deployment says no. */
+	loadVersionAndUpdate: () => Promise<void>;
 	checkForUpdate: () => Promise<void>;
 	restart: () => Promise<void>;
 	reset: () => void;
@@ -77,6 +83,13 @@ export const useAppStore = create<AppState>()((set, get) => ({
 			set({ version: await wsClient.request<AppVersion>("app.version", {}) });
 		} catch (error) {
 			set({ error: message(error) });
+		}
+	},
+
+	async loadVersionAndUpdate() {
+		await get().loadVersion();
+		if (get().version?.updateCheck === true) {
+			await get().checkForUpdate();
 		}
 	},
 

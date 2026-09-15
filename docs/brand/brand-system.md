@@ -355,7 +355,7 @@ The solid cursor during execution is a second, quieter activity signal that does
 
 ### Colour is the safety mechanism
 
-Every project carries one of the four accents. It appears on the prompt path, the cursor, and the connection indicator in the status bar. **Production is magenta — the only thing in the interface that is magenta and permanent**, so peripheral vision learns it fast.
+Every project carries one of the four accents. It appears on the prompt path, the cursor, and the datasource breadcrumb. (It was also the status bar's connection indicator until that bar stopped repeating what the sidebar already says; the accent is unchanged, it is in two places rather than three.) **Production is magenta — the only thing in the interface that is magenta and permanent**, so peripheral vision learns it fast.
 
 | Class | Colour | Meaning |
 | --- | --- | --- |

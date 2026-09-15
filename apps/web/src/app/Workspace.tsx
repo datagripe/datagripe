@@ -47,6 +47,7 @@ import { EditorView } from "../editor/EditorView";
 import { db, LOCAL_LAYOUT_ID } from "../persistence/db";
 import { createDebouncer } from "../persistence/debounce";
 import { parseLayout, sanitizeLayout } from "../persistence/layout";
+import { useAppStore } from "../stores/app";
 import { useDatasourceStore } from "../stores/datasource";
 import { draftDebouncer, useDocumentsStore } from "../stores/documents";
 import { useFilesStore } from "../stores/files";
@@ -298,6 +299,12 @@ export function Workspace() {
 					if (useSessionStore.getState().currentWorkspace?.role === "owner") {
 						void useMcpStore.getState().loadStatus();
 					}
+					// The status bar says whether this deployment is behind, so
+					// it has to know without being asked (docs/spec/updates.md
+					// "The status bar"). Once per socket open, and the server
+					// holds the answer for ten minutes, so a room full of
+					// people is still one request.
+					void useAppStore.getState().loadVersionAndUpdate();
 					void useDocumentsStore
 						.getState()
 						.switchWorkspace(result.workspace.id)

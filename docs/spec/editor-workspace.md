@@ -248,7 +248,10 @@ The header is the prompt on the left (`ProjectPrompt`) and one avatar on
 the right (`AccountMenu`, docs/spec/updates.md) — role, settings, address
 and log-out all moved behind it, because the header is also the drag
 region of an installed window and every permanent control there is width
-the operating system may take.
+the operating system may take. The status bar holds the version and the
+gripe count and nothing else: what it used to carry — the datasource,
+its namespace, the project and its class — the sidebar and the prompt
+already say, a foot up the same screen.
 
 The sidebar lists every document (dirty dot, click to focus or open,
 double-click to rename, delete to discard). It is plain React, not a
@@ -291,6 +294,14 @@ setting: the reason to turn it up is usually the screen in front of you,
 and the same account is also open on a phone. `main.tsx` applies it to
 `<html>` before the first render, so the app never paints at one size
 and jumps to another.
+
+Two pieces of chrome are sized in px rather than type and have to be
+multiplied explicitly: the tab strip
+(`--dv-tabs-and-actions-container-height`, which Dockview sizes the row
+from) and the header, which is content-sized everywhere and
+`min-height` rather than `height` in an installed window — the reserved
+titlebar strip is a floor, not a ceiling, or the scale would crop the
+bar (docs/spec/updates.md).
 
 Nothing else in the application reads the scale. A component that sizes
 itself from it is a component that stops scaling the day the slider's

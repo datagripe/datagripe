@@ -163,12 +163,13 @@ Exhaustion returns `RATE_LIMITED`, not a slow response.
 ## What reaches the internet
 
 Three things, and only three. Datasource connections you configured.
-The MCP endpoint, when a project's owner turns it on. And two in the
-account menu: the **check for updates** button, when somebody presses it
-— nothing checks on a timer — and the avatar, which is a hash of your
-address sent to Gravatar the first time the menu is opened. Both are
-described on [updates](/docs/updates/), and the first can be turned off
-with `UPDATE_CHECK_DISABLED`.
+The MCP endpoint, when a project's owner turns it on. And two about the
+app itself: the **update check**, which asks the release feed when a
+project is opened and at most once every ten minutes per server — no
+interval, no background thread — and the avatar, which is a hash of
+your address sent to Gravatar the first time the account menu is
+opened. Both are described on [updates](/docs/updates/), and the first
+is removed outright by `UPDATE_CHECK_DISABLED`.
 
 ## Restarting from inside the app
 

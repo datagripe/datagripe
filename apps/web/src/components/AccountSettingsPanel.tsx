@@ -2,6 +2,7 @@ import type { Passkey, PasskeyListResult } from "@datagripe/contracts";
 import { startRegistration } from "@simplewebauthn/browser";
 import { useCallback, useEffect, useState } from "react";
 import {
+	NAME_MAX,
 	SCALE_DEFAULT,
 	SCALE_MAX,
 	SCALE_MIN,
@@ -50,6 +51,36 @@ function describe(passkey: Passkey): string {
 			? "never used"
 			: `last used ${new Date(passkey.lastUsedAt).toLocaleDateString()}`;
 	return `added ${new Date(passkey.createdAt).toLocaleDateString()} · ${used}`;
+}
+
+/**
+ * Your name, as this browser addresses you. Local like the scale, and
+ * for the same reason: it is a preference, not an identity. Other
+ * members see the address, here and everywhere else.
+ */
+function Name() {
+	const name = useAppearanceStore((state) => state.name);
+	const setName = useAppearanceStore((state) => state.setName);
+
+	return (
+		<div className="dg-form-section">
+			<span className="dg-form-section-title">Name</span>
+			<p className="dg-form-note">
+				Shown in the header button instead of the initials taken from your
+				address. Stored in this browser; it does not rename your account, and
+				other members still see the address.
+			</p>
+			<input
+				className="dg-name-input"
+				type="text"
+				value={name}
+				maxLength={NAME_MAX}
+				placeholder="Your name"
+				aria-label="Your name"
+				onChange={(event) => setName(event.target.value)}
+			/>
+		</div>
+	);
 }
 
 /**
@@ -143,6 +174,7 @@ export function AccountSettingsPanel() {
 							? "This server runs without accounts, so there is nothing to sign in with."
 							: `${user?.email ?? "You"} — this server has security keys turned off, so there is nothing to manage here.`}
 					</p>
+					<Name />
 					<Appearance />
 				</div>
 			</div>
@@ -220,6 +252,7 @@ export function AccountSettingsPanel() {
 				<h3 className="dg-form-title">Account</h3>
 				<p className="dg-form-lead">{user?.email}</p>
 
+				<Name />
 				<Appearance />
 
 				<div className="dg-form-section">

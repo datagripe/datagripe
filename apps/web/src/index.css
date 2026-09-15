@@ -84,10 +84,11 @@ button:disabled {
 }
 
 .dg-header {
+	--dg-header-pad: 6px;
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	padding: 6px 10px;
+	padding: var(--dg-header-pad) 10px;
 	background: var(--dg-panel);
 	border-bottom: 1px solid var(--dg-rule);
 	flex: none;
@@ -131,12 +132,73 @@ button:disabled {
 	flex: 1;
 }
 
+/* The project-class dot, in the prompt's project switcher. It was also
+   the status bar's connection indicator until the bar stopped repeating
+   what the sidebar says (brand-system.md "Colour is the safety
+   mechanism" — the accent is now on the prompt and the breadcrumb). */
 .dg-status-dot {
 	width: 8px;
 	height: 8px;
 	border-radius: 50%;
 	background: var(--dg-project, var(--dg-green));
 	flex: none;
+}
+
+/* ---- the version, bottom left (components/VersionStatus.tsx) ----- *
+ * One number when there is nothing to do, two words when there is. The
+ * dot is the part read from across a desk.
+ */
+
+.dg-version {
+	position: relative;
+	flex: none;
+}
+
+.dg-statusbar button.dg-version-button {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.dg-version-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--dg-ink-faint);
+	flex: none;
+}
+
+/* Green, the healthy state, and the same green the refresh button has
+   always used for "there is a newer one of these". */
+.dg-statusbar button.dg-version-behind {
+	color: var(--dg-green);
+}
+
+.dg-version-behind .dg-version-dot {
+	background: var(--dg-green);
+}
+
+.dg-version-pop {
+	position: absolute;
+	bottom: calc(100% + 6px);
+	left: 0;
+	z-index: 90;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 7px;
+	min-width: 248px;
+	max-width: 320px;
+	padding: 10px;
+	background: var(--dg-raised);
+	border: 1px solid var(--dg-rule);
+	border-radius: 9px;
+	color: var(--dg-ink-mute);
+	white-space: normal;
+}
+
+.dg-version-action {
+	align-self: stretch;
 }
 
 .dg-statusbar button.dg-statusbar-button {
@@ -159,10 +221,6 @@ button:disabled {
 	color: var(--dg-ink-mute);
 	font: inherit;
 	padding: 1px 2px;
-}
-
-.dg-statusbar button.dg-statusbar-button.dg-statusbar-update {
-	color: var(--dg-green);
 }
 
 /* ---- frameless window drag region --------------------------- */
@@ -202,7 +260,11 @@ button:disabled {
 		   same titlebar strip, so the header gets what is left of it —
 		   otherwise the two together overhang the strip by exactly the bar
 		   and the header's bottom edge disappears under the content. */
-		height: calc(env(titlebar-area-height, 33px) - 4px);
+		/* `min-height`, not `height`: the strip's height is the floor, and
+		   the bar has to be able to outgrow it because the reader's scale
+		   decides how tall its contents are. What spills below the overlay
+		   is ordinary client area, and the drag region goes with it. */
+		min-height: calc(env(titlebar-area-height, 33px) - 4px);
 		box-sizing: border-box;
 	}
 }
@@ -1068,7 +1130,10 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	--dv-background-color: var(--dg-void);
 	--dv-group-view-background-color: var(--dg-void);
 	--dv-tabs-and-actions-container-background-color: var(--dg-panel);
-	--dv-tabs-and-actions-container-height: 29px;
+	/* The strip is as tall as the text in it, at whatever scale the
+	   reader chose (stores/appearance.ts). Dockview sizes the row from
+	   this variable, so it is the one place to say it. */
+	--dv-tabs-and-actions-container-height: calc(29px * var(--dg-scale));
 	--dv-separator-border: var(--dg-rule);
 	--dv-paneview-active-outline-color: var(--dg-violet);
 	--dv-tab-divider-color: transparent;
@@ -1088,7 +1153,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 
 .dockview-theme-abyss .dv-tabs-and-actions-container {
 	border-bottom: 1px solid var(--dg-rule);
-	min-height: 29px;
+	min-height: calc(29px * var(--dg-scale));
 }
 
 .dockview-theme-abyss .dv-tabs-and-actions-container .dv-tab {
@@ -1099,7 +1164,8 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 
 /* Tab content spacing per results-tab mock: 6px 10px 4px, 11.5px mono, 6px gaps. */
 .dockview-theme-abyss .dg-tab {
-	padding: 6px 10px 4px;
+	padding: calc(6px * var(--dg-scale)) calc(10px * var(--dg-scale))
+		calc(4px * var(--dg-scale));
 	gap: 6px;
 }
 
@@ -3056,59 +3122,97 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 .dg-account {
 	position: relative;
 	flex: none;
+	display: flex;
+	/* The wrapper is what stretches — a <button> is not reliably stretched
+	   by `align-self` — and the negative margin eats the header's own
+	   padding so the control ends where the window does. */
+	align-self: stretch;
+	margin-block: calc(-1 * var(--dg-header-pad));
 }
 
+/* Full height of the bar, and the same corner radius as every other
+   button here. This interface is square; one circle in it reads as an
+   import from another product. */
 .dg-avatar {
 	display: inline-flex;
 	align-items: center;
-	justify-content: center;
-	width: 22px;
-	height: 22px;
-	padding: 0;
-	border-radius: 50%;
-	overflow: hidden;
-	border: 1px solid var(--dg-rule);
-	/* The domain palette, never a project accent: a face is organisation,
-	   not a warning (styles/tokens.css "domains"). */
-	background: var(--dg-domain-1);
-	color: var(--dg-void);
+	gap: 7px;
+	height: 100%;
+	padding: 0 6px;
+	border-radius: var(--dg-radius-input);
+	border: 1px solid transparent;
+	background: none;
+	color: var(--dg-ink-dim);
 	font-family: var(--dg-font-mono);
-	font-size: calc(9.5px * var(--dg-scale));
-	letter-spacing: 0;
-}
-
-.dg-avatar[data-slot="2"] {
-	background: var(--dg-domain-2);
-}
-.dg-avatar[data-slot="3"] {
-	background: var(--dg-domain-3);
-}
-.dg-avatar[data-slot="4"] {
-	background: var(--dg-domain-4);
-}
-.dg-avatar[data-slot="5"] {
-	background: var(--dg-domain-5);
-}
-.dg-avatar[data-slot="6"] {
-	background: var(--dg-domain-6);
-}
-.dg-avatar[data-slot="7"] {
-	background: var(--dg-domain-7);
-}
-.dg-avatar[data-slot="8"] {
-	background: var(--dg-domain-8);
+	font-size: var(--dg-fs-meta);
 }
 
 .dg-avatar:hover:not(:disabled),
 .dg-avatar[aria-expanded="true"] {
-	border-color: var(--dg-ink-dim);
+	background: var(--dg-raised);
+	border-color: var(--dg-rule);
+	color: var(--dg-ink);
 }
 
-.dg-avatar img {
+/* The face keeps a square of its own, sized off the text so it grows
+   with the reader's scale like everything else. */
+.dg-avatar-face {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: none;
+	width: 1.7em;
+	height: 1.7em;
+	border-radius: var(--dg-radius-input);
+	overflow: hidden;
+	/* The domain palette, never a project accent: a face is organisation,
+	   not a warning (styles/tokens.css "domains"). */
+	background: var(--dg-domain-1);
+	color: var(--dg-void);
+	font-size: calc(0.86 * var(--dg-fs-meta));
+	letter-spacing: 0;
+}
+
+.dg-avatar-face[data-slot="2"] {
+	background: var(--dg-domain-2);
+}
+.dg-avatar-face[data-slot="3"] {
+	background: var(--dg-domain-3);
+}
+.dg-avatar-face[data-slot="4"] {
+	background: var(--dg-domain-4);
+}
+.dg-avatar-face[data-slot="5"] {
+	background: var(--dg-domain-5);
+}
+.dg-avatar-face[data-slot="6"] {
+	background: var(--dg-domain-6);
+}
+.dg-avatar-face[data-slot="7"] {
+	background: var(--dg-domain-7);
+}
+.dg-avatar-face[data-slot="8"] {
+	background: var(--dg-domain-8);
+}
+
+.dg-avatar-face img {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
 	display: block;
+}
+
+/* A name if you set one (Account settings → Name), and never more of it
+   than the bar can spare. */
+.dg-avatar-name {
+	max-width: 18ch;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.dg-avatar-named {
+	padding-right: 9px;
 }
 
 .dg-account-pop {

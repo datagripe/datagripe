@@ -49,10 +49,14 @@ hiding something rather than quietly showing you less.
   starts collapsed and stays where it is in the list whether it is open
   or shut.
 - **One avatar in the header** opens the account menu: the project you
-  are in and your role, the two settings panels, the way out, and which
-  version the app and the server are each running — with a button that
-  checks for a newer one and tells you the one thing that applies it
-  *here*, which is different in every shape.
+  are in and your role, the two settings panels, and the way out. Set a
+  name in Account settings and the button wears it.
+- **The version is bottom left**, as one number — and as *Update
+  Available* when a newer release exists, when the page has fallen
+  behind the server, or when a downloaded build is waiting. Clicking it
+  tells you the one thing that applies an update *here*, which is
+  different in every shape, and in Kubernetes offers the button that
+  does it.
 - **Scale.** Account settings has a slider for how big the interface is,
   from 80% to 180%. Every size in the application is a multiple of it,
   so the tree, the tabs, the editor and the results move together. It is
