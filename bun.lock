@@ -15,7 +15,7 @@
     },
     "apps/desktop": {
       "name": "@datagripe/desktop",
-      "version": "0.0.7",
+      "version": "0.0.8",
       "devDependencies": {
         "@types/bun": "^1.2.21",
         "typescript": "^5.9.2",
@@ -23,7 +23,7 @@
     },
     "apps/server": {
       "name": "@datagripe/server",
-      "version": "0.0.7",
+      "version": "0.0.8",
       "dependencies": {
         "@datagripe/contracts": "*",
         "@datagripe/database-adapters": "*",
@@ -37,7 +37,7 @@
     },
     "apps/web": {
       "name": "@datagripe/web",
-      "version": "0.0.7",
+      "version": "0.0.8",
       "dependencies": {
         "@datagripe/contracts": "*",
         "@datagripe/gripes": "*",
@@ -69,7 +69,7 @@
     },
     "packages/contracts": {
       "name": "@datagripe/contracts",
-      "version": "0.0.7",
+      "version": "0.0.8",
       "dependencies": {
         "zod": "^4.1.5",
       },
@@ -79,7 +79,7 @@
     },
     "packages/database-adapters": {
       "name": "@datagripe/database-adapters",
-      "version": "0.0.7",
+      "version": "0.0.8",
       "dependencies": {
         "@datagripe/contracts": "*",
         "@datagripe/sql-tools": "*",
@@ -91,7 +91,7 @@
     },
     "packages/gripes": {
       "name": "@datagripe/gripes",
-      "version": "0.0.7",
+      "version": "0.0.8",
       "dependencies": {
         "@datagripe/contracts": "*",
         "@datagripe/sql-tools": "*",
@@ -102,7 +102,7 @@
     },
     "packages/sql-tools": {
       "name": "@datagripe/sql-tools",
-      "version": "0.0.7",
+      "version": "0.0.8",
       "devDependencies": {
         "typescript": "^5.9.2",
       },
