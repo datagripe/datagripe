@@ -109,6 +109,8 @@ beforeAll(async () => {
 			MCP_MAX_BYTES: 1_000_000,
 			MCP_READ_MAX_BYTES: 65_536,
 			MCP_INSTRUCTIONS_MAX_BYTES: 16_384,
+			UPDATE_CHECK_DISABLED: false,
+			RESTART_TO_UPDATE: undefined,
 		} as AppConfig,
 		connections: {
 			listConnections: async () => [DATASOURCE],
@@ -502,7 +504,8 @@ describe("mcp endpoint", () => {
 		expect(state.available).toBe(true);
 		expect(state.enabled).toBe(true);
 		expect(state.mode).toBe("read-only");
-		expect(state.url).toBe(`http://localhost:3001/mcp/${workspaceId}`);
+		// The address the app is served from, not the port it listens on.
+		expect(state.url).toBe(`http://localhost:5173/mcp/${workspaceId}`);
 		expect(state.datasources[0]?.ref).toBe("predefined:demo");
 		expect(state.fileCount).toBe(1);
 		expect(state.instructionsSource).toContain("AGENTS.md");

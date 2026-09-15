@@ -1358,7 +1358,15 @@ footer .shell {
 
 @media (min-width: 860px) {
 	.fcols {
-		grid-template-columns: repeat(4, 1fr);
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
+/* Four documentation groups plus the agents column. Below this they
+   wrap, which is what the two narrower steps are for. */
+@media (min-width: 1100px) {
+	.fcols {
+		grid-template-columns: repeat(5, 1fr);
 	}
 }
 

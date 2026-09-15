@@ -1,11 +1,20 @@
 import { type ReactNode, useState } from "react";
+import { readIds, toggleId, writeIds } from "../persistence/idList";
 import { IconChevronDown, IconChevronRight } from "./icons";
 
 /**
- * VSCode-style sidebar sections: expanded sections size to their
- * content (capped — see .dg-sidebar-section in index.css) and shrink
- * when space runs out; the explorer tree absorbs whatever is left.
- * Collapsing a section docks its header at the bottom.
+ * The sidebar's stack of sections.
+ *
+ * Two rules, both of them about not moving: **every section starts
+ * collapsed**, and a section stays where it is in the list whether it is
+ * open or shut. An earlier version docked collapsed headers at the
+ * bottom, which meant opening one re-ordered the sidebar around it —
+ * the list you learned the shape of was never the list you were looking
+ * at. Position is now a property of the section, not of its state.
+ *
+ * An open section sizes to its content, capped (.dg-sidebar-section in
+ * index.css), and shrinks when space runs out; the explorer tree above
+ * absorbs whatever is left.
  */
 
 export interface SidebarSection {
@@ -13,107 +22,69 @@ export interface SidebarSection {
 	title: ReactNode;
 	body: ReactNode;
 	/**
-	 * Start collapsed until somebody expands it (docs/spec/mcp.md
-	 * "The panel"). An id absent from storage renders expanded, so
-	 * "collapsed by default" has to be said here — and once a person has
-	 * expanded or collapsed it, the stored list wins like everywhere
-	 * else.
+	 * Controls that live in the header, where they work whether the
+	 * section is open or shut — the MCP switch is the case this exists
+	 * for. They sit beside the header button rather than inside it: a
+	 * button in a button is neither valid nor clickable.
 	 */
-	defaultCollapsed?: boolean;
+	actions?: ReactNode;
+	/**
+	 * Draw the whole section as switched on: a green frame that survives
+	 * being collapsed, because "something outside this app can read the
+	 * project" is not a fact that should need expanding a panel to see.
+	 */
+	on?: boolean;
 }
 
-const STORAGE_KEY = "dg.sidebar.collapsed";
-/** Ids a person has expanded, so a default-collapsed one stays open. */
+/** Ids a person has opened. Everything else is collapsed.  */
 const EXPANDED_KEY = "dg.sidebar.expanded";
 
-function readIds(key: string): string[] {
-	try {
-		const raw = localStorage.getItem(key);
-		const parsed: unknown = raw === null ? [] : JSON.parse(raw);
-		return Array.isArray(parsed)
-			? parsed.filter((v) => typeof v === "string")
-			: [];
-	} catch {
-		return [];
-	}
-}
-
-function writeIds(key: string, ids: string[]): void {
-	try {
-		localStorage.setItem(key, JSON.stringify(ids));
-	} catch {
-		// Storage blocked — collapse state just stops persisting.
-	}
-}
-
 export function SidebarSections(props: { sections: SidebarSection[] }) {
-	const [collapsed, setCollapsed] = useState<string[]>(() =>
-		readIds(STORAGE_KEY),
-	);
 	const [expandedIds, setExpandedIds] = useState<string[]>(() =>
 		readIds(EXPANDED_KEY),
 	);
 
-	/**
-	 * Whether a section is open. Two lists rather than one because the
-	 * default differs per section: a collapse has to be remembered for a
-	 * normally-open section, and an expand for a normally-closed one.
-	 */
-	const isOpen = (section: SidebarSection) =>
-		section.defaultCollapsed === true
-			? expandedIds.includes(section.id)
-			: !collapsed.includes(section.id);
-
-	const toggle = (section: SidebarSection) => {
-		const open = isOpen(section);
-		if (section.defaultCollapsed === true) {
-			const next = open
-				? expandedIds.filter((value) => value !== section.id)
-				: [...expandedIds, section.id];
-			setExpandedIds(next);
-			writeIds(EXPANDED_KEY, next);
-			return;
-		}
-		const next = open
-			? [...collapsed, section.id]
-			: collapsed.filter((value) => value !== section.id);
-		setCollapsed(next);
-		writeIds(STORAGE_KEY, next);
+	const toggle = (id: string) => {
+		const next = toggleId(expandedIds, id);
+		setExpandedIds(next);
+		writeIds(EXPANDED_KEY, next);
 	};
-
-	const expanded = props.sections.filter(isOpen);
-	const docked = props.sections.filter((section) => !isOpen(section));
-
-	const header = (section: SidebarSection, isExpanded: boolean) => (
-		<button
-			key={section.id}
-			type="button"
-			className="dg-section-header"
-			aria-expanded={isExpanded}
-			onClick={() => toggle(section)}
-		>
-			<span className="dg-section-chevron">
-				{isExpanded ? <IconChevronDown /> : <IconChevronRight />}
-			</span>
-			{section.title}
-		</button>
-	);
 
 	return (
 		<>
-			{expanded.map((section) => (
-				<section key={section.id} className="dg-sidebar-section">
-					{header(section, true)}
-					<div className="dg-sidebar-section-body dg-scroll">
-						{section.body}
-					</div>
-				</section>
-			))}
-			{docked.length > 0 && (
-				<div className="dg-sidebar-docked">
-					{docked.map((s) => header(s, false))}
-				</div>
-			)}
+			{props.sections.map((section) => {
+				const open = expandedIds.includes(section.id);
+				return (
+					<section
+						key={section.id}
+						className={`dg-sidebar-section${open ? "" : " dg-sidebar-section-shut"}${
+							section.on === true ? " dg-sidebar-section-on" : ""
+						}`}
+					>
+						<div className="dg-section-head">
+							<button
+								type="button"
+								className="dg-section-header"
+								aria-expanded={open}
+								onClick={() => toggle(section.id)}
+							>
+								<span className="dg-section-chevron">
+									{open ? <IconChevronDown /> : <IconChevronRight />}
+								</span>
+								{section.title}
+							</button>
+							{section.actions !== undefined && (
+								<div className="dg-section-actions">{section.actions}</div>
+							)}
+						</div>
+						{open && (
+							<div className="dg-sidebar-section-body dg-scroll">
+								{section.body}
+							</div>
+						)}
+					</section>
+				);
+			})}
 		</>
 	);
 }

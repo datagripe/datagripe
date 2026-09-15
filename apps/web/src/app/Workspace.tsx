@@ -19,19 +19,19 @@ import {
 } from "react";
 import { wsClient } from "../api/ws";
 import { AccessPanel } from "../components/AccessPanel";
+import { AccountMenu } from "../components/AccountMenu";
 import { AccountSettingsPanel } from "../components/AccountSettingsPanel";
 import { ActivityBar } from "../components/ActivityBar";
 import { ConnectionForm } from "../components/ConnectionForm";
-import { DocumentSidebar } from "../components/DocumentSidebar";
 import { DomainManager } from "../components/DomainManager";
 import { EditorTab } from "../components/EditorTab";
 import { Explorer } from "../components/Explorer";
+import { FilesSection } from "../components/FilesSection";
 import { GripesPanel } from "../components/GripesPanel";
-import { IconClose, IconSettings } from "../components/icons";
-import { McpSection } from "../components/McpSection";
+import { IconClose } from "../components/icons";
+import { McpSection, McpSwitch } from "../components/McpSection";
 import { NewProjectForm } from "../components/NewProjectForm";
 import { ObjectView } from "../components/ObjectView";
-import { PathTree } from "../components/PathTree";
 import { PresenceSidebar } from "../components/PresenceSidebar";
 import { ProjectPrompt } from "../components/ProjectPrompt";
 import { ProjectSettingsPanel } from "../components/ProjectSettingsPanel";
@@ -52,6 +52,7 @@ import { draftDebouncer, useDocumentsStore } from "../stores/documents";
 import { useFilesStore } from "../stores/files";
 import { useRepoStore } from "../stores/git";
 import { useGripesStore } from "../stores/gripes";
+import { useMcpStore } from "../stores/mcp";
 import { usePresenceStore } from "../stores/presence";
 import { useRepoRunsStore } from "../stores/repoRuns";
 import {
@@ -68,11 +69,7 @@ import {
 	registerEditorPanelApi,
 } from "./editorPanels";
 import { registerResultsOpener } from "./resultsPanel";
-import {
-	openAccountSettings,
-	openProjectSettings,
-	registerViewPanelOpeners,
-} from "./viewPanels";
+import { registerViewPanelOpeners } from "./viewPanels";
 
 const LAYOUT_SAVE_DELAY_MS = 500;
 
@@ -220,12 +217,7 @@ export function Workspace() {
 		window.addEventListener("pointerup", onUp);
 	};
 
-	const sessionUser = useSessionStore((state) => state.bootstrap?.user);
-	const authDisabled = useSessionStore(
-		(state) => state.bootstrap?.authDisabled ?? false,
-	);
 	const currentWorkspace = useSessionStore((state) => state.currentWorkspace);
-	const logout = useSessionStore((state) => state.logout);
 	const hydrated = useDocumentsStore((state) => state.hydrated);
 	// The path sections belong to the datasource the tree is scoped to:
 	// switching datasource swaps them, the way it swaps the tree.
@@ -251,6 +243,15 @@ export function Workspace() {
 	const followingUserId = usePresenceStore((state) => state.followingUserId);
 	const followedBy = usePresenceStore((state) => state.followedBy);
 	const presenceUsers = usePresenceStore((state) => state.users);
+	const myUserId = useSessionStore((state) => state.bootstrap?.user?.id);
+	// "Online" means other people: a badge that counts you is a badge
+	// that never reads nought.
+	const othersOnline = presenceUsers.filter(
+		(user) => user.userId !== myUserId,
+	).length;
+	// Whether this deployment has MCP, and whether this project's server
+	// is on — the section header needs both before anybody opens it.
+	const mcpStatus = useMcpStore((state) => state.status);
 	const followingEmail = presenceUsers.find(
 		(u) => u.userId === followingUserId,
 	)?.email;
@@ -290,6 +291,13 @@ export function Workspace() {
 				.load()
 				.then((result) => {
 					useSessionStore.getState().confirmWorkspace(result.workspace);
+					// The MCP switch is in a section header, so its state is
+					// needed whether or not the panel is ever opened — and only
+					// an owner may ask for it (docs/spec/mcp.md).
+					useMcpStore.getState().reset();
+					if (useSessionStore.getState().currentWorkspace?.role === "owner") {
+						void useMcpStore.getState().loadStatus();
+					}
 					void useDocumentsStore
 						.getState()
 						.switchWorkspace(result.workspace.id)
@@ -521,37 +529,11 @@ export function Workspace() {
 						Followed by {followedBy.length}
 					</span>
 				)}
-				{currentWorkspace !== null && (
-					<span className="dg-header-meta">{currentWorkspace.role}</span>
-				)}
-				{currentWorkspace !== null && (
-					<button
-						type="button"
-						className="dg-header-cog"
-						title="Project settings"
-						aria-label="Project settings"
-						onClick={() => openProjectSettings()}
-					>
-						<IconSettings />
-					</button>
-				)}
-				{authDisabled ? (
-					<span className="dg-header-meta">{sessionUser?.email}</span>
-				) : (
-					<button
-						type="button"
-						className="dg-header-account"
-						title="Account settings"
-						onClick={() => openAccountSettings()}
-					>
-						{sessionUser?.email}
-					</button>
-				)}
-				{!authDisabled && (
-					<button type="button" onClick={() => void logout()}>
-						Log out
-					</button>
-				)}
+				{/* Role, project settings, the address and the way out are all
+					  behind one avatar (components/AccountMenu.tsx): four
+					  permanent controls for things nobody presses hourly, on the
+					  bar that has to stay legible in an installed window. */}
+				<AccountMenu />
 			</header>
 			<div className="dg-body">
 				<aside className="dg-sidebar" style={{ width: sidebarWidth }}>
@@ -560,13 +542,49 @@ export function Workspace() {
 					</div>
 					<SidebarSections
 						sections={[
-							// The repository, then its own files, then DataGripe's
-							// (docs/spec/git-datasources.md, docs/spec/datasource-paths.md).
+							// Files first, and always the same four entries in the
+							// same four places: every file the editor can open lives
+							// in one tree (docs/spec/datasource-paths.md "What the
+							// sidebar shows"), so switching datasource changes what
+							// is inside a section rather than which sections exist.
+							{
+								id: "files",
+								title: "Files",
+								body: (
+									<FilesSection
+										connectionRef={activeConnectionId}
+										paths={datasourcePaths}
+										onCreate={newDocument}
+										onOpenDocument={(documentId) => {
+											const doc =
+												useDocumentsStore.getState().documents[documentId];
+											if (dockApi !== null && doc !== undefined) {
+												openEditorPanel(dockApi, doc);
+											}
+										}}
+										onOpenFile={(doc) => {
+											if (dockApi !== null) {
+												openEditorPanel(dockApi, doc);
+											}
+										}}
+										onDiscard={(documentId) => {
+											if (dockApi !== null) {
+												closeEditorPanels(dockApi, documentId);
+											}
+											void useDocumentsStore
+												.getState()
+												.discardDocument(documentId);
+										}}
+									/>
+								),
+							},
+							// Only when the datasource has one
+							// (docs/spec/git-datasources.md).
 							...(isGitDatasource && activeConnectionId !== null
 								? [
 										{
 											id: `repo:${activeConnectionId}`,
-											title: "repository",
+											title: "Repository",
 											body: (
 												<RepoSection
 													connectionRef={activeConnectionId}
@@ -583,85 +601,38 @@ export function Workspace() {
 										},
 									]
 								: []),
-							...datasourcePaths.map((path) => ({
-								id: `path:${path.id}`,
-								title: path.name,
-								body: (
-									<PathTree
-										connectionRef={activeConnectionId ?? ""}
-										path={path}
-										onOpen={(doc) => {
-											if (dockApi !== null) {
-												openEditorPanel(dockApi, doc);
-											}
-										}}
-									/>
-								),
-							})),
-							{
-								id: "files",
-								title: "Workspace files",
-								body: (
-									<DocumentSidebar
-										kind="shared"
-										onCreate={newDocument}
-										onOpen={(documentId) => {
-											const doc =
-												useDocumentsStore.getState().documents[documentId];
-											if (dockApi !== null && doc !== undefined) {
-												openEditorPanel(dockApi, doc);
-											}
-										}}
-										onDiscard={(documentId) => {
-											if (dockApi !== null) {
-												closeEditorPanels(dockApi, documentId);
-											}
-											void useDocumentsStore
-												.getState()
-												.discardDocument(documentId);
-										}}
-									/>
-								),
-							},
-							{
-								id: "scratch",
-								title: "Scratchpads (local)",
-								body: (
-									<DocumentSidebar
-										kind="scratch"
-										onCreate={newDocument}
-										onOpen={(documentId) => {
-											const doc =
-												useDocumentsStore.getState().documents[documentId];
-											if (dockApi !== null && doc !== undefined) {
-												openEditorPanel(dockApi, doc);
-											}
-										}}
-										onDiscard={(documentId) => {
-											if (dockApi !== null) {
-												closeEditorPanels(dockApi, documentId);
-											}
-											void useDocumentsStore
-												.getState()
-												.discardDocument(documentId);
-										}}
-									/>
-								),
-							},
 							{
 								id: "online",
-								title: "Online",
+								title: (
+									<>
+										Online
+										{/* The count is the whole answer for most of the
+											  day, and it is nought most of the day: grey
+											  says "nobody", colour says "somebody". */}
+										<span
+											className={`dg-count${
+												othersOnline > 0 ? " dg-count-live" : ""
+											}`}
+										>
+											{othersOnline}
+										</span>
+									</>
+								),
 								body: <PresenceSidebar />,
 							},
-							// Collapsed by default, and only for an owner: MCP is
-							// the switch that lets something outside the app read
-							// the project (docs/spec/mcp.md).
-							...(currentWorkspace?.role === "owner"
+							// Owner-only, and only where the deployment has MCP at
+							// all. The switch is in the header rather than the panel:
+							// whether something outside the app can read this project
+							// is not a fact you should have to open a panel to learn
+							// (docs/spec/mcp.md "The panel").
+							...(currentWorkspace?.role === "owner" &&
+							mcpStatus?.available === true
 								? [
 										{
 											id: "mcp",
-											title: "mcp",
-											defaultCollapsed: true,
+											title: "MCP Server",
+											actions: <McpSwitch />,
+											on: mcpStatus.enabled,
 											body: <McpSection />,
 										},
 									]

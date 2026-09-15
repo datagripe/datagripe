@@ -159,6 +159,10 @@ function serverEnv(options, port, dataDir) {
 	const env = { ...process.env };
 	const defaults = {
 		PORT: port,
+		// Which shape this is, for the upgrade advice the account menu
+		// gives (docs/spec/updates.md). The launcher knows; the server
+		// would otherwise have to guess from the shape of its filesystem.
+		DATAGRIPE_SHAPE: "cli",
 		// One origin, because the server is also the web server here. The
 		// checkout's default names the Vite dev server, and leaving it
 		// would fail every WebSocket upgrade on the origin check.

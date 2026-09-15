@@ -59,12 +59,17 @@ const ASSETS = [
 ];
 
 /**
- * The three footer columns, which are also the three documentation
- * groups. One field with two uses rather than two fields that disagree:
- * a page's `group` puts it in the sidebar and in the footer, and there
- * is no way to add it to one and forget the other.
+ * The footer columns, which are also the documentation groups. One
+ * field with two uses rather than two fields that disagree: a page's
+ * `group` puts it in the sidebar and in the footer, and there is no way
+ * to add it to one and forget the other.
+ *
+ * Configuration is its own group rather than one page under Deploy:
+ * fifty environment variables on one page is a page people search
+ * rather than read, and the question they arrived with — "how do I turn
+ * on Google sign-in" — is a heading on a shorter page.
  */
-const GROUPS = ["Product", "Deploy", "Learn"] as const;
+const GROUPS = ["Product", "Configuration", "Deploy", "Learn"] as const;
 type Group = (typeof GROUPS)[number];
 
 /** Top-level navigation. Checked against the built pages. */
@@ -1410,6 +1415,112 @@ function checkGrouping(pages: Page[]): void {
 	}
 }
 
+/**
+ * Every environment variable the server reads is on the configuration
+ * page and in `.env.example`, and neither names one that no longer
+ * exists.
+ *
+ * This is the drift nobody catches by reading: a variable is added in
+ * `config.ts` with a good comment beside it, and the two places people
+ * actually look — a documentation page and the file they copy to `.env`
+ * — say nothing about it until somebody asks. Renaming one is worse,
+ * because the docs keep confidently describing a name that is ignored.
+ *
+ * Both directions, because both have happened. Internal or experimental
+ * is not a reason to leave one out; "you probably do not need this" is a
+ * sentence, and an undocumented variable is not.
+ */
+const ENV_ELSEWHERE = new Set([
+	// Read by the packaged launcher and the image, not by the server's
+	// own schema: it sets the data directories under one path.
+	"DATAGRIPE_DATA_DIR",
+	// Set *by* DataGripe on every git child process, never read from the
+	// environment — a missing credential must error, not hang on a prompt.
+	"GIT_TERMINAL_PROMPT",
+	// Kubernetes sets this in every pod; DataGripe only reads it to know
+	// it is in one (docs/spec/updates.md).
+	"KUBERNETES_SERVICE_HOST",
+]);
+
+async function checkEnvVars(): Promise<void> {
+	const configSource = await readFile(
+		path.join(root, "apps", "server", "src", "config.ts"),
+		"utf8",
+	);
+	const start = configSource.indexOf("const envSchema = z.object({");
+	const end = configSource.indexOf("\n});", start);
+	if (start < 0 || end < 0) {
+		throw new Error(
+			"site: could not find envSchema in apps/server/src/config.ts — the environment-variable check is reading the wrong thing",
+		);
+	}
+	const declared = new Set(
+		[...configSource.slice(start, end).matchAll(/^\t([A-Z][A-Z0-9_]*):/gm)].map(
+			(match) => match[1] as string,
+		),
+	);
+
+	// Documented *anywhere* under /docs/ counts, because a variable
+	// explained on the page about the feature it belongs to is explained.
+	// The reverse check is narrower — see below.
+	const docsDir = path.join(contentDir, "docs");
+	const sources = await Promise.all(
+		(await readdir(docsDir))
+			.filter((name) => name.endsWith(".md"))
+			.map((name) => readFile(path.join(docsDir, name), "utf8")),
+	);
+	const doc = sources.join("\n");
+	const envExample = await readFile(path.join(root, ".env.example"), "utf8");
+
+	const problems: string[] = [];
+	for (const name of declared) {
+		if (!doc.includes(`\`${name}\``)) {
+			problems.push(`${name} is on no page under /docs/`);
+		}
+		if (!new RegExp(`\\b${name}\\b`).test(envExample)) {
+			problems.push(`${name} is not in .env.example`);
+		}
+	}
+
+	// The other direction: a name that was renamed or removed. Scoped to
+	// the Configuration group and to `.env.example`, which is where a
+	// stale name is read as an instruction — elsewhere an upper-case
+	// token is as likely to be a code symbol or a container's own
+	// variable. Only candidates shaped like an environment variable, so
+	// `SELECT` and `NOT IN` in prose are not suspects.
+	const mentioned = new Set<string>();
+	for (const source of sources) {
+		if (!/^group: Configuration$/m.test(source)) {
+			continue;
+		}
+		for (const match of source.matchAll(/`([^`\n]+)`/g)) {
+			for (const token of (match[1] as string).matchAll(
+				/\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b/g,
+			)) {
+				mentioned.add(token[0]);
+			}
+		}
+	}
+	for (const match of envExample.matchAll(
+		/^#?\s*([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)=/gm,
+	)) {
+		mentioned.add(match[1] as string);
+	}
+	for (const name of mentioned) {
+		if (!declared.has(name) && !ENV_ELSEWHERE.has(name)) {
+			problems.push(
+				`${name} is documented but is not in config.ts (renamed, removed, or it belongs in ENV_ELSEWHERE)`,
+			);
+		}
+	}
+
+	if (problems.length > 0) {
+		throw new Error(
+			`site: ${problems.length} environment variable(s) out of step:\n  ${problems.join("\n  ")}`,
+		);
+	}
+}
+
 /* ------------------------------------------------------------------ */
 /* agent surfaces                                                     */
 /* ------------------------------------------------------------------ */
@@ -1675,6 +1786,7 @@ pages.sort((a, b) => groupRank(a) - groupRank(b) || a.order - b.order);
 checkGrouping(pages);
 checkPlaceholders(pages);
 await checkLinks(pages);
+await checkEnvVars();
 
 await rm(outDir, { recursive: true, force: true });
 await mkdir(outDir, { recursive: true });

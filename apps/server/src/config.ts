@@ -102,6 +102,36 @@ const envSchema = z.object({
 	 * means anyone on the internet.
 	 */
 	GOOGLE_ALLOWED_DOMAINS: z.string().default(""),
+	/**
+	 * Which shape this is running as, for the update advice the account
+	 * menu gives (docs/spec/updates.md). Set by the desktop shell and
+	 * the CLI launcher, which know; Kubernetes is detected and wins over
+	 * it. Setting it by hand only changes which upgrade instructions you
+	 * are shown.
+	 */
+	DATAGRIPE_SHAPE: z.enum(["desktop", "cli", "container"]).optional(),
+	/**
+	 * Turn off the "check for updates" button entirely. Nothing checks on
+	 * a timer in any case — the button is the only thing that reaches the
+	 * network — but an airgapped deployment should not offer a button
+	 * that cannot work.
+	 */
+	UPDATE_CHECK_DISABLED: z
+		.enum(["true", "false"])
+		.default("false")
+		.transform((value) => value === "true"),
+	/**
+	 * Whether ending the process brings a new one back. True by default
+	 * in Kubernetes and nowhere else, because that is the one shape where
+	 * something is guaranteed to start it again. Set it for a compose
+	 * stack or a systemd unit that restarts, and the account menu offers
+	 * to restart into a pulled image rather than telling you to do it by
+	 * hand.
+	 */
+	RESTART_TO_UPDATE: z
+		.enum(["true", "false"])
+		.optional()
+		.transform((value) => (value === undefined ? undefined : value === "true")),
 	/** Comma-separated hostnames allowed despite SSRF private-range blocks. */
 	TARGET_HOST_ALLOWLIST: z.string().default(""),
 	/** Disable SSRF target-host blocking entirely (trusted-network deployments). */

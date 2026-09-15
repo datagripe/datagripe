@@ -1,5 +1,6 @@
 export * from "./access";
 export * from "./adapters";
+export * from "./app";
 export * from "./auth";
 export * from "./connectionParams";
 export * from "./connectionString";

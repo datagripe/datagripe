@@ -185,9 +185,36 @@ button:disabled {
    them and fill the titlebar height. */
 @media (display-mode: window-controls-overlay) {
 	.dg-header {
-		/* Keep content clear of the window controls (left side on macOS). */
+		/* The controls are on the left on macOS and the right everywhere
+		   else, and the browser will not say which — it says where the
+		   area we may use starts and how wide it is. Everything outside
+		   that is reserved, on both sides, so both are padded: guessing a
+		   side puts the account menu under the close button on the other
+		   one. */
 		padding-left: calc(10px + env(titlebar-area-x, 0px));
-		height: env(titlebar-area-height, 33px);
+		padding-right: calc(
+			10px +
+			100vw -
+			env(titlebar-area-x, 0px) -
+			env(titlebar-area-width, 100vw)
+		);
+		/* The activity bar (4px, tokens.css) is above this and inside the
+		   same titlebar strip, so the header gets what is left of it —
+		   otherwise the two together overhang the strip by exactly the bar
+		   and the header's bottom edge disappears under the content. */
+		height: calc(env(titlebar-area-height, 33px) - 4px);
+		box-sizing: border-box;
+	}
+}
+
+/* Installed on a phone or tablet the window is the screen, cutouts and
+   home indicator included. Inset the shell rather than the header alone:
+   the status bar at the bottom is as easy to lose as the header. */
+@supports (left: env(safe-area-inset-left)) {
+	.dg-workspace {
+		padding-left: env(safe-area-inset-left);
+		padding-right: env(safe-area-inset-right);
+		padding-bottom: env(safe-area-inset-bottom);
 		box-sizing: border-box;
 	}
 }
@@ -198,7 +225,7 @@ button:disabled {
 
 .dg-mock-badge {
 	font-family: var(--dg-font-mono);
-	font-size: 9.5px;
+	font-size: calc(9.5px * var(--dg-scale));
 	letter-spacing: 0.04em;
 	color: var(--dg-magenta);
 	border: 1px dashed var(--dg-magenta);
@@ -237,8 +264,9 @@ button:disabled {
 
 /* ---- collapsible sections: expanded sections size to content, capped
    so a long file list can't crush the tree; when space runs out they
-   shrink proportionally and their bodies scroll. Collapsed headers dock
-   at the bottom. ---------------------------------------------- */
+   shrink proportionally and their bodies scroll. A collapsed section is
+   its header, in place — nothing docks, nothing re-orders
+   (components/SidebarSections.tsx). ---------------------------- */
 
 /* Explorer is never collapsible: no section header, the breadcrumb is its
    chrome. It absorbs the real estate the content-sized sections leave. */
@@ -268,27 +296,43 @@ button:disabled {
 	border-top: none;
 }
 
+/* Shut: a header and nothing else, so it takes exactly its own height
+   and leaves the rest to the tree. */
+.dg-sidebar-section-shut {
+	flex: none;
+	max-height: none;
+}
+
+/* Switched on — the MCP server, and so far only it. The frame is on the
+   section rather than the header, so collapsing it does not put the one
+   fact worth seeing from across the room inside a closed box. */
+/* Two classes deep so it also wins against .dg-sidebar-section:first-child,
+   which sets border-top: none. */
+.dg-sidebar-section.dg-sidebar-section-on {
+	border: 1px solid var(--dg-green);
+	background: #0c1a17;
+}
+
 .dg-sidebar-section-body {
 	flex: 1;
 	min-height: 0;
 	overflow-y: auto;
 }
 
-.dg-sidebar-docked {
+/* Header row: the toggle button takes the width, anything in `actions`
+   sits at the end of it and is not part of the toggle. */
+.dg-section-head {
+	display: flex;
+	align-items: center;
 	flex: none;
-	border-top: 1px solid var(--dg-rule);
 }
 
-.dg-sidebar-docked .dg-section-header + .dg-section-header {
-	border-top: 1px solid var(--dg-rule-soft);
-}
-
-/* biome-ignore lint/style/noDescendingSpecificity: base rule intentionally follows the docked-header variant */
 .dg-section-header {
 	display: flex;
 	align-items: center;
 	gap: 6px;
-	width: 100%;
+	flex: 1;
+	min-width: 0;
 	background: none;
 	border: none;
 	border-radius: 0;
@@ -296,7 +340,6 @@ button:disabled {
 	color: var(--dg-ink-dim);
 	font-size: var(--dg-fs-ui);
 	text-align: left;
-	flex: none;
 }
 
 .dg-section-header:hover:not(:disabled) {
@@ -304,10 +347,35 @@ button:disabled {
 	color: var(--dg-ink);
 }
 
+.dg-section-actions {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex: none;
+	padding-right: 10px;
+}
+
 .dg-section-chevron {
 	display: inline-flex;
 	align-items: center;
 	color: var(--dg-ink-faint);
+}
+
+/* A count in a section header: how many people are online. Nought is
+   grey and says so; anything else earns the accent. */
+.dg-count {
+	margin-left: auto;
+	padding: 0 6px;
+	border-radius: var(--dg-radius-pill);
+	background: #1b2333;
+	color: var(--dg-ink-faint);
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-meta);
+}
+
+.dg-count-live {
+	background: #0f2c24;
+	color: var(--dg-green);
 }
 
 /* ---- datasource breadcrumb -------------------------------------- */
@@ -354,7 +422,7 @@ button:disabled {
 	border-radius: 4px;
 	background: #232c3e;
 	color: var(--dg-ink-dim);
-	font-size: 9px;
+	font-size: calc(9px * var(--dg-scale));
 	font-weight: 500;
 	flex: none;
 }
@@ -432,7 +500,7 @@ button:disabled {
 .dg-crumb-pop-hd {
 	padding: 5px 9px 4px;
 	color: var(--dg-ink-faint);
-	font-size: 10.5px;
+	font-size: calc(10.5px * var(--dg-scale));
 }
 
 .dg-crumb-item {
@@ -472,7 +540,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 .dg-crumb-sub {
 	margin-left: auto;
 	color: var(--dg-ink-faint);
-	font-size: 10.5px;
+	font-size: calc(10.5px * var(--dg-scale));
 	padding-left: 10px;
 }
 
@@ -642,16 +710,49 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 
 /* ---- document + presence lists ------------------------------- */
 
-/* Create affordance in each documents section: centered button under the help text when empty,
-   left-aligned string row under the items otherwise. */
 .dg-documents {
 	display: flex;
 	flex-direction: column;
 }
 
-.dg-doc-new-empty {
-	align-self: center;
-	margin: 0 10px 12px;
+/* ---- the files tree ------------------------------------------ *
+ * One section, three kinds of root: the datasource's own directories,
+ * the project's shared files, this browser's scratchpads
+ * (components/FilesSection.tsx). Everything under a root is indented
+ * against it, so the tree reads as one tree.
+ */
+
+.dg-files {
+	padding-bottom: 6px;
+}
+
+/* A root row sits at the tree's own left margin; everything a root
+   contains is indented against it by .dg-files-root-body. */
+.dg-files-root {
+	padding-left: 10px;
+}
+
+.dg-files-root-body {
+	padding-left: 12px;
+}
+
+/* `new` belongs to the row it creates in. Always visible, never loud:
+   a create affordance that appears on hover is a create affordance
+   nobody on a touch screen has. */
+.dg-files-new {
+	flex: none;
+	background: none;
+	border: none;
+	border-radius: 0;
+	padding: 0 8px;
+	color: var(--dg-ink-faint);
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-meta);
+}
+
+.dg-files-new:hover:not(:disabled) {
+	background: none;
+	color: var(--dg-green);
 }
 
 .dg-doc-new {
@@ -669,11 +770,6 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 .dg-doc-new:hover:not(:disabled) {
 	background: none;
 	color: var(--dg-green);
-}
-
-.dg-doc-new-empty {
-	align-self: center;
-	margin: 0 10px 12px;
 }
 
 .dg-document-list {
@@ -726,7 +822,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 .dg-path-root {
 	margin: 0 10px 8px;
 	font-family: var(--dg-font-mono);
-	font-size: 11px;
+	font-size: calc(11px * var(--dg-scale));
 	color: var(--dg-ink-mute);
 	overflow-wrap: anywhere;
 }
@@ -915,7 +1011,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 .dg-exp-fmt-hd {
 	padding: 5px 9px 4px;
 	color: var(--dg-ink-faint);
-	font-size: 10.5px;
+	font-size: calc(10.5px * var(--dg-scale));
 }
 
 .dg-exp-fmt-it {
@@ -1009,7 +1105,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 
 .dockview-theme-abyss .dg-tab-close {
 	padding: 0 2px;
-	font-size: 10px;
+	font-size: calc(10px * var(--dg-scale));
 }
 
 /* biome-ignore lint/style/noDescendingSpecificity: base border for all tabs intentionally follows the strip-scoped rules above */
@@ -1206,7 +1302,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	background: var(--dg-sev-warning-bg);
 	border-bottom: 1px solid var(--dg-rule);
 	color: var(--dg-violet-text);
-	font-size: 12px;
+	font-size: calc(12px * var(--dg-scale));
 	flex: none;
 }
 
@@ -1332,7 +1428,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 }
 
 .dg-badge {
-	font-size: 10px;
+	font-size: calc(10px * var(--dg-scale));
 	padding: 1px 5px;
 	border: 1px solid var(--dg-rule);
 	border-radius: var(--dg-radius-pill);
@@ -1717,7 +1813,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	border-top: 1px solid var(--dg-rule);
 	background: var(--dg-panel);
 	padding: 14px 16px 24px;
-	font-size: 12.5px;
+	font-size: calc(12.5px * var(--dg-scale));
 	min-width: 0;
 }
 
@@ -1765,7 +1861,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 		padding: 0;
 		background: var(--dg-panel);
 		color: var(--dg-ink-mute);
-		font-size: 12px;
+		font-size: calc(12px * var(--dg-scale));
 		line-height: 1;
 		cursor: pointer;
 	}
@@ -1820,7 +1916,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 
 .dg-rail-section h4 {
 	font-family: var(--dg-font-mono);
-	font-size: 10.5px;
+	font-size: calc(10.5px * var(--dg-scale));
 	color: var(--dg-ink-faint);
 	font-weight: 400;
 	margin: 0 0 9px;
@@ -1833,7 +1929,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	gap: 10px;
 	padding: 4px 0;
 	font-family: var(--dg-font-mono);
-	font-size: 11.5px;
+	font-size: calc(11.5px * var(--dg-scale));
 }
 
 .dg-rail-kv span {
@@ -1864,7 +1960,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
    while filling the form in, and the fastest way to spot a wrong port. */
 .dg-rail-conn {
 	font-family: var(--dg-font-mono);
-	font-size: 11px;
+	font-size: calc(11px * var(--dg-scale));
 	color: var(--dg-ink-faint);
 	word-break: break-all;
 	background: var(--dg-void);
@@ -1886,7 +1982,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	border-radius: 8px;
 	padding: 10px 11px;
 	font-family: var(--dg-font-mono);
-	font-size: 11px;
+	font-size: calc(11px * var(--dg-scale));
 	line-height: 1.75;
 	margin-top: 6px;
 }
@@ -1897,14 +1993,14 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 
 .dg-rail-help p {
 	color: var(--dg-ink-dim);
-	font-size: 12px;
+	font-size: calc(12px * var(--dg-scale));
 	line-height: 1.55;
 	margin: 0 0 10px;
 }
 
 .dg-rail-help code {
 	font-family: var(--dg-font-mono);
-	font-size: 11px;
+	font-size: calc(11px * var(--dg-scale));
 	color: var(--dg-cyan);
 }
 
@@ -1914,14 +2010,14 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 
 .dg-rail-help dt {
 	font-family: var(--dg-font-mono);
-	font-size: 11.5px;
+	font-size: calc(11.5px * var(--dg-scale));
 	color: var(--dg-ink);
 	margin-top: 8px;
 }
 
 .dg-rail-help dd {
 	margin: 2px 0 0;
-	font-size: 11.5px;
+	font-size: calc(11.5px * var(--dg-scale));
 	color: var(--dg-ink-faint);
 	line-height: 1.5;
 }
@@ -1933,7 +2029,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	padding: 0;
 	color: var(--dg-green);
 	font-family: var(--dg-font-mono);
-	font-size: 11.5px;
+	font-size: calc(11.5px * var(--dg-scale));
 	cursor: pointer;
 	text-align: left;
 }
@@ -2012,7 +2108,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 
 .dg-tog-tx b {
 	display: block;
-	font-size: 12.5px;
+	font-size: calc(12.5px * var(--dg-scale));
 	color: var(--dg-ink);
 	font-weight: 400;
 	font-family: var(--dg-font-mono);
@@ -2020,7 +2116,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 
 .dg-tog-tx span {
 	display: block;
-	font-size: 11.5px;
+	font-size: calc(11.5px * var(--dg-scale));
 	color: var(--dg-ink-faint);
 	line-height: 1.45;
 	margin-top: 2px;
@@ -2239,7 +2335,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 
 .dg-modal-hint {
 	color: var(--dg-ink-mute);
-	font-size: 12px;
+	font-size: calc(12px * var(--dg-scale));
 	margin: 0 0 10px;
 }
 
@@ -2285,7 +2381,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 /* Field help sits under its control, capped to a text measure so it
    reads as help rather than page copy. */
 .dg-form-hint {
-	font-size: 11.5px;
+	font-size: calc(11.5px * var(--dg-scale));
 	color: var(--dg-ink-faint);
 	line-height: 1.45;
 	margin: 4px 0 0;
@@ -2318,7 +2414,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	flex: 1 1 auto;
 	min-width: 0;
 	font-family: var(--dg-font-mono);
-	font-size: 12px;
+	font-size: calc(12px * var(--dg-scale));
 }
 
 /* What the string said that the fields could not take. Faint, because it
@@ -2329,7 +2425,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	margin: 8px 0 0;
 	padding: 0;
 	max-width: 640px;
-	font-size: 11.5px;
+	font-size: calc(11.5px * var(--dg-scale));
 	line-height: 1.45;
 	color: var(--dg-ink-faint);
 }
@@ -2366,12 +2462,12 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 
 .dg-test-ok {
 	color: var(--dg-green);
-	font-size: 12px;
+	font-size: calc(12px * var(--dg-scale));
 }
 
 .dg-test-failed {
 	color: var(--dg-magenta);
-	font-size: 12px;
+	font-size: calc(12px * var(--dg-scale));
 }
 
 .dg-modal-actions-spacer {
@@ -2432,12 +2528,12 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 
 .dg-form-title {
 	font-weight: 500;
-	font-size: 15px;
+	font-size: calc(15px * var(--dg-scale));
 	margin: 0 0 3px;
 }
 
 .dg-form-lead {
-	font-size: 12.5px;
+	font-size: calc(12.5px * var(--dg-scale));
 	color: var(--dg-ink-mute);
 	margin: 0 0 16px;
 }
@@ -2448,7 +2544,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 }
 
 .dg-form-note {
-	font-size: 11.5px;
+	font-size: calc(11.5px * var(--dg-scale));
 	color: var(--dg-ink-mute);
 	margin: 6px 0 0;
 }
@@ -2462,9 +2558,48 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 .dg-form-section-title {
 	display: block;
 	font-family: var(--dg-font-mono);
-	font-size: 11px;
+	font-size: calc(11px * var(--dg-scale));
 	color: var(--dg-ink-mute);
 	margin-bottom: 10px;
+}
+
+/* ---- the scale slider (docs/spec/editor-workspace.md "Scale") ----
+ * Two sample letters at the ends, the value beside them. The samples
+ * are sized in the tokens they set, so the control demonstrates what it
+ * does while you drag it.
+ */
+
+.dg-scale-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.dg-scale-slider {
+	flex: 1;
+	min-width: 0;
+	max-width: 260px;
+	accent-color: var(--dg-green);
+}
+
+.dg-scale-sample {
+	flex: none;
+	color: var(--dg-ink-dim);
+	font-family: var(--dg-font-sans);
+	font-size: var(--dg-fs-body);
+	line-height: 1;
+}
+
+.dg-scale-sample-small {
+	font-size: var(--dg-fs-meta);
+}
+
+.dg-scale-value {
+	flex: none;
+	min-width: 5ch;
+	color: var(--dg-ink-mute);
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-meta);
 }
 
 .dg-form fieldset.dg-eng {
@@ -2482,7 +2617,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 
 .dg-form legend {
 	font-family: var(--dg-font-mono);
-	font-size: 11px;
+	font-size: calc(11px * var(--dg-scale));
 	color: var(--dg-ink-mute);
 	padding: 0;
 	margin-bottom: 4px;
@@ -2500,7 +2635,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	align-items: center;
 	gap: 7px;
 	font-family: var(--dg-font-mono);
-	font-size: 11.5px;
+	font-size: calc(11.5px * var(--dg-scale));
 	color: var(--dg-ink-dim);
 	background: transparent;
 	border: 1px solid var(--dg-rule);
@@ -2549,7 +2684,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	align-items: center;
 	gap: 6px;
 	font-family: var(--dg-font-mono);
-	font-size: 11px;
+	font-size: calc(11px * var(--dg-scale));
 	padding: 5px 11px;
 	border-radius: 6px;
 	background: transparent;
@@ -2584,7 +2719,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 
 .dg-btn {
 	font-family: var(--dg-font-mono);
-	font-size: 11.5px;
+	font-size: calc(11.5px * var(--dg-scale));
 	padding: 6px 14px;
 	border-radius: 6px;
 	background: transparent;
@@ -2609,7 +2744,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 
 .dg-testline {
 	font-family: var(--dg-font-mono);
-	font-size: 11px;
+	font-size: calc(11px * var(--dg-scale));
 	color: var(--dg-ink-mute);
 	margin-left: auto;
 }
@@ -2667,12 +2802,12 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 }
 
 .dg-pin {
-	font-size: 12px;
+	font-size: calc(12px * var(--dg-scale));
 }
 
 .dg-results-status {
 	color: var(--dg-ink-mute);
-	font-size: 12px;
+	font-size: calc(12px * var(--dg-scale));
 	font-family: var(--dg-font-mono);
 }
 
@@ -2815,7 +2950,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 .dg-auth-lockup {
 	font-family: var(--dg-font-mono);
 	font-weight: 500;
-	font-size: 22px;
+	font-size: calc(22px * var(--dg-scale));
 	letter-spacing: -0.03em;
 	color: var(--dg-ink);
 }
@@ -2912,16 +3047,172 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	white-space: nowrap;
 }
 
-.dg-header-account {
-	background: none;
-	border: none;
-	color: var(--dg-ink-mute);
-	padding: 0 4px;
+/* ---- account menu (docs/spec/updates.md "The menu") -------------- *
+ * One avatar where four controls used to be. The header is the one bar
+ * that has to stay legible in an installed window, where the OS takes
+ * whichever end it likes (see the window-controls-overlay block above).
+ */
+
+.dg-account {
+	position: relative;
+	flex: none;
 }
 
-.dg-header-account:hover:not(:disabled) {
-	background: none;
+.dg-avatar {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	border-radius: 50%;
+	overflow: hidden;
+	border: 1px solid var(--dg-rule);
+	/* The domain palette, never a project accent: a face is organisation,
+	   not a warning (styles/tokens.css "domains"). */
+	background: var(--dg-domain-1);
+	color: var(--dg-void);
+	font-family: var(--dg-font-mono);
+	font-size: calc(9.5px * var(--dg-scale));
+	letter-spacing: 0;
+}
+
+.dg-avatar[data-slot="2"] {
+	background: var(--dg-domain-2);
+}
+.dg-avatar[data-slot="3"] {
+	background: var(--dg-domain-3);
+}
+.dg-avatar[data-slot="4"] {
+	background: var(--dg-domain-4);
+}
+.dg-avatar[data-slot="5"] {
+	background: var(--dg-domain-5);
+}
+.dg-avatar[data-slot="6"] {
+	background: var(--dg-domain-6);
+}
+.dg-avatar[data-slot="7"] {
+	background: var(--dg-domain-7);
+}
+.dg-avatar[data-slot="8"] {
+	background: var(--dg-domain-8);
+}
+
+.dg-avatar:hover:not(:disabled),
+.dg-avatar[aria-expanded="true"] {
+	border-color: var(--dg-ink-dim);
+}
+
+.dg-avatar img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.dg-account-pop {
+	position: absolute;
+	top: calc(100% + 6px);
+	right: 0;
+	z-index: 90;
+	min-width: 264px;
+	max-width: 320px;
+	background: var(--dg-raised);
+	border: 1px solid var(--dg-rule);
+	border-radius: 9px;
+	padding: 4px;
+	/* The header is a drag region in an installed window; the menu inside
+	   it is not, or half of it cannot be clicked. */
+	app-region: no-drag;
+}
+
+.dg-account-who {
+	padding: 8px 10px 9px;
+	border-bottom: 1px solid var(--dg-rule);
+}
+
+.dg-account-project {
+	display: block;
+	font-family: var(--dg-font-mono);
+	font-weight: 400;
+	font-size: var(--dg-fs-ui);
 	color: var(--dg-ink);
+	overflow-wrap: anywhere;
+}
+
+.dg-account-meta {
+	display: block;
+	margin-top: 2px;
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-meta);
+	color: var(--dg-ink-mute);
+	overflow-wrap: anywhere;
+}
+
+.dg-account-rows {
+	display: flex;
+	flex-direction: column;
+	padding: 4px 0;
+	border-bottom: 1px solid var(--dg-rule);
+}
+
+.dg-account-row {
+	background: none;
+	border: none;
+	border-radius: 5px;
+	padding: 6px 10px;
+	text-align: left;
+	color: var(--dg-ink-dim);
+	font-size: var(--dg-fs-ui);
+}
+
+.dg-account-row:hover:not(:disabled) {
+	background: #1d2537;
+	color: var(--dg-ink);
+}
+
+.dg-account-version {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 6px;
+	padding: 9px 10px 8px;
+}
+
+/* Two versions, labelled, because which one is behind is the answer. */
+.dg-account-versions {
+	display: grid;
+	grid-template-columns: auto auto;
+	gap: 2px 8px;
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-meta);
+	color: var(--dg-ink-faint);
+}
+
+.dg-account-versions code {
+	color: var(--dg-ink-dim);
+}
+
+.dg-account-note {
+	margin: 0;
+	font-size: var(--dg-fs-meta);
+	color: var(--dg-ink-mute);
+	max-width: 34ch;
+}
+
+.dg-account-restart {
+	align-self: stretch;
+}
+
+.dg-account-link {
+	color: var(--dg-ink-mute);
+	font-size: var(--dg-fs-meta);
+	text-decoration: none;
+}
+
+.dg-account-link:hover {
+	color: var(--dg-cyan);
 	text-decoration: underline;
 }
 
@@ -3005,7 +3296,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 
 .dg-follow-button {
 	padding: 1px 8px;
-	font-size: 11px;
+	font-size: calc(11px * var(--dg-scale));
 	margin-right: 6px;
 	visibility: hidden;
 }
@@ -3019,7 +3310,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	font-size: 12px;
+	font-size: calc(12px * var(--dg-scale));
 	padding: 2px 8px;
 	border: 1px solid var(--dg-rule);
 	border-radius: var(--dg-radius-pill);
@@ -3122,7 +3413,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 
 .dg-ov-title b {
 	font-family: var(--dg-font-mono);
-	font-size: 14px;
+	font-size: calc(14px * var(--dg-scale));
 	font-weight: 500;
 	color: var(--dg-ink);
 }
@@ -3263,7 +3554,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 .dg-ov-stats b {
 	display: block;
 	font-family: var(--dg-font-mono);
-	font-size: 16px;
+	font-size: calc(16px * var(--dg-scale));
 	font-weight: 400;
 	color: var(--dg-ink);
 }
@@ -3583,7 +3874,7 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	align-items: center;
 	gap: 1px;
 	color: var(--dg-cyan);
-	font-size: 9px;
+	font-size: calc(9px * var(--dg-scale));
 }
 
 .dg-tv-cell {
@@ -4371,13 +4662,13 @@ th.dg-tv-pk .dg-tv-th {
 }
 
 .dg-md-prose h2 {
-	font-size: 21px;
+	font-size: calc(21px * var(--dg-scale));
 	border-bottom: 1px solid var(--dg-rule);
 	padding-bottom: 4px;
 }
 
 .dg-md-prose h3 {
-	font-size: 17px;
+	font-size: calc(17px * var(--dg-scale));
 }
 
 .dg-md-prose code {
@@ -4621,6 +4912,13 @@ th.dg-tv-pk .dg-tv-th {
 	gap: 8px;
 	padding: 6px 10px 10px;
 	font-size: var(--dg-fs-meta);
+}
+
+/* What the switch in the header just did, in words. */
+.dg-mcp-lead {
+	margin: 0;
+	color: var(--dg-ink-dim);
+	max-width: 40ch;
 }
 
 .dg-mcp-mode {

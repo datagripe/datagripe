@@ -58,6 +58,9 @@ that fails, rather than publishes, on:
 - a nav entry pointing at a page that no longer exists;
 - a page with no `group`, which is a page nothing links to;
 - two pages claiming the same group and order;
+- an environment variable in `apps/server/src/config.ts` that no page
+  documents, or that `.env.example` does not carry — and, on a
+  Configuration page, a variable name the server no longer reads;
 - a line in `roadmap.md`'s gripe sections it cannot parse, a duplicate
   slug, or a status outside the five;
 - **a rule listed as "not built yet" that has quietly shipped**;
@@ -84,7 +87,8 @@ order: 6
 ---
 ```
 
-`group` is one of **Product**, **Deploy** or **Learn**, and it does two
+`group` is one of **Product**, **Configuration**, **Deploy** or
+**Learn**, and it does two
 jobs: it is the sidebar heading and it is the footer column. One field
 with two uses rather than two fields that disagree — there is no way to
 add a page to the sidebar and forget the footer.

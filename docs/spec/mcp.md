@@ -124,11 +124,12 @@ the two things to change.
 `mode` default `'read-only'`, `updated_by`, `updated_at`. No row means
 off, which is why nothing bootstraps one.
 
-Four actions, all `owner`: `mcp.settings` (the panel's whole state,
-including the token list), `mcp.settings.set`, `mcp.token.create`,
-`mcp.token.revoke`. This is an owner-level decision like repository
-trust, and the panel is absent for everybody else rather than disabled
-with a tooltip.
+Five actions, all `owner`: `mcp.status` (three fields off the settings
+row, for the section header — see "The panel"), `mcp.settings` (the
+panel's whole state, including the token list), `mcp.settings.set`,
+`mcp.token.create`, `mcp.token.revoke`. This is an owner-level decision
+like repository trust, and the panel is absent for everybody else rather
+than disabled with a tooltip.
 
 Turning MCP off revokes nothing and deletes no token; a valid token for
 a disabled project gets `403` naming the toggle. Flipping read/write
@@ -322,24 +323,35 @@ under a line naming where it came from, capped at
 
 ### The panel
 
-A `SidebarSections` entry, id `mcp`, **collapsed by default** and
-rendered only for an owner and only when `MCP_ENABLED`.
+A `SidebarSections` entry, id `mcp`, titled **MCP Server**, rendered
+only for an owner and only when the deployment has MCP at all. Like
+every section it starts collapsed (docs/spec/editor-workspace.md
+"Sections").
 
-Collapsed-by-default needed `defaultCollapsed?: boolean` on
-`SidebarSection`. An id absent from `dg.sidebar.collapsed` renders
-expanded, so the default has to be expressed rather than assumed — and
-because the default now differs per section, an expand has to be
-remembered as well as a collapse: `dg.sidebar.expanded` holds the ids of
-default-collapsed sections a person has opened. Once they have touched
-it, the stored list wins, like everywhere else.
+**The switch is in the header, not the panel.** It is the section's
+`actions`, and the section carries `on` while the server is running, so
+it wears a green frame whether it is open or shut. Whether something
+outside this app can read the project is not a fact that should need a
+panel opened to see, and turning it off should not either.
 
-Because the section only mounts when expanded, nothing reads the disk
-while it is collapsed — which is what it is, by default.
+That costs one cheap read. `mcp.status` — available, enabled, mode, off
+the settings row — is asked for on every project open by an owner, and
+is deliberately not `mcp.settings`: the panel's state walks every
+datasource path to count the files an agent would see, and that is a
+disk read nobody asked for while the section sits shut. The section body
+still only mounts when it is opened, so that read still happens exactly
+when somebody looks.
 
-Top to bottom:
+`mcp.status` answers rather than refuses when `MCP_ENABLED` is off
+(`available: false`), because that is the question being asked — a
+thrown `Forbidden` would leave the sidebar unable to tell "off" from
+"broken". The section is absent in that case, as it is for anybody who
+is not an owner.
 
-- a `Toggle` for the server itself. Off reads "Nothing is listening for
-  this project."
+Top to bottom, inside the panel:
+
+- one line saying what the switch in the header just did. Off reads
+  "Nothing is listening for this project."
 - read-only ⇄ read/write, the segmented shape the datasource page's
   overrides use. Read/write is a deliberate second press, its
   description states that every tool call commits, and when it is
@@ -396,11 +408,21 @@ applies through the registry.
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `MCP_ENABLED` | `true` | deployment kill switch; off means the route and the panel are absent |
-| `MCP_PUBLIC_URL` | `http://localhost:$PORT` | what the panel tells people to point a client at |
+| `MCP_PUBLIC_URL` | `WEB_ORIGIN` | what the panel tells people to point a client at |
 | `MCP_MAX_ROWS` | `200` | ceiling for `run_query`, clamping `maxRows` |
 | `MCP_MAX_BYTES` | `1000000` | serialized result cap per call |
 | `MCP_READ_MAX_BYTES` | `65536` | `read_doc` / `resources/read` per call |
 | `MCP_INSTRUCTIONS_MAX_BYTES` | `16384` | briefing cap |
+
+`MCP_PUBLIC_URL` defaults to `WEB_ORIGIN` rather than the listening
+port. The endpoint is served by the same process on the same origin as
+the app, and `WEB_ORIGIN` is the address this deployment already tells
+browsers to use and the one a proxy in front of it terminates; the port
+is right only when nothing is in front, which is the case `WEB_ORIGIN`
+also describes. Set `MCP_PUBLIC_URL` for the deployment that answers MCP
+on a different hostname. In development the Vite server proxies `/mcp`
+to the API for the same reason: the address the panel prints has to be
+one that answers.
 
 Timeout and concurrency come from the existing `QUERY_*` limits.
 

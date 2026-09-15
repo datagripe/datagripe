@@ -143,7 +143,7 @@ machinery from `docs/spec/multiplayer.md`, untouched.
   the file was opened. The pair can be repointed, removed, or have a
   symlink swapped underneath it while a tab sits open, and none of those
   may turn into a write somewhere else.
-- File-backed documents are excluded from the *Workspace files* section:
+- File-backed documents are excluded from the *Workspace files* root:
   they belong to their path's section, and one file in two lists with
   two different names for what it is helps nobody.
 
@@ -176,23 +176,31 @@ root is a different feature with a different cost.
 ## What the sidebar shows
 
 ```
-┌ migrations ─────────────────┐   ← the pair's name is the box title
-│ ▾ 2026                      │
-│   · 0007_domains.sql        │
-│   · 0008_paths.sql        ● │   ← dirty, same dot as the tab
-│ · README.md                 │
-├ queries ────────────────────┤   ← a second pair, its own section
-│ · churn.sql                 │
-├ Workspace files ────────────┤
-│ · shared.sql                │
-├ Scratchpads (local) ────────┤
+┌ Files ──────────────────────┐   ← one section, three kinds of root
+│ ▾ migrations                │   ← a path pair, under its own name
+│   ▾ 2026                    │
+│     · 0007_domains.sql      │
+│     · 0008_paths.sql      ● │   ← dirty, same dot as the tab
+│   · README.md               │
+│ ▸ queries                   │   ← a second pair
+│ ▾ Workspace files     [new] │
+│   · shared.sql              │
+│ ▸ Scratchpads         [new] │
 └─────────────────────────────┘
 ```
 
-Path sections come first because they are the project's own files; the
-workspace files below them are DataGripe's. They are ordinary
-`SidebarSections`, so they collapse and dock like the rest, and
-switching datasource swaps them the way it swaps the tree.
+Path roots come first because they are the project's own files; the two
+below them are DataGripe's. They were three sidebar sections until the
+number of them started changing with the datasource — a sidebar whose
+section list re-shapes under you is a sidebar you cannot learn. They are
+all "files the editor can open", which is one question, so they are one
+section with three kinds of root: switching datasource now changes what
+is inside Files rather than which sections exist
+(docs/spec/editor-workspace.md "Sections").
+
+`new` sits on the root it creates in, and opens that root — a file
+appearing in a folder you cannot see is indistinguishable from nothing
+happening. Which roots are open is `dg.sidebar.files`.
 
 A directory that will not read shows why, plus the absolute path it
 tried — "not readable" on its own sends people to the wrong machine.

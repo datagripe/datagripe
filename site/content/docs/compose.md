@@ -96,4 +96,4 @@ except access to any datasource.
 - [Docker](/docs/docker/) — one container, no compose.
 - [Kubernetes](/docs/kubernetes/) — Helm and plain manifests.
 - [Upgrading](/docs/upgrading/) — what to run, in what order.
-- [Configuration](/docs/configuration/) — every variable.
+- [Configuration](/docs/configuration/) — every variable, a page per decision.

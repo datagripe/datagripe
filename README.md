@@ -49,8 +49,11 @@ Setting `APP_DATABASE_URL` selects external mode: account auth is on and
 Accounts sign in with a password, a security key, or Google — set
 `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` for the last one, and
 `PASSWORD_AUTH_DISABLED` / `PASSKEY_AUTH_DISABLED` to lock the
-deployment to the methods you want
-([docs/spec/auth-and-hardening.md](docs/spec/auth-and-hardening.md)).
+deployment to the methods you want. The four steps for Google, and every
+other setting, are on
+[datagripe.com/docs/authentication](https://datagripe.com/docs/authentication/);
+the design is in
+[docs/spec/auth-and-hardening.md](docs/spec/auth-and-hardening.md).
 
 Requires Bun 1.4 (`packageManager` is pinned). External mode expects
 PostgreSQL 17.

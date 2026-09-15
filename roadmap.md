@@ -469,6 +469,52 @@ places on a day the catalogue held eighteen.
 Exit: a page cannot describe a version that does not exist, and the
 build says which page and why.
 
+## Phase 19 — The shell · shipped 2026-09-15
+
+The chrome around the editor, which had accumulated rather than been
+designed: a header of four controls nobody presses hourly, a sidebar
+that re-ordered itself when you opened a section, and type sized in
+pixels for one particular pair of eyes.
+
+- [x] One **scale** setting — a slider in account settings, 80% to 180%,
+      multiplying every type token, Monaco included and live — stored in
+      the browser rather than the account, because the reason to turn it
+      up is the screen in front of you
+- [x] The sidebar is Files, Repository, Online and MCP Server, in that
+      order, **all collapsed by default**, and a collapsed section stays
+      where it is instead of docking at the bottom: opening one used to
+      re-order the sidebar around it
+- [x] Every file the editor can open is one tree — datasource
+      directories, workspace files, scratchpads — each root with its own
+      `new`, so switching datasource changes what is inside a section
+      rather than which sections exist
+- [x] MCP's switch moved into its section header, with a green frame
+      that survives collapsing: whether something outside the app can
+      read the project should not need a panel opened to see
+- [x] The MCP panel hands out `WEB_ORIGIN`, not the port the process
+      happens to listen on
+- [x] An installed window pads for the reserved area on **both** edges,
+      so the account menu is not under the window controls on the two
+      platforms that put them on the right
+- [x] The header's four controls became one Gravatar and a menu:
+      project, role, address, both settings panels, log out, **and the
+      versions of the app and the server** (`docs/spec/updates.md`)
+- [x] A **check for updates** button that is the only thing in DataGripe
+      reaching the internet on its own behalf, and only when pressed —
+      no timer, no telemetry — which then says the one thing that
+      applies an update *in this shape*, detected server-side
+- [x] In Kubernetes, where a Deployment guarantees a restart, an owner
+      can restart from the menu: with `imagePullPolicy: Always` that is
+      the entire upgrade. Refused by the server anywhere nothing would
+      start it again
+- [x] Configuration became a documentation *group*, Google sign-in got
+      documented at last, and the site build now fails when an
+      environment variable is missing from the docs or `.env.example` —
+      or named there after it stopped existing
+
+Exit: nothing in the shell is sized, ordered or documented by accident,
+and the version you are running is one click away.
+
 ## Gripes about Datagripe
 
 It has opinions about your schema. These are the ones it has about

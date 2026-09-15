@@ -98,14 +98,23 @@
   --dg-font-sans:    "IBM Plex Sans", system-ui, sans-serif;
   --dg-font-display: "Space Grotesk", system-ui, sans-serif;  /* website only */
 
-  --dg-fs-display:   60px;   --dg-lh-display: 1.02;  /* weight 700 */
-  --dg-fs-heading:   27px;   --dg-lh-heading: 1.25;  /* weight 500 */
-  --dg-fs-body:      16px;   --dg-lh-body:    1.65;
-  --dg-fs-ui:        13px;   --dg-lh-ui:      1.4;
-  --dg-fs-gripe:     14px;   --dg-lh-gripe:   1.5;
-  --dg-fs-editor:    13px;   --dg-lh-editor:  1.8;
-  --dg-fs-tree:      12.5px; --dg-lh-tree:    1.5;
-  --dg-fs-meta:      11.5px; --dg-lh-meta:    1.4;
+  /* Every size is the brand value times --dg-scale, the reader's own
+     setting (Account settings -> Appearance, stored in localStorage and
+     set on <html> at boot by stores/appearance.ts). At 1 these are the
+     numbers in docs/brand/tokens.css exactly; the multiplication is the
+     application's, which is why this copy carries it and the brand file
+     does not. Anything sized in px elsewhere is chrome, not type. */
+
+  --dg-scale: 1;
+
+  --dg-fs-display: calc(60px   * var(--dg-scale));  --dg-lh-display: 1.02;  /* weight 700 */
+  --dg-fs-heading: calc(27px   * var(--dg-scale));  --dg-lh-heading: 1.25;  /* weight 500 */
+  --dg-fs-body:    calc(16px   * var(--dg-scale));  --dg-lh-body:    1.65;
+  --dg-fs-ui:      calc(13px   * var(--dg-scale));  --dg-lh-ui:      1.4;
+  --dg-fs-gripe:   calc(14px   * var(--dg-scale));  --dg-lh-gripe:   1.5;
+  --dg-fs-editor:  calc(13px   * var(--dg-scale));  --dg-lh-editor:  1.8;
+  --dg-fs-tree:    calc(12.5px * var(--dg-scale));  --dg-lh-tree:    1.5;
+  --dg-fs-meta:    calc(11.5px * var(--dg-scale));  --dg-lh-meta:    1.4;
 
   /* Weights 400 and 500 only inside the application.
      Sentence case everywhere, including buttons, menus and tabs. */
@@ -257,7 +266,7 @@
 
 .dg-prompt {
   font-family: var(--dg-font-mono);
-  font-size: 13px;
+  font-size: var(--dg-fs-ui);
   letter-spacing: -.01em;
   display: inline-flex;
   align-items: center;

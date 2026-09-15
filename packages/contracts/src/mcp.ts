@@ -48,6 +48,21 @@ export const mcpDatasourceSchema = z.object({
 
 export type McpDatasource = z.infer<typeof mcpDatasourceSchema>;
 
+/**
+ * What the section header needs, and nothing else: whether this
+ * deployment has MCP at all, whether this project's server is on, and
+ * which mode it is in. The header is visible whether the panel is open
+ * or closed, and reading `McpState` walks every datasource path to
+ * count files — a disk read nobody asked for while the panel is shut.
+ */
+export const mcpStatusSchema = z.object({
+	available: z.boolean(),
+	enabled: z.boolean(),
+	mode: mcpModeSchema,
+});
+
+export type McpStatus = z.infer<typeof mcpStatusSchema>;
+
 /** Everything the panel renders, in one read. */
 export const mcpStateSchema = z.object({
 	/**

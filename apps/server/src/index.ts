@@ -294,6 +294,11 @@ const dispatch = createDispatcher({
 		? { commandRunner }
 		: {}),
 	...(mcp === null ? {} : { mcp }),
+	// Handed in rather than implemented there: `shutdown` below is the
+	// one description of how this process stops, and an update applied by
+	// restarting must go out the same way a SIGTERM does — the embedded
+	// cluster included (docs/spec/updates.md).
+	restart: requestRestart,
 });
 const auth = createAuthRoutes({
 	appDb,
@@ -463,6 +468,19 @@ const server = serve<SocketData>({
 // Stopped before the next evaluation calls serve() again, so the port is
 // free rather than contested.
 hot.disposers.push(() => server.stop(true));
+
+/**
+ * Stop, so whatever is supervising this starts a new one — the account
+ * menu's "restart to apply" in Kubernetes (docs/spec/updates.md). The
+ * delay is for the socket: the reply and the close frame have to reach
+ * the browser, or the person who pressed the button sees a dead tab
+ * instead of "restarting…".
+ */
+const RESTART_DELAY_MS = 250;
+function requestRestart(reason: string): void {
+	log.info("restart requested", { reason });
+	setTimeout(() => void shutdown(), RESTART_DELAY_MS);
+}
 
 async function shutdown() {
 	log.info("shutting down");

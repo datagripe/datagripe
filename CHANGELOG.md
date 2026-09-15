@@ -4,6 +4,70 @@
 
 ### Added
 
+- **One avatar where four controls were.** The role, the settings cog,
+  the signed-in address and the log-out button have become a single
+  Gravatar in the header, and a menu behind it: the project and your
+  role in it, Project settings, Account settings, Log out — and what
+  version this is.
+
+  The avatar is a hash. Your address never leaves the browser, only a
+  SHA-256 of it does, nothing is requested until you open the menu, and
+  an address with no Gravatar gets initials on a coloured disc rather
+  than a generated face — which is also what you get offline or on an
+  airgapped deployment.
+
+- **Versions, and what to do about them.** The menu shows the app's
+  version and the server's, separately, because they come apart: a
+  service worker that has downloaded a build but not applied it leaves a
+  browser running the old bundle against a new server, and the menu now
+  says so instead of leaving it to be diagnosed.
+
+  **Check for updates** is a button and nothing else. No timer, no
+  startup call, no telemetry — it is the only thing in DataGripe that
+  reaches the internet on its own behalf, and only when pressed.
+  `UPDATE_CHECK_DISABLED` removes it. A check that failed says so: "up
+  to date" on a timed-out request is how somebody misses a security
+  release.
+
+  What it tells you to do is per shape, because the answer is completely
+  different in each and the person reading it is often not the person
+  who deployed it. The desktop app updates itself; the CLI wants
+  `@latest`; a container wants a pull; a checkout wants `git pull`. The
+  server detects which it is, and the menu names the one that applies.
+
+- **In Kubernetes, the menu can just do it.** With
+  `imagePullPolicy: Always` a restart *is* the upgrade, so a workspace
+  owner gets a **restart to apply** button. It is offered only where
+  something is guaranteed to start DataGripe again — Kubernetes by
+  default, and anything that sets `RESTART_TO_UPDATE` — and refused by
+  the server elsewhere rather than merely hidden, because a process
+  nothing will restart must not be able to stop itself. It goes out the
+  way a `SIGTERM` does, embedded PostgreSQL included, it is audited as
+  `app.restart`, and the page waits for the server to come back and
+  reloads onto whatever it is now serving.
+
+- **How big the interface is, is yours.** Account settings has a scale
+  slider, 80% to 180%. Every type size in the application is that one
+  number times a brand token, so the tree, the tabs, the status bar, the
+  gripes and the editor all move together — Monaco included, live, with
+  its undo history intact. It is stored in the browser rather than the
+  account, because the reason to turn it up is the screen in front of
+  you and the same account is also open on a phone, and it is applied
+  before the first paint so nothing renders at one size and jumps to
+  another.
+
+- **The sidebar's MCP switch is in its header.** The section is titled
+  MCP Server, the toggle sits on its title bar, and the whole section
+  wears a green frame while the server is running — collapsed as well as
+  open. Whether something outside the app can read your project is not a
+  fact that should need a panel opened to see. It costs one new
+  `mcp.status` read, three fields off the settings row; the panel's
+  full state, which walks every datasource path to count files, still
+  waits until somebody opens it.
+
+- **The Online section counts who is there** — grey at nought, green
+  when it is not.
+
 - **The specifications are published.** `docs/spec` — eighteen documents
   recording what each subsystem does, what it deliberately does not, and
   which alternatives were rejected and why — is now `/specs/` on
@@ -26,7 +90,66 @@
   deliberately not published — that is a separate decision and it has
   not been made.
 
+### Changed
+
+- **Configuration is a section of the documentation, not a page.**
+  Fifty environment variables in one wall of tables is a page people
+  search rather than read, and the question somebody arrives with —
+  "how do I turn on Google sign-in" — is now a heading on a short page
+  about accounts and sign-in. Alongside it: database and storage,
+  datasources, limits, files/git/commands, and MCP.
+
+  **Google sign-in was documented nowhere on the site**, despite being
+  one of the three ways into a deployment. It now has the four steps,
+  the OAuth client type, what the redirect URI must match, and the
+  warning that matters: an empty `GOOGLE_ALLOWED_DOMAINS` with signup
+  open means anyone on the internet can make themselves an account.
+
+  Fourteen other variables were undocumented too — the two sign-in kill
+  switches, the Google four, both repository-command timeouts, the MCP
+  briefing cap, `EMBEDDED_PG_PORT`, `MIGRATIONS_DIR`, and the three
+  pre-rename names. Thirteen were missing from `.env.example`. All are
+  there now, and **the site build fails when the next one is not**: it
+  reads `envSchema` out of `apps/server/src/config.ts` and checks both
+  directions, so a variable added without documentation, or a page
+  describing a name that was renamed, stops the build rather than
+  shipping.
+
+- **Every file the editor can open is in one Files section.** The
+  datasource's own directories, the project's shared files and this
+  browser's scratchpads are now three kinds of root in one tree, each
+  with its own `new` on the row it creates in — and `new` opens that
+  root, because a file appearing in a folder you cannot see is
+  indistinguishable from nothing happening. They were three to five
+  separate sections whose number changed with the datasource.
+
+  The sidebar's sections are now Files, Repository (when the datasource
+  has one), Online and MCP Server, in that order, and they keep it:
+  every section starts collapsed, and a collapsed one stays where it is
+  in the list instead of docking at the bottom. Opening one used to
+  re-order the sidebar around it, so the shape you learned was never the
+  shape you were looking at.
+
 ### Fixed
+
+- **An installed window hid the header behind the window controls.**
+  With `window-controls-overlay` the header only padded its left edge,
+  so on Windows and Linux — where the controls are on the right — the
+  account menu and the log-out button sat underneath them, unreachable.
+  It now pads whatever the browser says is reserved on *both* sides,
+  gives the activity bar back the 4px it was overhanging the titlebar
+  strip by, and ellipsises a long address rather than pushing the
+  buttons off the edge. Installed on a phone, the shell now insets for
+  the cutout and the home indicator too.
+
+- **The MCP panel gave out an address that only worked on the server.**
+  It printed `http://localhost:$PORT` unless `MCP_PUBLIC_URL` was set,
+  which is the port the process listens on and not the address anybody
+  reaches it at. It now defaults to `WEB_ORIGIN` — the same origin the
+  app is served from, which is where the endpoint actually is — and in
+  development Vite proxies `/mcp` so the printed address answers there
+  too. `MCP_PUBLIC_URL` stays, for a deployment that answers MCP on a
+  different hostname.
 
 - **Every page but the landing one was flush against the edge of a
   phone.** Sections carry `.shell` for their horizontal padding, and

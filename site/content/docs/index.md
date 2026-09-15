@@ -31,9 +31,15 @@ pick one, then the page for whichever you picked.
 Two settings decide whether a deployment works at all and neither has a
 default that can be right everywhere — `WEB_ORIGIN` and
 `CONNECTION_ENCRYPTION_KEY`. Both are on
-[configuration](/docs/configuration/), along with every other variable,
-and [security](/docs/security/) is what to change before it faces
-anybody.
+[configuration](/docs/configuration/), which is also where the rest of
+the environment lives, a page per decision:
+[accounts and sign-in](/docs/authentication/) — including
+[Google](/docs/authentication/#google-sign-in) —
+[database and storage](/docs/database/),
+[datasources](/docs/datasources/), [limits](/docs/limits/),
+[files, git and commands](/docs/files-and-git/) and
+[MCP](/docs/mcp/). [Security](/docs/security/) is what to change before
+it faces anybody.
 
 ## I want to know why it is like this
 

@@ -237,17 +237,67 @@ selection it formats the selection, without one the whole document.
 
 ```text
 ┌──────────────────────────────────────────────┐
-│ header: DataGripe · New query · Save         │
+│ >Datagripe:project_              …      (av) │
 ├───────────┬──────────────────────────────────┤
 │ documents │  Dockview workspace              │
 │ sidebar   │  (editor panels, splits, tabs)   │
 └───────────┴──────────────────────────────────┘
 ```
 
+The header is the prompt on the left (`ProjectPrompt`) and one avatar on
+the right (`AccountMenu`, docs/spec/updates.md) — role, settings, address
+and log-out all moved behind it, because the header is also the drag
+region of an installed window and every permanent control there is width
+the operating system may take.
+
 The sidebar lists every document (dirty dot, click to focus or open,
 double-click to rename, delete to discard). It is plain React, not a
 Dockview panel — it has no close semantics and must always be reachable.
 The empty workspace shows a Dockview watermark with a New query button.
+
+### Sections
+
+Below the explorer the sidebar is a stack of collapsible sections
+(`SidebarSections`): **Files**, **Repository** when the datasource has
+one, **Online**, and **MCP Server** for an owner. Two rules, both about
+not moving:
+
+- **Every section starts collapsed.** A person opening one is stating a
+  preference; `dg.sidebar.expanded` holds the ids they have opened and
+  nothing else is remembered. (The older pair of keys — a collapse list
+  *and* an expand list, because the default differed per section — is
+  gone, and `dg.sidebar.collapsed` is ignored where it survives.)
+- **A section stays where it is in the list**, open or shut. Collapsed
+  headers used to dock at the bottom, which meant opening one re-ordered
+  the sidebar around it: the shape you learned was never the shape you
+  were looking at.
+
+A section may carry `actions` — controls in its header, beside the
+toggle rather than inside it, live whether the section is open or shut —
+and `on`, which frames the whole section in green. Both exist for the
+MCP switch (docs/spec/mcp.md "The panel"): whether something outside the
+app can read this project is not a fact that should need a panel opened
+to see.
+
+### Scale
+
+One number, `--dg-scale`, multiplying every type token in
+`styles/tokens.css`. The slider is in Account settings → Appearance
+(`SCALE_MIN`–`SCALE_MAX`, in steps of `SCALE_STEP`), and
+`stores/appearance.ts` owns it.
+
+It is **local to the browser** (`dg.appearance.scale`), not an account
+setting: the reason to turn it up is usually the screen in front of you,
+and the same account is also open on a phone. `main.tsx` applies it to
+`<html>` before the first render, so the app never paints at one size
+and jumps to another.
+
+Nothing else in the application reads the scale. A component that sizes
+itself from it is a component that stops scaling the day the slider's
+range changes. Monaco is the one exception, because its font size is a
+JavaScript option rather than CSS: each editor is created at the scaled
+size and subscribes for changes, rather than being re-created — a font
+size is not worth an undo history.
 
 ## Client–server sync boundary (later phases)
 

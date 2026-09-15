@@ -89,7 +89,8 @@ token's name.
 - [Gripe levels](/docs/gripe-levels.md) — the four-level dial.
 - [What it can do](/docs/features.md) — the whole surface.
 - [Deploying](/docs/deploy.md) — Docker, compose, Kubernetes, Helm.
-- [Configuration](/docs/configuration.md) — every environment variable.
+- [Configuration](/docs/configuration.md) — every environment variable,
+  a page per decision.
 - [Roadmap](/roadmap.md) — the gripes it has about itself.
 - [All documentation](/docs.md)
 

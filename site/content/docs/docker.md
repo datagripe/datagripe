@@ -101,5 +101,5 @@ depend on.
 
 - [Compose](/docs/compose/) — the same thing with a PostgreSQL beside it.
 - [Kubernetes](/docs/kubernetes/) — Helm and plain manifests.
-- [Configuration](/docs/configuration/) — every variable.
+- [Configuration](/docs/configuration/) — every variable, a page per decision.
 - [Security](/docs/security/) — what to switch off before it faces anyone.

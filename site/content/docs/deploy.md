@@ -79,7 +79,7 @@ plain manifests as an init container. See [upgrading](/docs/upgrading/).
 
 ## Related
 
-- [Configuration](/docs/configuration/) — every environment variable.
+- [Configuration](/docs/configuration/) — every environment variable, a page per decision.
 - [Security](/docs/security/) — what to switch off before it faces
   anybody.
 - [Upgrading](/docs/upgrading/) — backups, migrations, key rotation.

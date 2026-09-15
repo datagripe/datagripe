@@ -1,16 +1,56 @@
 import { useEffect, useState } from "react";
 import { useMcpStore } from "../stores/mcp";
 import { useSessionStore } from "../stores/session";
-import { Toggle } from "./Toggle";
 
 /**
- * The mcp section (docs/spec/mcp.md "The panel").
+ * The MCP panel (docs/spec/mcp.md "The panel").
  *
- * Collapsed by default and owner-only. What it has to make plain, in
- * this order: whether anything is listening, what mode it is in — and
- * that the mode is a ceiling rather than a grant, because a datasource
- * marked `read only` stays read-only however this is set.
+ * Collapsed by default and owner-only. The switch is not here — it is
+ * in the section header (`McpSwitch`), where it is reachable and
+ * legible without opening anything. What the panel adds, in this order:
+ * what mode it is in, that the mode is a ceiling rather than a grant
+ * because a datasource marked `read only` stays read-only however this
+ * is set, where to point a client, and which tokens exist.
  */
+
+/**
+ * The switch, in the section header (`SidebarSection.actions`).
+ *
+ * Separate from the panel because it outlives it: the panel mounts when
+ * somebody opens the section, and this has to say whether an agent can
+ * reach the project whether or not anybody ever does. It reads
+ * `status` — one settings row — rather than the panel's whole state.
+ */
+export function McpSwitch() {
+	const status = useMcpStore((store) => store.status);
+	const busy = useMcpStore((store) => store.busy);
+
+	if (status === null) {
+		return null;
+	}
+
+	return (
+		<button
+			type="button"
+			className="dg-sw"
+			aria-pressed={status.enabled}
+			aria-label="MCP server"
+			disabled={busy}
+			title={
+				status.enabled
+					? "On — an agent with a token can read this project"
+					: "Off — nothing is listening for this project"
+			}
+			onClick={() =>
+				void useMcpStore
+					.getState()
+					.setSettings({ enabled: !status.enabled, mode: status.mode })
+			}
+		>
+			<i />
+		</button>
+	);
+}
 
 /** How long "copied" stays on a button before it goes back to itself. */
 const COPIED_MS = 1200;
@@ -94,21 +134,11 @@ export function McpSection() {
 
 	return (
 		<div className="dg-mcp">
-			<Toggle
-				on={state.enabled}
-				title="mcp server"
-				description={
-					state.enabled
-						? "An agent with a token can read this project and query its datasources."
-						: "Nothing is listening for this project."
-				}
-				disabled={busy}
-				onChange={(on) =>
-					void useMcpStore
-						.getState()
-						.setSettings({ enabled: on, mode: state.mode })
-				}
-			/>
+			<p className="dg-mcp-lead">
+				{state.enabled
+					? "An agent with a token can read this project and query its datasources."
+					: "Nothing is listening for this project. The switch is in the header."}
+			</p>
 
 			{state.enabled && (
 				<>

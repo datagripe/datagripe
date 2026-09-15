@@ -121,4 +121,4 @@ Set `NODE_ENV=production` alongside it once that origin is `https://`.
   when it fails.
 - [Security](/docs/security/) — what to switch off for a shared
   deployment.
-- [Configuration](/docs/configuration/) — every variable.
+- [Configuration](/docs/configuration/) — every variable, a page per decision.

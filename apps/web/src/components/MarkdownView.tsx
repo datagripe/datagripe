@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { type MarkdownSegment, scanMarkdown } from "../editor/markdown/blocks";
 import { renderMarkdown } from "../editor/markdown/render";
 import { monaco } from "../editor/monacoSetup";
+import { editorFontSize, useAppearanceStore } from "../stores/appearance";
 import {
 	connectionIdForDocument,
 	dialectForConnection,
@@ -117,6 +118,7 @@ function SqlBlock(props: {
 }) {
 	const hostRef = useRef<HTMLDivElement>(null);
 	const [visible, setVisible] = useState(false);
+	const scale = useAppearanceStore((state) => state.scale);
 	// Subscribed to prefs so choosing a connection in the results panel
 	// enables the run button without a remount.
 	useDocumentsStore((state) => state.prefs[props.documentId]);
@@ -162,16 +164,19 @@ function SqlBlock(props: {
 			scrollbar: { vertical: "hidden", horizontal: "auto" },
 			wordWrap: "on",
 			contextmenu: false,
-			fontSize: 13,
+			fontSize: editorFontSize(13, scale),
 			padding: { top: 8, bottom: 8 },
 		});
 		const lines = editor.getModel()?.getLineCount() ?? 1;
-		host.style.height = `${Math.max(lines, 1) * 19 + 16}px`;
+		// A block has no scrollbar of its own, so its height is the line
+		// count — which means the scale has to be in this effect's
+		// dependencies rather than applied to a live editor.
+		host.style.height = `${Math.max(lines, 1) * Math.round(19 * scale) + 16}px`;
 		return () => {
 			editor.getModel()?.dispose();
 			editor.dispose();
 		};
-	}, [visible, props.segment.text]);
+	}, [visible, props.segment.text, scale]);
 
 	const dialect =
 		connectionId === undefined ? undefined : dialectForConnection(connectionId);

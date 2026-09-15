@@ -43,12 +43,23 @@ rules" on the day the catalogue reached eighteen. Two more said
 `--version 0.0.6` on the day 0.0.7 shipped. Neither is the kind of thing
 a reviewer catches.
 
+**Environment variables are checked, not trusted.** Every key in
+`envSchema` (`apps/server/src/config.ts`) has to appear on a page under
+`site/content/docs/` *and* in `.env.example`, and a Configuration page
+naming a variable the server no longer reads fails the build too. So
+adding one is three edits, and renaming one is caught rather than left
+to be discovered. Internal or experimental is not an exemption — say so
+in the row. A name that is genuinely not ours (a container's own
+variable, something DataGripe sets on a child process) goes in
+`ENV_ELSEWHERE` in the build, with the reason.
+
 `bun run build:site` fails rather than publishes when any of this is
 inconsistent: a broken internal link, a roadmap line it cannot parse, a
 duplicate gripe slug, a page with no group, a placeholder nothing
-substitutes, a spec missing its status, phase or goal, or a rule listed
-as "not built yet" that has quietly shipped. CI runs it on every pull
-request.
+substitutes, a spec missing its status, phase or goal, an environment
+variable missing from the documentation or `.env.example`, or a rule
+listed as "not built yet" that has quietly shipped. CI runs it on every
+pull request.
 
 ### What is not automatic
 
@@ -58,7 +69,7 @@ The likely candidates, by what you touched:
 | You changed | Check |
 | --- | --- |
 | a keybinding | `site/content/docs/keyboard.md` |
-| an environment variable | `site/content/docs/configuration.md`, and `.env.example` |
+| an environment variable | the right page under `site/content/docs/` — Configuration is a group, one page per decision — and `.env.example`. The build enforces both |
 | anything about deployment | `docs/{deploy,docker,compose,kubernetes,upgrading}.md` under `site/content/` |
 | a security default or switch | `site/content/docs/security.md` |
 | a feature's surface | `site/content/docs/features.md` |
@@ -68,7 +79,8 @@ The likely candidates, by what you touched:
 | a question you had to answer twice | `site/content/docs/faq.md` |
 
 Adding a page means one markdown file in `site/content/docs/` with
-`title`, `description`, `group` (`Product`, `Deploy` or `Learn`) and
+`title`, `description`, `group` (`Product`, `Configuration`, `Deploy` or
+`Learn`) and
 `order`. The group puts it in the sidebar *and* the footer — there is no
 way to add it to one and forget the other, and a page with no group
 fails the build rather than becoming an orphan.

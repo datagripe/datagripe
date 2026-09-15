@@ -45,9 +45,10 @@ scratchpads that never sync.
   members, synced on open and live via `document.changed` broadcasts
   (create/save/archive). Docs synced before the flag existed self-repair
   on next sync.
-- The sidebar shows "Workspace files" and "Scratchpads (local)" as
-  separate sections; the header has "New scratchpad" and "New shared
-  file".
+- The sidebar shows "Workspace files" and "Scratchpads" as two roots of
+  the one Files section, each with its own `new`
+  (docs/spec/datasource-paths.md "What the sidebar shows"); the header
+  has "New scratchpad" and "New shared file".
 
 ### Default connection
 

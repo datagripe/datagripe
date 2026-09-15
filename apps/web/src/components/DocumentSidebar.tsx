@@ -5,20 +5,20 @@ import { useViewsStore } from "../stores/views";
 import { IconClose } from "./icons";
 
 export type DocumentSidebarProps = {
-	/** Which list this section renders; the section frame owns the heading. */
+	/** Which list this renders; the tree root owns the heading and `new`. */
 	kind: "shared" | "scratch";
-	onCreate: (shared: boolean) => void;
 	onOpen: (documentId: string) => void;
 	onDiscard: (documentId: string) => void;
 };
 
 /**
- * Documents in two clearly separated sections: local scratchpads
- * (IndexedDB, never shared) and workspace files (server-side, shared
- * with every member). Files opened from a datasource path are shared
- * too but live in their own section (docs/spec/datasource-paths.md), so
- * they are excluded here rather than listed twice. Closing a tab never
- * discards a document — only the explicit discard action here does.
+ * One list of documents, under its root in the files tree
+ * (`FilesSection`): local scratchpads (IndexedDB, never shared) or
+ * workspace files (server-side, shared with every member). Files opened
+ * from a datasource path are shared documents too but belong to their
+ * own root (docs/spec/datasource-paths.md), so they are excluded here
+ * rather than listed twice. Closing a tab never discards a document —
+ * only the explicit discard action here does.
  */
 export function DocumentSidebar(props: DocumentSidebarProps) {
 	const order = useDocumentsStore((state) => state.order);
@@ -123,22 +123,15 @@ export function DocumentSidebar(props: DocumentSidebarProps) {
 	};
 
 	const ids = props.kind === "shared" ? shared : scratch;
-	const create = () => props.onCreate(props.kind === "shared");
-	const label = props.kind === "shared" ? "new shared file" : "new scratchpad";
 
 	return (
 		<div className="dg-documents">
 			{ids.length === 0 ? (
-				<>
-					<p className="dg-sidebar-empty">
-						{props.kind === "shared"
-							? "No shared files. Shared files sync to every workspace member."
-							: "No scratchpads. These stay local to your browser — experiments and adhoc queries are never shared."}
-					</p>
-					<button type="button" className="dg-doc-new-empty" onClick={create}>
-						{label}
-					</button>
-				</>
+				<p className="dg-sidebar-empty">
+					{props.kind === "shared"
+						? "No shared files yet. Shared files sync to every workspace member."
+						: "No scratchpads yet. These stay local to your browser — experiments and adhoc queries are never shared."}
+				</p>
 			) : (
 				<ul className="dg-document-list">
 					{ids.map((id) => {
@@ -146,11 +139,6 @@ export function DocumentSidebar(props: DocumentSidebarProps) {
 						return doc === undefined ? null : renderRow(doc);
 					})}
 				</ul>
-			)}
-			{ids.length > 0 && (
-				<button type="button" className="dg-doc-new" onClick={create}>
-					+ {label}
-				</button>
 			)}
 			{menu !== null && (
 				<div

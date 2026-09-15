@@ -44,6 +44,19 @@ leak by asking whether one exists. Nothing needs switching on;
 `WEBAUTHN_RP_ID` only matters when the app answers on several subdomains
 and one key should work across all of them.
 
+**Google sign-in** is the third way in, off until a deployment
+configures an OAuth client. Identities are matched on Google's `sub`
+rather than the email address, an unverified address is refused, and
+`GOOGLE_ALLOWED_DOMAINS` restricts it to your Workspace domains — set
+it if `ALLOW_SIGNUP` is true, because empty means any Google account on
+the internet. The only claim stored is the address.
+
+Each of the three is independently switchable, and none is a second
+factor on top of another: a key and a Google identity are alternatives
+to a password, not additions to one. Turning off the last way in is
+refused at startup. All of it is on
+[accounts and sign-in](/docs/authentication/).
+
 State-changing HTTP routes require a CSRF token matching the session's.
 
 ## Authorization is per action
@@ -141,18 +154,39 @@ consumer is a context window.
 
 Server-enforced, so a client cannot ask past them: query timeout, max
 rows, max bytes, concurrent queries per user, access-report cell count,
-domain-export row count. All on [configuration](/docs/configuration/).
+domain-export row count. All on [limits](/docs/limits/).
 
 Rate limits are in-memory token buckets — 5 logins per minute per email,
 30 per minute per IP, 30 executions per minute per user, and others.
 Exhaustion returns `RATE_LIMITED`, not a slow response.
+
+## What reaches the internet
+
+Three things, and only three. Datasource connections you configured.
+The MCP endpoint, when a project's owner turns it on. And two in the
+account menu: the **check for updates** button, when somebody presses it
+— nothing checks on a timer — and the avatar, which is a hash of your
+address sent to Gravatar the first time the menu is opened. Both are
+described on [updates](/docs/updates/), and the first can be turned off
+with `UPDATE_CHECK_DISABLED`.
+
+## Restarting from inside the app
+
+In Kubernetes, where a Deployment is guaranteed to start it again, a
+workspace **owner** can restart the server from the account menu — with
+`imagePullPolicy: Always` that is the whole upgrade. It is off by
+default in every other shape and refused by the server there, not just
+hidden, because a process nothing will restart must not be able to stop
+itself. `RESTART_TO_UPDATE` decides it either way, and every press is
+audited.
 
 ## Audit log
 
 Structured JSON on stdout, tagged `"msg":"audit"`: signup, login success
 and failure, logout, security-key registration and removal, datasource
 create/update/delete, execution start and cancel, workspace membership
-changes, domain operations, access role changes, and `ssrf.blocked`.
+changes, domain operations, access role changes, `app.restart`, and
+`ssrf.blocked`.
 
 Never passwords, never secrets, never result values.
 
@@ -168,7 +202,7 @@ the details and a private channel will be arranged.
 
 ## Related
 
-- [Configuration](/docs/configuration/) — every variable.
+- [Configuration](/docs/configuration/) — every variable, a page per decision.
 - [Upgrading](/docs/upgrading/) — backups and key rotation.
 - [Kubernetes](/docs/kubernetes/), [Compose](/docs/compose/) — the
   shapes with accounts on.

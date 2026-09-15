@@ -1,5 +1,10 @@
 import { useEffect, useRef } from "react";
 import { monaco } from "../editor/monacoSetup";
+import {
+	editorFontSize,
+	trackEditorScale,
+	useAppearanceStore,
+} from "../stores/appearance";
 
 /**
  * The table view's value editor (docs/spec/table-view.md "The value
@@ -65,7 +70,7 @@ export function ValueEditor(props: {
 			lineDecorationsWidth: 4,
 			folding: true,
 			wordWrap: "on",
-			fontSize: 12,
+			fontSize: editorFontSize(12, useAppearanceStore.getState().scale),
 			scrollBeyondLastLine: false,
 			renderLineHighlight: "none",
 			padding: { top: 6, bottom: 6 },
@@ -84,6 +89,7 @@ export function ValueEditor(props: {
 			scrollbar: { verticalScrollbarSize: 8, horizontalScrollbarSize: 8 },
 		});
 		editorRef.current = editor;
+		const untrackScale = trackEditorScale(editor, 12);
 
 		/** Report the text and the worst-placed error the model has. */
 		const report = () => {
@@ -116,6 +122,7 @@ export function ValueEditor(props: {
 		});
 
 		return () => {
+			untrackScale();
 			contentSubscription.dispose();
 			markerSubscription.dispose();
 			editor.dispose();

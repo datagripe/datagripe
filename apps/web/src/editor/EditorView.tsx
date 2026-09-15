@@ -8,6 +8,11 @@ import { openEditorPanel } from "../app/editorPanels";
 import { MarkdownView } from "../components/MarkdownView";
 import { db } from "../persistence/db";
 import { createDebouncer } from "../persistence/debounce";
+import {
+	editorFontSize,
+	trackEditorScale,
+	useAppearanceStore,
+} from "../stores/appearance";
 import { useBrandingStore } from "../stores/branding";
 import {
 	connectionIdForDocument,
@@ -179,7 +184,7 @@ export function EditorView(props: IDockviewPanelProps) {
 			automaticLayout: true,
 			minimap: { enabled: false },
 			glyphMargin: true,
-			fontSize: 13,
+			fontSize: editorFontSize(13, useAppearanceStore.getState().scale),
 			scrollBeyondLastLine: false,
 			padding: { top: 8 },
 			// Middle-click drag makes the columnar, multi-line selection
@@ -226,6 +231,7 @@ export function EditorView(props: IDockviewPanelProps) {
 		});
 
 		let disposed = false;
+		const untrackScale = trackEditorScale(editor, 13);
 		const viewStateDebouncer = createDebouncer();
 		const decorations = editor.createDecorationsCollection();
 		editorDecorations.set(viewId, decorations);
@@ -288,6 +294,7 @@ export function EditorView(props: IDockviewPanelProps) {
 
 		return () => {
 			disposed = true;
+			untrackScale();
 			viewStateDebouncer.cancel(props.api.id);
 			persistViewState();
 			for (const subscription of subscriptions) {

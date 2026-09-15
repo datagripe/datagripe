@@ -74,6 +74,7 @@ import type { ConnectionsService } from "../connections/service";
 import { ServiceError } from "../connections/service";
 import { withIdempotency } from "../db/app/idempotency";
 import type { AppDb } from "../db/app/pool";
+import { appVersion, checkForUpdate } from "../deployment";
 import type { DocumentsService } from "../documents/service";
 import { resolveExportTarget, runExport } from "../domains/export";
 import { runImport } from "../domains/import";
@@ -172,6 +173,13 @@ export interface DispatcherDeps {
 	commandRunner?: CommandRunner;
 	/** The MCP panel's service; absent when MCP_ENABLED is off. */
 	mcp?: McpService;
+	/**
+	 * End the process, for the one deployment shape where something is
+	 * guaranteed to start it again (docs/spec/updates.md). Absent means
+	 * `app.restart` is refused — the dispatcher never learns how to stop
+	 * a server; `index.ts` owns that and hands it in.
+	 */
+	restart?: (reason: string) => void;
 }
 
 const ROLE_RANK = { viewer: 0, editor: 1, owner: 2 } as const;
@@ -255,6 +263,12 @@ const MINIMUM_ROLE: Partial<Record<ClientAction, Role>> = {
 	// queries in a member's name (docs/spec/mcp.md). Reading the state is
 	// owner-only too, because it carries the token list — and because the
 	// panel is absent for everybody else rather than disabled.
+	// Restarting is the one action here that is about the deployment
+	// rather than the project. Owner, because it interrupts everybody in
+	// it — and it is only ever offered where a supervisor will bring the
+	// process back (docs/spec/updates.md).
+	"app.restart": "owner",
+	"mcp.status": "owner",
 	"mcp.settings": "owner",
 	"mcp.settings.set": "owner",
 	"mcp.token.create": "owner",
@@ -792,6 +806,41 @@ export function createDispatcher(deps: DispatcherDeps): Dispatch {
 					() => connections.alterColumns(workspace, request),
 				);
 			}
+
+			case "app.version":
+				return appVersion(deps.config);
+
+			case "app.update.check":
+				return checkForUpdate(deps.config);
+
+			case "app.restart": {
+				const version = appVersion(deps.config);
+				if (!version.supervised || deps.restart === undefined) {
+					throw new ServiceError(
+						ErrorCodes.Forbidden,
+						"Nothing here would start DataGripe again, so it will not stop itself. Restart it the way this deployment does.",
+					);
+				}
+				log.audit("app.restart", {
+					workspaceId: workspace.id,
+					userId: ctx.userId,
+					shape: version.shape,
+				});
+				deps.restart(`requested by ${ctx.userId}`);
+				return { restarting: true };
+			}
+
+			// Not through `requireMcp()`: a deployment with MCP off is
+			// exactly what this answers, and a thrown Forbidden would
+			// leave the sidebar unable to tell "off" from "broken".
+			case "mcp.status":
+				return (
+					deps.mcp?.status(workspace) ?? {
+						available: false,
+						enabled: false,
+						mode: "read-only",
+					}
+				);
 
 			case "mcp.settings":
 				return requireMcp().state(workspace);

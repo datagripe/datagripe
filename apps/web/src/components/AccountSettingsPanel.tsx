@@ -2,6 +2,13 @@ import type { Passkey, PasskeyListResult } from "@datagripe/contracts";
 import { startRegistration } from "@simplewebauthn/browser";
 import { useCallback, useEffect, useState } from "react";
 import {
+	SCALE_DEFAULT,
+	SCALE_MAX,
+	SCALE_MIN,
+	SCALE_STEP,
+	useAppearanceStore,
+} from "../stores/appearance";
+import {
 	ceremonyError,
 	useSessionStore,
 	webAuthnAvailable,
@@ -13,6 +20,11 @@ import { IconClose } from "./icons";
  * signs in with (docs/spec/auth-and-hardening.md "Security keys"). One
  * account may hold as many keys as it likes — a spare in a drawer is the
  * whole point — and the server refuses to remove the last way in.
+ *
+ * And the size of the interface, which is not an account setting at all
+ * (docs/spec/editor-workspace.md "Scale"): it lives in this browser's
+ * localStorage, because the reason to turn it up is the screen in front
+ * of you and the same account is also open on a phone.
  */
 
 async function post(path: string, body: unknown, csrfToken: string) {
@@ -38,6 +50,51 @@ function describe(passkey: Passkey): string {
 			? "never used"
 			: `last used ${new Date(passkey.lastUsedAt).toLocaleDateString()}`;
 	return `added ${new Date(passkey.createdAt).toLocaleDateString()} · ${used}`;
+}
+
+/**
+ * The scale slider. Shown whatever the server's auth settings are —
+ * a deployment with accounts off still has readers with eyes.
+ */
+function Appearance() {
+	const scale = useAppearanceStore((state) => state.scale);
+	const setScale = useAppearanceStore((state) => state.setScale);
+	const percent = Math.round(scale * 100);
+
+	return (
+		<div className="dg-form-section">
+			<span className="dg-form-section-title">Appearance</span>
+			<p className="dg-form-note">
+				How big the interface is. Every size in the application is a multiple of
+				this one, so the tree, the tabs, the editor and the results move
+				together. Stored in this browser, not in your account.
+			</p>
+			<div className="dg-scale-row">
+				<span className="dg-scale-sample dg-scale-sample-small">A</span>
+				<input
+					type="range"
+					className="dg-scale-slider"
+					min={SCALE_MIN}
+					max={SCALE_MAX}
+					step={SCALE_STEP}
+					value={scale}
+					aria-label="Interface scale"
+					aria-valuetext={`${percent} percent`}
+					onChange={(event) => setScale(event.target.valueAsNumber)}
+				/>
+				<span className="dg-scale-sample">A</span>
+				<output className="dg-scale-value">{percent}%</output>
+				<button
+					type="button"
+					className="dg-doc-new"
+					disabled={scale === SCALE_DEFAULT}
+					onClick={() => setScale(SCALE_DEFAULT)}
+				>
+					reset
+				</button>
+			</div>
+		</div>
+	);
 }
 
 export function AccountSettingsPanel() {
@@ -86,6 +143,7 @@ export function AccountSettingsPanel() {
 							? "This server runs without accounts, so there is nothing to sign in with."
 							: `${user?.email ?? "You"} — this server has security keys turned off, so there is nothing to manage here.`}
 					</p>
+					<Appearance />
 				</div>
 			</div>
 		);
@@ -161,6 +219,8 @@ export function AccountSettingsPanel() {
 			<div className="dg-form-body">
 				<h3 className="dg-form-title">Account</h3>
 				<p className="dg-form-lead">{user?.email}</p>
+
+				<Appearance />
 
 				<div className="dg-form-section">
 					<span className="dg-form-section-title">Security keys</span>

@@ -155,6 +155,10 @@ const backend = resolveBackend();
 // variables (DATABASE_MODE/APP_DATABASE_URL/AUTH_DISABLED) still win.
 const serverEnv: Record<string, string | undefined> = {
 	...process.env,
+	// The shell updates itself (updates.ts), so the account menu's advice
+	// is "it will offer you the new version" rather than a command to run
+	// (docs/spec/updates.md).
+	DATAGRIPE_SHAPE: "desktop",
 	DATABASE_MODE: Bun.env.DATABASE_MODE ?? "embedded",
 	EMBEDDED_PG_DATA_DIR:
 		Bun.env.EMBEDDED_PG_DATA_DIR ?? path.join(userData, "pg"),

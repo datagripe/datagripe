@@ -40,6 +40,25 @@ and is opt-in; `fatal` swears.
 that table, or the whole project — and the app always tells you it is
 hiding something rather than quietly showing you less.
 
+## The interface
+
+- **One Files section** in the sidebar: the datasource's own
+  directories, the project's shared files and this browser's
+  scratchpads, as three kinds of root in one tree. Each has its own
+  `new`, and every section — Files, Repository, Online, MCP Server —
+  starts collapsed and stays where it is in the list whether it is open
+  or shut.
+- **One avatar in the header** opens the account menu: the project you
+  are in and your role, the two settings panels, the way out, and which
+  version the app and the server are each running — with a button that
+  checks for a newer one and tells you the one thing that applies it
+  *here*, which is different in every shape.
+- **Scale.** Account settings has a slider for how big the interface is,
+  from 80% to 180%. Every size in the application is a multiple of it,
+  so the tree, the tabs, the editor and the results move together. It is
+  stored in the browser rather than the account — the reason to turn it
+  up is usually the screen in front of you.
+
 ## Editor and documents
 
 - Movable tabs, horizontal and vertical splits, and one editor model per
@@ -109,6 +128,11 @@ Off by default, and enabled per deployment.
 
 ## MCP
 
+The switch is in the sidebar's **MCP Server** header, and the section
+wears a green frame while the server is running — including collapsed,
+because whether something outside the app can read a project is not
+something you should have to open a panel to check.
+
 Every project can expose an endpoint an AI agent connects to, so the
 agent reads the project's own documentation and queries its datasources
 under the same rules a person gets. Off per project until an owner turns
@@ -121,7 +145,7 @@ name beside it.
 
 - **No accounts at all** for the personal and desktop shapes.
 - **Accounts** for a shared deployment, with a
-  [security key](/docs/configuration/) as an alternative to a password —
+  [security key](/docs/authentication/) as an alternative to a password —
   sign-in is usernameless, so there is no email to type and none to leak
   by asking about.
 - Signup closes after the first account unless you say otherwise.

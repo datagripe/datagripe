@@ -75,6 +75,10 @@ COPY --from=build /src/dist/ ./
 # loses its database, and with it the key its connection passwords are
 # encrypted with.
 ENV DATAGRIPE_DATA_DIR=/data
+# The shape, for the account menu's upgrade advice (docs/spec/updates.md).
+# Kubernetes is detected and wins over this: in a pod, "container" is true
+# and useless — what matters there is that a Deployment restarts it.
+ENV DATAGRIPE_SHAPE=container
 RUN mkdir -p /data && chown bun:bun /data
 VOLUME /data
 

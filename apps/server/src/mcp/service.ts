@@ -1,6 +1,7 @@
 import type {
 	McpSettingsSetRequest,
 	McpState,
+	McpStatus,
 	McpTokenCreateResult,
 } from "@datagripe/contracts";
 import { ErrorCodes } from "@datagripe/contracts/errors";
@@ -23,6 +24,7 @@ import {
  */
 
 export interface McpService {
+	status: (workspace: { id: string }) => Promise<McpStatus>;
 	state: (workspace: { id: string; name: string }) => Promise<McpState>;
 	setSettings: (
 		workspace: { id: string; name: string },
@@ -47,8 +49,13 @@ export function createMcpService(deps: McpDeps): McpService {
 	 * a client's config, and no tool ever has to ask which one was meant.
 	 */
 	function urlFor(workspaceId: string): string {
-		const base =
-			deps.config.MCP_PUBLIC_URL ?? `http://localhost:${deps.config.PORT}`;
+		// `WEB_ORIGIN` rather than the listening port: that is the address
+		// this deployment already tells browsers to use, and the one a
+		// proxy in front of it terminates. The port is right only when
+		// nothing is in front, which is the case `WEB_ORIGIN` also
+		// describes. `MCP_PUBLIC_URL` stays for the deployment that
+		// answers MCP on a different hostname from the app.
+		const base = deps.config.MCP_PUBLIC_URL ?? deps.config.WEB_ORIGIN;
 		return `${base.replace(/\/+$/, "")}/mcp/${workspaceId}`;
 	}
 
@@ -74,6 +81,21 @@ export function createMcpService(deps: McpDeps): McpService {
 			userId: "",
 			token: { id: "", name: "panel" },
 			role: "editor",
+			mode: settings.mode,
+		};
+	}
+
+	/**
+	 * The settings row, and nothing more. The section header shows
+	 * whether the server is on whether or not the panel is open, so this
+	 * has to be cheap enough to ask for on every project open — one
+	 * indexed read, no datasource list, no file walk, no briefing.
+	 */
+	async function status(workspace: { id: string }): Promise<McpStatus> {
+		const settings = await readSettings(deps.appDb, workspace.id);
+		return {
+			available: deps.config.MCP_ENABLED,
+			enabled: settings.enabled,
 			mode: settings.mode,
 		};
 	}
@@ -117,6 +139,7 @@ export function createMcpService(deps: McpDeps): McpService {
 	}
 
 	return {
+		status,
 		state,
 
 		async setSettings(workspace, userId, request) {
