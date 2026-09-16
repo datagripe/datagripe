@@ -3100,6 +3100,51 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	font-style: italic;
 }
 
+/* A selected cell. Violet is selection and focus in this system
+   (brand-system.md "Colour"), used as a fill here and never as text —
+   the cell keeps whatever colour its value had, because a number that
+   stopped being green when you highlighted it would be telling you
+   something that is not true. */
+.dg-grid-sel {
+	background: rgb(139 92 246 / 18%);
+	box-shadow: inset 0 0 0 1px rgb(139 92 246 / 35%);
+}
+
+/* Dragging across cells must not also drag a text selection through
+   them: two selections, one gesture, neither legible. */
+.dg-grid {
+	user-select: none;
+}
+
+/* What the selection adds up to, along the bottom of a grid. Sits
+   above the panel's own footer, in the tree's type, quiet until there
+   is something in it. */
+.dg-selbar {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex: none;
+	padding: 4px 10px;
+	border-top: 1px solid var(--dg-rule);
+	background: var(--dg-panel);
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-meta);
+}
+
+.dg-selbar-stat {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 5px;
+}
+
+.dg-selbar-label {
+	color: var(--dg-ink-faint);
+}
+
+.dg-selbar-value {
+	color: var(--dg-ink-dim);
+}
+
 .dg-grid-clip {
 	max-width: 420px;
 }

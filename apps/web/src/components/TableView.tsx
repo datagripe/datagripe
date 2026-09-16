@@ -19,6 +19,7 @@ import {
 	rowTsv,
 } from "./cellActions";
 import { ExportControls } from "./ExportControls";
+import { rangeToTsv, rangeValues, useCellSelection } from "./gridSelection";
 import {
 	IconCheck,
 	IconClose,
@@ -27,6 +28,7 @@ import {
 	IconSortAsc,
 	IconSortDesc,
 } from "./icons";
+import { SelectionBar } from "./SelectionBar";
 import {
 	buildEdits,
 	cellDetail,
@@ -64,6 +66,14 @@ type Focus = {
 	kind: "row" | "insert";
 	index: number;
 	column: string;
+};
+
+/** Which way each arrow key grows a selection. */
+const ARROW_STEPS: Record<string, { row: number; column: number }> = {
+	ArrowUp: { row: -1, column: 0 },
+	ArrowDown: { row: 1, column: 0 },
+	ArrowLeft: { row: 0, column: -1 },
+	ArrowRight: { row: 0, column: 1 },
 };
 
 /** An open cell menu: where it was summoned, and over which cell. */
@@ -224,6 +234,8 @@ function CellBody(props: {
 	onCancel: () => void;
 	onCopy: () => void;
 	onPaste: () => void;
+	/** Shift+arrow: grow the selection from this cell. */
+	onExtend?: (rowDelta: number, columnDelta: number) => void;
 }) {
 	const shown =
 		props.pending === undefined
@@ -294,6 +306,16 @@ function CellBody(props: {
 					props.onStartEdit();
 					return;
 				}
+				// Shift+arrows grow the selection from here, which is the
+				// keyboard's version of dragging across cells.
+				if (event.shiftKey && props.onExtend !== undefined) {
+					const step = ARROW_STEPS[event.key];
+					if (step !== undefined) {
+						event.preventDefault();
+						props.onExtend(step.row, step.column);
+						return;
+					}
+				}
 				if (!(event.ctrlKey || event.metaKey)) {
 					return;
 				}
@@ -336,6 +358,11 @@ export function TableView(props: IDockviewPanelProps) {
 	const [loading, setLoading] = useState(false);
 	const [edits, setEdits] = useState<PendingEdits>(NO_PENDING_EDITS);
 	const [focus, setFocus] = useState<Focus | null>(null);
+	// A rectangle of cells, for copying a block of them and for the bar
+	// that adds them up (docs/spec/table-view.md "Selecting cells").
+	// In data coordinates, so transposing the grid changes how it is
+	// drawn and not what is selected.
+	const selection = useCellSelection();
 	const [editing, setEditing] = useState<Focus | null>(null);
 	const [transposed, setTransposed] = useState(false);
 	const [panelOpen, setPanelOpen] = useState(false);
@@ -400,6 +427,15 @@ export function TableView(props: IDockviewPanelProps) {
 
 	const columns = data?.columns ?? [];
 	const rows = data?.rows ?? [];
+
+	// Another page, another filter, another load: the rectangle was over
+	// rows that are no longer there.
+	const { clear: clearSelection } = selection;
+	useEffect(() => {
+		if (data !== null) {
+			clearSelection();
+		}
+	}, [data, clearSelection]);
 	const writableColumns = columns.filter((column) => !column.generated);
 	const canEdit = data?.editable === true && canEditData && !saving && !loading;
 	const dirty = isDirty(edits);
@@ -470,6 +506,45 @@ export function TableView(props: IDockviewPanelProps) {
 			setError("The clipboard is not available in this context");
 		});
 	};
+
+	/**
+	 * The selection as a block of tab-separated text. Pending edits are
+	 * included, because what is on screen is what somebody thinks they
+	 * are copying — an uncommitted change is still the value in the cell
+	 * they are looking at.
+	 */
+	const copySelection = () => {
+		if (selection.range === null) {
+			return;
+		}
+		copyText(
+			rangeToTsv(selection.range, (row, column) => {
+				const column_ = columns[column];
+				const pending =
+					column_ === undefined
+						? undefined
+						: pendingCell(edits, row, column_.name);
+				if (pending === undefined) {
+					return cellDisplay(rows[row]?.[column] ?? null).text;
+				}
+				// The three intents a cell edit can carry, as the grid shows
+				// them (tableEdits.ts): NULL, the column default, or text.
+				return pending.kind === "null"
+					? "NULL"
+					: pending.kind === "default"
+						? "DEFAULT"
+						: pending.text;
+			}),
+		);
+	};
+
+	const selectedValues = (): unknown[] =>
+		selection.range === null
+			? []
+			: rangeValues(
+					selection.range,
+					(row, column) => rows[row]?.[column] ?? null,
+				);
 
 	/**
 	 * Paste lands in the pending set, not in the database — the same place
@@ -675,10 +750,24 @@ export function TableView(props: IDockviewPanelProps) {
 		if (isFocused) {
 			classes.push("dg-tv-focused");
 		}
+		if (selection.isSelected(rowIndex, columnIndex)) {
+			classes.push("dg-grid-sel");
+		}
 		return (
 			<td
 				key={cellKey}
 				className={classes.join(" ")}
+				onMouseDown={(event) => {
+					selection.begin(rowIndex, columnIndex, event.shiftKey);
+				}}
+				onMouseOver={() => selection.extendTo(rowIndex, columnIndex)}
+				// Focus landing on a cell — tab, or a click — selects it,
+				// unless it is already part of a selection somebody built.
+				onFocus={() => {
+					if (!selection.isSelected(rowIndex, columnIndex)) {
+						selection.select(rowIndex, columnIndex);
+					}
+				}}
 				onContextMenu={(event) => {
 					event.preventDefault();
 					setFocus(target);
@@ -698,8 +787,24 @@ export function TableView(props: IDockviewPanelProps) {
 					onStartEdit={() => setEditing(target)}
 					onCommit={(next) => setCell(target, next)}
 					onCancel={() => setEditing(null)}
-					onCopy={() => copyText(cellDetail(cellValue(target)))}
+					onCopy={() => {
+						// One press, two honest answers: a block if a block is
+						// highlighted, otherwise the cell under the cursor.
+						if (selection.size > 1) {
+							copySelection();
+						} else {
+							copyText(cellDetail(cellValue(target)));
+						}
+					}}
 					onPaste={() => pasteInto(target)}
+					onExtend={(rowDelta, columnDelta) =>
+						selection.moveHead(rowDelta, columnDelta, {
+							top: 0,
+							left: 0,
+							bottom: Math.max(rows.length - 1, 0),
+							right: Math.max(columns.length - 1, 0),
+						})
+					}
 				/>
 			</td>
 		);
@@ -1010,6 +1115,12 @@ export function TableView(props: IDockviewPanelProps) {
 						</div>
 					)}
 				</div>
+
+				{/* What the highlighted cells add up to — of this page, and it
+					  says so by counting the cells first. */}
+				{selection.size > 1 && (
+					<SelectionBar values={selectedValues()} onCopy={copySelection} />
+				)}
 
 				{panelOpen && (
 					<aside className="dg-tv-side">

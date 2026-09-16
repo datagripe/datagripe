@@ -123,6 +123,15 @@ role allows them.
   the active editor's latest execution: data grid (sticky header, first
   1,000 rows rendered), status line (status, elapsed, rows, truncation,
   affected rows), Cancel while running, inline errors with position.
+- **Cells select as a rectangle**, exactly as they do in the table view,
+  from the same shared geometry and the same aggregate bar
+  (`docs/spec/table-view.md` "Selecting cells"): press, shift-press,
+  drag, `ctrl/cmd c` for tab-separated rows, and a bar along the bottom
+  that says what the highlighted cells add up to. The difference is the
+  keyboard: a results cell is a `td` with nothing to focus, so there is
+  no shift+arrow here, and the selection is cleared when another
+  execution takes the panel — a rectangle over rows that have been
+  replaced is pointing at nothing.
 - `history.list` returns paginated metadata (newest first); used by a
   simple History view in the results panel.
 - Statement result glyphs (DataGrip-style gutter ticks): `run()` records

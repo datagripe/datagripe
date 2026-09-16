@@ -14,6 +14,7 @@ import { useConnectionsStore, useExecutionsStore } from "../stores/runtime";
 import { useSessionStore } from "../stores/session";
 import { useViewsStore } from "../stores/views";
 import { ExportControls } from "./ExportControls";
+import { rangeToTsv, rangeValues, useCellSelection } from "./gridSelection";
 import {
 	IconChevronDown,
 	IconClose,
@@ -22,6 +23,7 @@ import {
 	IconRunAll,
 	IconRunning,
 } from "./icons";
+import { SelectionBar } from "./SelectionBar";
 
 function documentsTitle(
 	state: DocumentsState,
@@ -337,6 +339,40 @@ export function ResultsPanel() {
 			? execution.resultSets[execution.resultSets.length - 1]
 			: undefined;
 
+	// Selecting cells to add them up (docs/spec/table-view.md).
+	const selection = useCellSelection();
+	const gridRef = useRef<HTMLTableElement>(null);
+	const { clear: clearSelection } = selection;
+	// Another execution is another grid; keeping a rectangle over it
+	// would be highlighting cells that no longer mean anything. Keyed on
+	// the execution rather than the result set, which is rebuilt on
+	// every streamed batch.
+	const executionId = execution?.id;
+	useEffect(() => {
+		if (executionId !== undefined) {
+			clearSelection();
+		}
+	}, [executionId, clearSelection]);
+
+	const selectedValues = (): unknown[] =>
+		selection.range === null
+			? []
+			: rangeValues(
+					selection.range,
+					(row, column) => resultSet?.rows[row]?.[column] ?? null,
+				);
+
+	const copySelection = () => {
+		if (selection.range === null) {
+			return;
+		}
+		const text = rangeToTsv(
+			selection.range,
+			(row, column) => cellText(resultSet?.rows[row]?.[column] ?? null).text,
+		);
+		void navigator.clipboard?.writeText(text);
+	};
+
 	return (
 		<div className="dg-results">
 			<div className="dg-results-toolbar">
@@ -534,7 +570,29 @@ export function ResultsPanel() {
 							{resultSet.columns.length === 0 ? (
 								<div className="dg-tree-note">Query returned no rows.</div>
 							) : (
-								<table className="dg-grid">
+								<table
+									className="dg-grid"
+									ref={gridRef}
+									// The grid takes focus so a copy has somewhere to
+									// come from: the cells are `td`s, not controls.
+									tabIndex={-1}
+									onCopy={(event) => {
+										if (selection.range !== null) {
+											event.preventDefault();
+											copySelection();
+										}
+									}}
+									onKeyDown={(event) => {
+										if (event.key === "Escape") {
+											selection.clear();
+											return;
+										}
+										if ((event.ctrlKey || event.metaKey) && event.key === "c") {
+											event.preventDefault();
+											copySelection();
+										}
+									}}
+								>
 									<thead>
 										<tr>
 											<th className="dg-grid-rn" aria-label="Row number" />
@@ -556,18 +614,39 @@ export function ResultsPanel() {
 														// everything else neutral.
 														const numeric =
 															!cell.isNull && typeof value === "number";
+														const classes = [
+															cell.isNull
+																? "dg-grid-null"
+																: numeric
+																	? "dg-grid-num"
+																	: "",
+															selection.isSelected(rowIndex, columnIndex)
+																? "dg-grid-sel"
+																: "",
+														]
+															.filter((entry) => entry !== "")
+															.join(" ");
 														return (
+															// biome-ignore lint/a11y/useKeyWithMouseEvents: extending a selection by dragging is a pointer gesture; a results cell is not focusable, and the keyboard path here is shift-click rather than a focus event that can never fire
 															<td
 																key={
 																	resultSet.columns[columnIndex]?.name ??
 																	columnIndex
 																}
-																className={
-																	cell.isNull
-																		? "dg-grid-null"
-																		: numeric
-																			? "dg-grid-num"
-																			: ""
+																className={classes}
+																onMouseDown={(event) => {
+																	// The browser's own text selection would
+																	// fight this one, and neither would win.
+																	event.preventDefault();
+																	gridRef.current?.focus();
+																	selection.begin(
+																		rowIndex,
+																		columnIndex,
+																		event.shiftKey,
+																	);
+																}}
+																onMouseOver={() =>
+																	selection.extendTo(rowIndex, columnIndex)
 																}
 															>
 																{cell.text}
@@ -588,6 +667,12 @@ export function ResultsPanel() {
 						</>
 					)}
 				</div>
+			)}
+			{/* What the selection adds up to, along the bottom, where a
+				  spreadsheet puts it. Only once there is more than one cell:
+				  the sum of one number is that number. */}
+			{!showHistory && selection.size > 1 && (
+				<SelectionBar values={selectedValues()} onCopy={copySelection} />
 			)}
 		</div>
 	);

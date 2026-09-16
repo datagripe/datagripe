@@ -91,6 +91,53 @@ transaction ten seconds later.
 edit goes: still commit-or-revert, never a write of its own. The pane is
 read-only when the grid is, and when the column is generated.
 
+### Selecting cells
+
+A rectangle, in both grids — this one and the results panel — because
+"which cells am I looking at" is the same question whether the rows came
+from browsing a table or from a query, and a selection that behaved
+differently between them would be two things to learn. The geometry
+(`components/gridSelection.ts`) and the bar (`components/gridStats.ts`)
+are shared, and both are pure enough to test without a DOM.
+
+- **Press** a cell to select it, **shift-press** another to take the
+  rectangle between them, **drag** to sweep one out. Extension is wired
+  to `mouseover` rather than `mouseenter`: a cell in this grid contains
+  a control, and a drag that crosses the button rather than the padding
+  still has to count.
+- **Shift+arrows** grow the selection from the focused cell, which is
+  the keyboard's version of the drag. It works here because a cell is a
+  button; the results grid's cells are `td`s with nothing to focus, so
+  there the gesture is shift-click.
+- **`ctrl/cmd c` copies the block** as tab-separated rows, which is what
+  a spreadsheet reads. A tab or a newline inside a value is escaped to
+  its two characters rather than quoted — this is a paste target, not a
+  CSV file, and quoting rules are where spreadsheets disagree. A single
+  cell still copies the way it always did: the full, pretty-printed
+  value.
+- **Pending edits are copied as they are shown.** An uncommitted change
+  is the value in the cell somebody is looking at; copying the old one
+  would be copying something that is not on screen.
+- **Disjoint selections are deliberately not built.** Ctrl-clicking
+  cells in three places makes every consumer answer "in what order?",
+  and the answer is worth less than the column of special cases it
+  costs.
+
+**The bar along the bottom** appears once more than one cell is
+selected — the sum of one number is that number — and says `cells`
+first, on purpose: every figure beside it is about the highlighted
+cells and nothing else. This is not a query. `sum` over a page of 200
+rows is the sum of that page, and a number that quietly meant the whole
+table would be a lie told in small type.
+
+Numbers get `sum`, `avg`, `min` and `max`; anything else gets
+`distinct`, because `sum 0` over a column of names is a number that
+means nothing while "how many different ones" is the question people
+actually have. `null` appears only when there are some. A string that is
+*exactly* a number counts as one — `numeric` and `bigint` arrive as
+strings from every driver here, so a total over a money column is the
+main case rather than an edge one.
+
 ### The cell menu
 
 Right-clicking a cell opens a menu of everything that is about *one

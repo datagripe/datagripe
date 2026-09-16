@@ -130,6 +130,15 @@ and *New project…* is the last item in it.
   short-lived cache.
 - **Table view**: sort, filter, page, edit cells, insert and delete rows,
   with a side panel for the JSON column that is unreadable in a grid.
+- **Select a block of cells** in either grid — press, shift-press, drag,
+  or shift+arrows in the table view — and the bottom of the panel says
+  what they add up to: `sum`, `avg`, `min`, `max` for numbers,
+  `distinct` for everything else, and how many of them are null.
+  `Ctrl+C` copies the block as tab-separated rows, which is what a
+  spreadsheet reads.
+- **The total is of what is highlighted**, not of the table behind it.
+  The bar counts the cells first for exactly that reason: a `sum` that
+  quietly meant the whole table would be a lie told in small type.
 - **Object view**: columns, arguments, indexes, constraints, triggers,
   grants, statistics and DDL from one catalog call. Column edits show you
   the SQL before they run it.

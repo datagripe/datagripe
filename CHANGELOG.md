@@ -59,6 +59,25 @@
   dirty; it could not offer to undo it, and the way back was closing the
   tab and answering a confirm about discarding the whole file.
 
+- **Cells select as a block, in both grids.** Press one, shift-press
+  another, or drag across them — and in the table view, shift+arrows,
+  because its cells are focusable and the results panel's are not.
+  `Ctrl+C` puts the block on the clipboard as tab-separated rows, which
+  is what a spreadsheet reads; a single cell still copies the full,
+  pretty-printed value the way it always did.
+
+  Along the bottom, what the selection adds up to: `sum`, `avg`, `min`
+  and `max` for numbers, `distinct` for everything else — `sum 0` over a
+  column of names is a number that means nothing — and `null` when there
+  are any. A string that is *exactly* a number counts as one, because
+  `numeric` and `bigint` arrive as strings from every driver here and a
+  total over a money column is the main case, not an edge one.
+
+  **It is the cells, not the table.** The bar says `cells 12` before it
+  says anything else: this is arithmetic on what is highlighted, not a
+  second query, and a `sum` that quietly meant the whole table behind a
+  page of 200 rows would be worse than no sum at all.
+
 - **The repository section got its space back.** The branch, the number
   of changed files and `refresh` moved into the section header, where
   they are legible whether or not the section is open — *which branch am
