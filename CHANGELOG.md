@@ -1,5 +1,48 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **A project can be deleted.** It could always be renamed; the way to
+  get rid of one was a database session. Project settings now has a
+  danger zone, gated the way every destructive action in the
+  application is — reveal, type the project's name, execute — and it
+  takes everything DataGripe holds about the project with it: its
+  datasources and their stored credentials, its shared files, its
+  domains and tags, its dismissed gripes, its members, its roles, its
+  MCP tokens. One statement, one cascade, no list in the code to forget
+  a table from.
+
+  **Nothing on disk is touched.** A repository datasource is a clone
+  somebody else also has; an exported domain is a directory under
+  version control; a datasource path points at work that was never
+  DataGripe's. Deleting a project is DataGripe forgetting it, not a
+  `rm -rf` of somebody's repository.
+
+  One rule stops it, and it is the same rule in two shapes: **nobody
+  may be left without a project.** Deleting your only one is refused,
+  and so is deleting a shared project that somebody else has no
+  alternative to — remove them from it first. An account with no
+  project cannot open a socket at all, so the alternative to this rule
+  is somebody locked out of the application by a button they did not
+  press.
+
+  Everybody with the project open is moved out of it when it goes,
+  including the other people in it, and the browser drops what it had
+  cached for it — the dock layout, the shared files, the class.
+  Deleting needs **rename or delete the project**, the capability that
+  already gated renaming.
+
+### Fixed
+
+- **Renaming a project was impossible from the interface.** The name
+  field disabled itself unless the name already differed from the
+  project's, and typing in it was the only way to make it differ — so
+  it was disabled forever, and the only rename anybody could do was
+  over the socket. Whether the field can be typed in is about the role
+  and nothing else, which is what it now asks.
+
 ## 0.0.10 — 2026-09-16
 
 ### Added

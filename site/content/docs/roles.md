@@ -43,14 +43,14 @@ is handing you a SQL prompt, would be a promise DataGripe cannot keep.
 | **Approve and run repo commands** | The only feature that runs a program DataGripe did not write. |
 | **Manage the MCP server** | Turn the project's endpoint on, and mint or revoke its tokens. |
 | **Manage members and roles** | Add and remove people, and edit this matrix. |
-| **Rename the project** | |
+| **Rename or delete the project** | Deleting removes everything DataGripe holds about it. Files on the host are left where they are. |
 | **Restart the server** | Where the deployment is [supervised](/docs/updates/). Interrupts everybody. |
 
 The three built-ins start as what they always were: a viewer holds none
 of these, an editor holds the first nine, an owner holds all sixteen. An
 upgrade changes nothing about what anybody can already do.
 
-## Three rules that will stop you
+## Four rules that will stop you
 
 - **Somebody has to keep "manage members and roles".** Moving the last
   person who has it into a role that does not is refused — otherwise the
@@ -60,6 +60,11 @@ upgrade changes nothing about what anybody can already do.
 - **The built-ins cannot be renamed or removed.** Their capabilities are
   yours; the names are fixed so "owner" means the same thing in every
   deployment.
+- **Nobody can be left without a project.** Deleting one is refused when
+  somebody in it has no other — including you. An account with no
+  project cannot open the application at all, so this rule is the
+  difference between "a shorter list" and somebody locked out by a
+  button they did not press.
 
 ## Changes take effect immediately
 

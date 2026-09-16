@@ -123,6 +123,21 @@ export type WorkspaceRenameRequest = z.infer<
 	typeof workspaceRenameRequestSchema
 >;
 
+/**
+ * Deleting a project names it rather than relying on the socket's
+ * binding. The id is what the client believes it is deleting, and a
+ * socket rebinds on a switch — so the one destructive action here says
+ * out loud which project it meant, and the server refuses if that is
+ * not the project it is bound to.
+ */
+export const workspaceDeleteRequestSchema = z.object({
+	id: z.uuid(),
+});
+
+export type WorkspaceDeleteRequest = z.infer<
+	typeof workspaceDeleteRequestSchema
+>;
+
 export const workspaceListEntrySchema = z.object({
 	id: z.uuid(),
 	name: z.string().min(1).max(255),

@@ -51,7 +51,7 @@ export const capabilitySchema = z.enum([
 	"mcp.manage",
 	/** Add and remove members, and manage the project's roles. */
 	"members.manage",
-	/** Rename the project. */
+	/** Rename the project, and delete it. */
 	"project.manage",
 	/** Restart the server, where the deployment allows it. */
 	"server.restart",
@@ -189,8 +189,9 @@ export const CAPABILITY_LABELS: Record<
 		detail: "Add and remove people, and edit what the roles here can do.",
 	},
 	"project.manage": {
-		title: "Rename the project",
-		detail: "Change the project's name.",
+		title: "Rename or delete the project",
+		detail:
+			"Change the project's name, and delete the project — which takes everything DataGripe holds about it and leaves the host's files alone.",
 	},
 	"server.restart": {
 		title: "Restart the server",

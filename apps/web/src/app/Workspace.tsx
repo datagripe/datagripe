@@ -45,7 +45,7 @@ import { SyncPanel } from "../components/SyncPanel";
 import { TableView } from "../components/TableView";
 import { WorkspaceWatermark } from "../components/WorkspaceWatermark";
 import { EditorView } from "../editor/EditorView";
-import { db, LOCAL_LAYOUT_ID } from "../persistence/db";
+import { db, LOCAL_LAYOUT_ID, layoutIdFor } from "../persistence/db";
 import { createDebouncer } from "../persistence/debounce";
 import { parseLayout, sanitizeLayout } from "../persistence/layout";
 import { useAppStore } from "../stores/app";
@@ -103,12 +103,6 @@ function readSidebarWidth(): number {
 
 const layoutDebouncer = createDebouncer();
 
-/** Layouts are per workspace (dock arrangements differ per project);
- * scratchpads appear in every workspace's layout. */
-function layoutKey(workspaceId: string | null): string {
-	return workspaceId === null ? LOCAL_LAYOUT_ID : `ws:${workspaceId}`;
-}
-
 // Hydration runs once per workspace, shared across StrictMode remounts.
 const hydratePromises = new Map<string | null, Promise<void>>();
 function ensureHydrated(workspaceId: string | null): Promise<void> {
@@ -138,7 +132,7 @@ const components = {
 
 function persistLayout(api: DockviewApi): void {
 	void db.layouts.put({
-		id: layoutKey(useSessionStore.getState().currentWorkspaceId),
+		id: layoutIdFor(useSessionStore.getState().currentWorkspaceId),
 		json: api.toJSON(),
 		updatedAt: new Date().toISOString(),
 	});
@@ -148,7 +142,7 @@ async function restoreLayout(
 	api: DockviewApi,
 	workspaceId: string | null,
 ): Promise<void> {
-	let row = await db.layouts.get(layoutKey(workspaceId));
+	let row = await db.layouts.get(layoutIdFor(workspaceId));
 	// One-time fallback: layouts saved before per-workspace keys.
 	if (row === undefined && workspaceId !== null) {
 		row = await db.layouts.get(LOCAL_LAYOUT_ID);
@@ -334,6 +328,14 @@ export function Workspace() {
 					capabilities: Capability[];
 				};
 				useSessionStore.getState().applyPermissions(payload);
+				return;
+			}
+			// The project this session has open was deleted — by this tab,
+			// or by somebody else in it. Everybody in it moves to another
+			// project rather than sitting in one that is gone.
+			if (event.topic === "workspace.deleted") {
+				const payload = event.payload as { id: string; name: string };
+				void useSessionStore.getState().workspaceDeleted(payload.id);
 				return;
 			}
 			if (event.topic === "presence.update") {

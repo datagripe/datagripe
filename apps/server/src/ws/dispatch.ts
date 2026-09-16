@@ -69,6 +69,7 @@ import {
 	viewBroadcastRequestSchema,
 	viewFollowRequestSchema,
 	workspaceCreateRequestSchema,
+	workspaceDeleteRequestSchema,
 	workspaceRenameRequestSchema,
 	workspaceSetDefaultConnectionRequestSchema,
 } from "@datagripe/contracts";
@@ -146,6 +147,7 @@ import type { RateLimiter } from "../security/rateLimit";
 import { addMember, listMembers, removeMember } from "../workspaces/members";
 import {
 	createWorkspace,
+	deleteWorkspace,
 	listWorkspaces,
 	renameWorkspace,
 	setDefaultConnection,
@@ -674,6 +676,42 @@ export function createDispatcher(deps: DispatcherDeps): Dispatch {
 				const request = workspaceRenameRequestSchema.parse(payload);
 				await renameWorkspace(appDb, workspace.id, request.name);
 				return { workspace: { id: workspace.id, name: request.name } };
+			}
+
+			case "workspace.delete": {
+				const request = workspaceDeleteRequestSchema.parse(payload);
+				// Direct-in has one implicit identity and one workspace,
+				// resolved once at boot and never re-resolved — deleting it
+				// would strand the server on an id that no longer exists
+				// until a restart.
+				if (config.AUTH_DISABLED) {
+					throw new ServiceError(
+						ErrorCodes.Conflict,
+						"Direct-in mode has a single project and cannot delete it",
+					);
+				}
+				// The socket rebinds when somebody switches project, so a
+				// delete that arrives for a different one is a race, not a
+				// request: refuse rather than delete the project they are
+				// looking at now.
+				if (request.id !== workspace.id) {
+					throw new ServiceError(
+						ErrorCodes.Conflict,
+						"That project is not the one this session has open",
+					);
+				}
+				await deleteWorkspace(appDb, workspace.id, ctx.userId);
+				// Everybody else who has it open is looking at a project that
+				// is gone, including its other members.
+				hub.broadcastToWorkspace(workspace.id, {
+					version: 1,
+					kind: "event",
+					eventId: crypto.randomUUID(),
+					topic: "workspace.deleted",
+					occurredAt: new Date().toISOString(),
+					payload: { id: workspace.id, name: workspace.name },
+				});
+				return {};
 			}
 
 			case "workspace.member.add": {

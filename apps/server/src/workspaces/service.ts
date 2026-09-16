@@ -80,6 +80,64 @@ export async function renameWorkspace(
 	log.audit("workspace.rename", { workspaceId, name });
 }
 
+/**
+ * Delete a project and everything the system knows about it.
+ *
+ * The cascade is the schema's, not a list kept here: every table that
+ * belongs to a project references `workspaces (id) ON DELETE CASCADE`,
+ * so members, roles, datasources and their secrets, documents, domains
+ * and their run history, dismissals, layouts, paths, MCP settings and
+ * tokens all go in one statement. A list in this function would be the
+ * second place to remember, and the one that gets forgotten.
+ *
+ * **Nothing on disk is touched.** A repository datasource's checkout, a
+ * domain's export directory and any file opened through a datasource
+ * path are the host's, not the project's — DataGripe stops knowing
+ * about them, which is what deleting the project means. Removing them
+ * would delete work that lives in somebody's git repository.
+ *
+ * One rule stops it: **nobody may be left without a project.** A
+ * session whose account has no workspace cannot open a socket at all
+ * ("Account has no workspace"), so deleting the last one locks that
+ * person out of the application rather than returning them to it — and
+ * that is as true for the other members of a shared project as it is
+ * for the person pressing the button.
+ */
+export async function deleteWorkspace(
+	appDb: AppDb,
+	workspaceId: string,
+	userId: string,
+): Promise<void> {
+	const stranded = await appDb<{ user_id: string; email: string }[]>`
+		SELECT m.user_id, u.email
+		FROM workspace_members m
+		JOIN users u ON u.id = m.user_id
+		WHERE m.workspace_id = ${workspaceId}
+			AND NOT EXISTS (
+				SELECT 1 FROM workspace_members other
+				WHERE other.user_id = m.user_id
+					AND other.workspace_id <> ${workspaceId}
+			)
+		ORDER BY (m.user_id = ${userId}) DESC, u.email
+	`;
+	const first = stranded[0];
+	if (first !== undefined) {
+		throw new ServiceError(
+			ErrorCodes.Conflict,
+			first.user_id === userId
+				? "This is your only project — create another one before deleting it"
+				: `${first.email} has no other project and would be locked out — remove them from this one first`,
+		);
+	}
+	const rows = await appDb<{ id: string }[]>`
+		DELETE FROM workspaces WHERE id = ${workspaceId} RETURNING id
+	`;
+	if (rows[0] === undefined) {
+		throw new ServiceError(ErrorCodes.NotFound, "Project not found");
+	}
+	log.audit("workspace.delete", { workspaceId, userId });
+}
+
 export async function setDefaultConnection(
 	appDb: AppDb,
 	workspaceId: string,

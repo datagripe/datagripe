@@ -68,6 +68,8 @@ export type BrandingState = {
 	setClass: (workspaceId: string, projectClass: ProjectClass) => void;
 	attitudeFor: (workspaceId: string | null) => AttitudeLevel;
 	setAttitude: (workspaceId: string, level: AttitudeLevel) => void;
+	/** A deleted project's settings, dropped from this browser. */
+	forget: (workspaceId: string) => void;
 };
 
 export const useBrandingStore = create<BrandingState>()((set, get) => ({
@@ -87,6 +89,13 @@ export const useBrandingStore = create<BrandingState>()((set, get) => ({
 	setAttitude: (workspaceId, level) => {
 		const attitudes = { ...get().attitudes, [workspaceId]: level };
 		set({ attitudes });
+		writeMap(ATTITUDE_STORAGE_KEY, attitudes);
+	},
+	forget: (workspaceId) => {
+		const { [workspaceId]: _class, ...classes } = get().classes;
+		const { [workspaceId]: _attitude, ...attitudes } = get().attitudes;
+		set({ classes, attitudes });
+		writeMap(CLASS_STORAGE_KEY, classes);
 		writeMap(ATTITUDE_STORAGE_KEY, attitudes);
 	},
 }));

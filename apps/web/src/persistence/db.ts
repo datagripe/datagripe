@@ -75,3 +75,31 @@ db.version(1).stores({
 db.version(2).stores({
 	documentPrefs: "id",
 });
+
+/** Layouts are per project (dock arrangements differ per project);
+ * scratchpads appear in every project's layout. */
+export function layoutIdFor(workspaceId: string | null): string {
+	return workspaceId === null ? LOCAL_LAYOUT_ID : `ws:${workspaceId}`;
+}
+
+/**
+ * Drop what this browser cached for a deleted project: its dock layout,
+ * its shared files, and the drafts, view states and per-document
+ * preferences those files owned.
+ *
+ * Scratchpads are left alone — they are this browser's, not the
+ * project's, and they appear in whichever project is open.
+ */
+export async function forgetWorkspace(workspaceId: string): Promise<void> {
+	const shared = await db.documents
+		.filter((row) => row.shared === true && row.workspaceId === workspaceId)
+		.toArray();
+	const ids = shared.map((row) => row.id);
+	await Promise.all([
+		db.layouts.delete(layoutIdFor(workspaceId)),
+		db.documents.bulkDelete(ids),
+		db.drafts.bulkDelete(ids),
+		db.documentPrefs.bulkDelete(ids),
+		db.viewStates.where("documentId").anyOf(ids).delete(),
+	]);
+}

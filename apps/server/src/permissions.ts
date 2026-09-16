@@ -85,6 +85,7 @@ export const CAPABILITY_FOR_ACTION: Partial<Record<ClientAction, Capability>> =
 		"member.set-role": "members.manage",
 
 		"workspace.rename": "project.manage",
+		"workspace.delete": "project.manage",
 		"app.restart": "server.restart",
 	};
 

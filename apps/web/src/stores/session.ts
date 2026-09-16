@@ -11,6 +11,8 @@ import {
 } from "@simplewebauthn/browser";
 import { create } from "zustand";
 import { wsClient } from "../api/ws";
+import { forgetWorkspace } from "../persistence/db";
+import { useBrandingStore } from "./branding";
 
 /**
  * Session state: the /api/session bootstrap plus login/signup/logout,
@@ -45,6 +47,13 @@ export type SessionState = {
 	switchWorkspace: (id: string) => void;
 	createWorkspace: (name: string) => Promise<WorkspaceListEntry>;
 	renameWorkspace: (name: string) => Promise<void>;
+	/** Delete the open project and move to another one. */
+	deleteWorkspace: (id: string) => Promise<void>;
+	/**
+	 * The open project is gone — deleted here, or by somebody else while
+	 * this session had it open.
+	 */
+	workspaceDeleted: (id: string) => Promise<void>;
 	confirmWorkspace: (workspace: CurrentWorkspace) => void;
 	/** A role changed under this session (docs/spec/permissions.md). */
 	applyPermissions: (next: {
@@ -244,6 +253,36 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
 					: entry,
 			),
 		});
+	},
+
+	async deleteWorkspace(id) {
+		await wsClient.request("workspace.delete", { id });
+		// The server broadcasts workspace.deleted to every socket in the
+		// project, including this one, so the local move happens once,
+		// there — deleting and being told are the same situation.
+	},
+
+	async workspaceDeleted(id) {
+		const remaining = get().workspaces.filter((entry) => entry.id !== id);
+		set({ workspaces: remaining });
+		// What this browser cached for a project that no longer exists:
+		// its class, its dock layout, its shared files. Files on the host
+		// are the host's and are left where they are.
+		useBrandingStore.getState().forget(id);
+		await forgetWorkspace(id);
+		if (get().currentWorkspaceId !== id) {
+			return;
+		}
+		const next = remaining[0];
+		if (next === undefined) {
+			// The server refuses to leave anybody without a project, so this
+			// is a list that was already stale — reconnecting resolves the
+			// account's default rather than guessing one here.
+			localStorage.removeItem(WORKSPACE_STORAGE_KEY);
+			set({ currentWorkspaceId: null, currentWorkspace: null });
+			return;
+		}
+		get().switchWorkspace(next.id);
 	},
 
 	/** Called with every workspace.open result: confirms the actual bound

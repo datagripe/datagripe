@@ -50,7 +50,7 @@ promise it cannot keep.
 | `repo.commands` | Approve and run a repository's declared commands |
 | `mcp.manage` | Turn the project's MCP server on, and mint or revoke tokens |
 | `members.manage` | Add and remove members, and manage roles |
-| `project.manage` | Rename the project |
+| `project.manage` | Rename the project, and delete it |
 | `server.restart` | Restart the server where the deployment is supervised |
 
 `server.restart` is here rather than in a separate deployment-admin
@@ -107,6 +107,12 @@ server would now refuse.
   way out is a database session.
 - **A read is still a read.** `role.list` needs nothing: knowing what
   the roles here can do is how you know what to ask for.
+- **Nobody may be left without a project.** Deleting a project is
+  refused when somebody in it — the person pressing the button
+  included — has no other one. A session whose account has no workspace
+  cannot open a socket at all, so the alternative is not "a smaller
+  list", it is somebody locked out of the application by a button
+  somebody else pressed.
 
 ## The legacy column
 

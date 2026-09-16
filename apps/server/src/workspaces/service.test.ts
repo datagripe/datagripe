@@ -5,6 +5,7 @@ import { migrate } from "../db/app/migrate";
 import type { AppDb } from "../db/app/pool";
 import {
 	createWorkspace,
+	deleteWorkspace,
 	listWorkspaces,
 	setDefaultConnection,
 } from "./service";
@@ -96,5 +97,81 @@ describe("workspace service", () => {
 			SELECT default_connection_ref FROM workspaces WHERE id = ${workspaceId}
 		`;
 		expect(cleared[0]?.default_connection_ref).toBeNull();
+	});
+});
+
+describe("deleting a project", () => {
+	pgTest("takes everything that belonged to it with it", async () => {
+		const doomed = await createWorkspace(appDb, userId, "Doomed");
+		// One row in a table that hangs off the project, and one in a
+		// table that hangs off a row that hangs off it: the cascade is the
+		// schema's, so this is checking the schema, not a list in the
+		// service.
+		await appDb`
+			INSERT INTO documents (workspace_id, title, content)
+			VALUES (${doomed.id}, 'notes', 'select 1')
+		`;
+		await appDb`
+			INSERT INTO gripe_dismissals
+				(workspace_id, rule_id, scope, key, dismissed_by)
+			VALUES (${doomed.id}, 'pk.missing', 'project', '', ${userId})
+		`;
+
+		await deleteWorkspace(appDb, doomed.id, userId);
+
+		for (const table of [
+			"documents",
+			"gripe_dismissals",
+			"workspace_members",
+			"workspace_roles",
+		]) {
+			const rows = await appDb.unsafe(
+				`SELECT count(*)::int AS count FROM ${table} WHERE workspace_id = $1`,
+				[doomed.id],
+			);
+			expect(rows[0]?.count).toBe(0);
+		}
+		expect(
+			(await listWorkspaces(appDb, userId)).map((w) => w.id),
+		).not.toContain(doomed.id);
+	});
+
+	pgTest("refuses the only project the account has", async () => {
+		const solo = (await createAccount(appDb, "solo@example.com", "hash"))
+			.userId;
+		const [only] = await listWorkspaces(appDb, solo);
+		if (only === undefined) {
+			throw new Error("expected a default workspace");
+		}
+		await expect(deleteWorkspace(appDb, only.id, solo)).rejects.toMatchObject({
+			code: "CONFLICT",
+		});
+	});
+
+	pgTest("refuses to lock another member out", async () => {
+		const shared = await createWorkspace(appDb, userId, "Shared");
+		const guest = await createAccount(appDb, "guest@example.com", "hash");
+		// A member whose only project is this one: deleting it would leave
+		// them with no workspace, and a session with no workspace cannot
+		// open a socket at all.
+		await appDb`DELETE FROM workspaces WHERE id = ${guest.workspaceId}`;
+		await appDb`
+			INSERT INTO workspace_members (workspace_id, user_id, role)
+			VALUES (${shared.id}, ${guest.userId}, 'viewer')
+		`;
+
+		await expect(
+			deleteWorkspace(appDb, shared.id, userId),
+		).rejects.toMatchObject({ code: "CONFLICT" });
+
+		// Removed, the project goes.
+		await appDb`
+			DELETE FROM workspace_members
+			WHERE workspace_id = ${shared.id} AND user_id = ${guest.userId}
+		`;
+		await deleteWorkspace(appDb, shared.id, userId);
+		expect(
+			(await listWorkspaces(appDb, userId)).map((w) => w.name),
+		).not.toContain("Shared");
 	});
 });

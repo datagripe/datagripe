@@ -9,6 +9,7 @@ import { wsClient } from "../api/ws";
 import {
 	PROJECT_CLASS_COLORS,
 	PROJECT_CLASSES,
+	type ProjectClass,
 	useBrandingStore,
 } from "../stores/branding";
 import { useSessionStore } from "../stores/session";
@@ -76,6 +77,11 @@ export function ProjectSettingsPanel() {
 	}
 
 	const canManageMembers = capabilities.includes("members.manage");
+	// Whether the field may be typed in at all, which is about the role
+	// and nothing else. The old expression also required the name to
+	// already differ from the project's, and typing was the only way to
+	// make it differ — so the field was disabled forever.
+	const canManageProject = capabilities.includes("project.manage");
 	const canRename =
 		capabilities.includes("project.manage") &&
 		name.trim().length > 0 &&
@@ -106,12 +112,12 @@ export function ProjectSettingsPanel() {
 						<span>Name</span>
 						<TextInput
 							value={name}
-							disabled={!canRename && name === currentWorkspace.name}
+							disabled={!canManageProject}
 							onChange={(event) => setName(event.target.value)}
 						/>
 					</label>
 				</div>
-				{!capabilities.includes("project.manage") && (
+				{!canManageProject && (
 					<p className="dg-form-note">
 						Your role in this project cannot rename it.
 					</p>
@@ -119,7 +125,7 @@ export function ProjectSettingsPanel() {
 				{renameError !== null && (
 					<p className="dg-test-failed">{renameError}</p>
 				)}
-				{capabilities.includes("project.manage") && (
+				{canManageProject && (
 					<div className="dg-frow">
 						<button
 							type="button"
@@ -158,6 +164,14 @@ export function ProjectSettingsPanel() {
 					</p>
 				</fieldset>
 
+				{canManageProject && (
+					<DeleteProject
+						workspaceId={currentWorkspace.id}
+						name={currentWorkspace.name}
+						projectClass={projectClass}
+					/>
+				)}
+
 				{!authDisabled && (
 					<MembersSection
 						canManage={canManageMembers}
@@ -174,6 +188,92 @@ export function ProjectSettingsPanel() {
 				)}
 			</div>
 		</div>
+	);
+}
+
+/**
+ * Deleting the project, gated the way every destructive action is
+ * (brand-system.md "Danger zone"): reveal, type the project name,
+ * execute. Typing the name is the point — muscle memory cannot fire it.
+ *
+ * What it says is what it does: everything the system holds about the
+ * project goes, and nothing on the host's disk is touched. A repository
+ * datasource is a clone somebody else also has; an exported domain is a
+ * directory under version control. Deleting the project is DataGripe
+ * forgetting them, not a `rm -rf` of somebody's work.
+ */
+function DeleteProject(props: {
+	workspaceId: string;
+	name: string;
+	projectClass: ProjectClass;
+}) {
+	const only = useSessionStore((state) => state.workspaces.length < 2);
+	const [typed, setTyped] = useState("");
+	const [busy, setBusy] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+	const armed = typed === props.name && !only;
+
+	const remove = async () => {
+		setBusy(true);
+		setError(null);
+		try {
+			await useSessionStore.getState().deleteWorkspace(props.workspaceId);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Delete failed");
+			setBusy(false);
+		}
+	};
+
+	return (
+		<fieldset className="dg-field dg-form-section">
+			<legend>Danger zone</legend>
+			<details className="dg-danger-action">
+				<summary>delete {props.name}</summary>
+				<div className="dg-danger-detail">
+					<span>
+						Removes this{" "}
+						<span style={{ color: PROJECT_CLASS_COLORS[props.projectClass] }}>
+							{props.projectClass}
+						</span>{" "}
+						project and everything DataGripe holds about it: its datasources and
+						their stored credentials, its shared files, its domains and tags,
+						its dismissed gripes, its members, its roles and its MCP tokens.
+						This cannot be undone.
+					</span>
+					<span>
+						Files on the host are left alone — repository checkouts, exported
+						domain directories and anything opened through a datasource path
+						stay exactly where they are.
+					</span>
+					{only ? (
+						<span>
+							This is your only project. Create another one first — an account
+							with no project cannot open the application.
+						</span>
+					) : (
+						<span>
+							Type <code>{props.name}</code> to confirm.
+						</span>
+					)}
+					<TextInput
+						value={typed}
+						disabled={only}
+						onChange={(event) => setTyped(event.target.value)}
+						placeholder={props.name}
+						aria-label={`Type ${props.name} to confirm deleting this project`}
+					/>
+					{error !== null && <span className="dg-test-failed">{error}</span>}
+					<button
+						type="button"
+						className="dg-danger-execute dg-btn"
+						disabled={!armed || busy}
+						onClick={() => void remove()}
+					>
+						{busy ? "deleting…" : "delete project"}
+					</button>
+				</div>
+			</details>
+		</fieldset>
 	);
 }
 

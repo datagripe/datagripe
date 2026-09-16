@@ -40,6 +40,28 @@ and is opt-in; `fatal` swears.
 that table, or the whole project — and the app always tells you it is
 hiding something rather than quietly showing you less.
 
+## Projects
+
+A project holds datasources, shared files, domains, members and roles.
+The switcher is the prompt in the header — `>Datagripe:<project>_` —
+and *New project…* is the last item in it.
+
+- **Rename** it in project settings, if your role can manage the
+  project.
+- **Delete** it from the danger zone of the same panel: reveal, type the
+  project's name, execute. It takes everything DataGripe holds about the
+  project — its datasources and their stored credentials, its shared
+  files, its domains and tags, its dismissed gripes, its members, its
+  roles and its MCP tokens — in one cascade, and it cannot be undone.
+- **Nothing on the host's disk is touched.** A repository datasource is
+  a clone somebody else also has, an exported domain is a directory
+  under version control, and a datasource path points at work that was
+  never DataGripe's. Deleting the project is DataGripe forgetting them.
+- **Nobody is left without a project.** Deleting your only one is
+  refused, and so is deleting a shared project somebody else has no
+  alternative to — remove them from it first. An account with no project
+  cannot open the application.
+
 ## The interface
 
 - **One Files section** in the sidebar: the datasource's own
