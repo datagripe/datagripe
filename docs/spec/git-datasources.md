@@ -404,17 +404,27 @@ active one, above its path sections
 (`docs/spec/datasource-paths.md` "What the sidebar shows"):
 
 ```
-┌ repository ─────────────────┐
-│ main · ↑2 ↓0                │   ← branch, ahead/behind upstream
-│ ☑ M foo/blah.sql            │   ← staged for the next commit
-│ ☑ M .datagripe/config.yaml  │
-│ ☐ ? bar/baz/query22.sql     │
-│ ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
-│ [ commit… ] [ push ] [ pull ]│
-│ [ refresh ]                  │
-├ Some Folder ────────────────┤
-│ ▾ foo                       │
+┌ repository        (main) (3) ⟳┐  ← branch, changed count, refresh
+│ 3 changed · 2 staged          │
+│ ☑ M foo/blah.sql              │  ← staged for the next commit
+│ ☑ M .datagripe/config.yaml    │
+│ ☐ ? bar/baz/query22.sql       │
+│ ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+│ [ commit… ] [ push 2 ][ pull 0 ]│
+├ Some Folder ──────────────────┤
+│ ▾ foo                         │
 ```
+
+**The branch, the change count and refresh live in the section header**,
+where they are legible whether or not the section is open. "Which branch
+am I on" is a question people ask without wanting the file list, and it
+used to cost a click and two rows of panel. What is left inside is one
+summary line and the buttons.
+
+**The ahead/behind counts ride on `push` and `pull` themselves** —
+`push 2`, `pull 0` — rather than sitting in a pair of arrows above them.
+The count belongs to the press that changes it, and `↑2 ↓0` needs its
+words said out loud to mean anything anyway.
 
 - **The list is `git status --porcelain -uall` at the work tree root**,
   not scoped to a sub-path. This is a repository view, and hiding a
@@ -447,6 +457,16 @@ active one, above its path sections
 - **`refresh` is the only way the list updates**, plus after any
   operation this section ran. Nothing polls. A status call per second
   across every open workspace is a `git` process per second.
+- **Refresh fetches first, where there is an upstream** (`git.fetch` →
+  `git fetch --quiet`, then a status). `rev-list` counts against the
+  remote-tracking ref, which is a memory of the last fetch, so a
+  refresh that only ran `status` would answer "0 behind" from whenever
+  somebody last pulled — a button that says there is nothing to pull
+  when there is. A fetch moves no file and touches no work tree, and it
+  is still a press: nothing fetches on a timer. Git's verdict comes back
+  verbatim like every other command here, so a fetch that failed on
+  credentials says so instead of showing stale counts. With no upstream
+  it is a plain status.
 
 The section is capped at 500 rows; past that it shows the count and a
 line saying to use a terminal, because a 12,000-file status is not a

@@ -60,6 +60,10 @@ export const CAPABILITY_FOR_ACTION: Partial<Record<ClientAction, Capability>> =
 		"git.pull": "git.commit",
 		"git.datasource.reload": "git.commit",
 
+		// A fetch reaches the remote with the deployment's credentials,
+		// which is what `git.commit` already covers for a pull.
+		"git.fetch": "git.commit",
+
 		"git.push": "git.push",
 		"git.datasource.add": "git.push",
 		"git.datasource.remove": "git.push",

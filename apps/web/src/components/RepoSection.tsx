@@ -4,8 +4,8 @@ import type { EditorDocument } from "../stores/documents";
 import { useRepoStore } from "../stores/git";
 import { openRepoFile } from "../stores/openRepoFile";
 import { useConnectionsStore } from "../stores/runtime";
-import { TextInput } from "./controls";
-import { IconAhead, IconBehind } from "./icons";
+import { Button, TextInput } from "./controls";
+import { IconRefresh } from "./icons";
 import { RepoCommands } from "./RepoCommands";
 
 /**
@@ -16,11 +16,74 @@ import { RepoCommands } from "./RepoCommands";
  * is a press: editing a file does not commit it, saving does not push,
  * and nothing refreshes on a timer.
  *
+ * The branch and the refresh live in the section *header*
+ * (`RepoHeader`), where they are legible whether or not the section is
+ * open — "which branch am I on" is the question people ask without
+ * wanting the file list, and it used to cost a click and two rows of
+ * panel. What is left inside is one line of counts and the buttons,
+ * with the ahead/behind counts on `push` and `pull` themselves rather
+ * than in a pair of arrows above them: the count belongs to the press
+ * that changes it.
+ *
  * The status list is the whole work tree, not the datasource's
  * configured paths. This is a repository view, and hiding a changed file
  * because it sits outside a path pair is how you commit half of
  * something.
  */
+
+/**
+ * The branch, the change count and refresh, in the section header
+ * (`SidebarSection.actions`).
+ *
+ * Separate from the panel because it outlives it: the panel mounts when
+ * somebody opens the section, and the branch is worth knowing when it
+ * is shut. It reads the status the panel already loaded and does not
+ * load one of its own — nothing here polls.
+ */
+export function RepoHeader(props: { connectionRef: string }) {
+	const { connectionRef } = props;
+	const status = useRepoStore((state) => state.status[connectionRef]);
+	const loading = useRepoStore(
+		(state) => state.loading[connectionRef] === true,
+	);
+	const busy = useRepoStore((state) => state.busy[connectionRef]);
+	const changed = status?.total ?? 0;
+
+	return (
+		<>
+			<span className="dg-repo-chip" title={status?.repoPath}>
+				{status?.branch ?? "…"}
+			</span>
+			{changed > 0 && (
+				<span
+					className="dg-count"
+					title={`${changed} changed ${changed === 1 ? "file" : "files"}`}
+				>
+					{changed}
+				</span>
+			)}
+			<button
+				type="button"
+				className="dg-section-icon"
+				title={
+					status?.upstream == null
+						? "Read the status again"
+						: `Fetch ${status.upstream} and read the status again`
+				}
+				aria-label="Refresh the repository"
+				disabled={loading || busy !== undefined}
+				onClick={(event) => {
+					// The header row toggles the section; refreshing is not
+					// asking for it to close.
+					event.stopPropagation();
+					void useRepoStore.getState().refresh(connectionRef);
+				}}
+			>
+				<IconRefresh />
+			</button>
+		</>
+	);
+}
 
 export interface RepoSectionProps {
 	connectionRef: string;
@@ -84,40 +147,35 @@ export function RepoSection(props: RepoSectionProps) {
 		return (
 			<div className="dg-repo">
 				<p className="dg-sidebar-empty dg-test-failed">{error}</p>
-				<button
-					type="button"
-					className="dg-doc-new"
+				<Button
+					size="sm"
 					onClick={() => void useRepoStore.getState().load(connectionRef)}
 				>
 					try again
-				</button>
+				</Button>
 			</div>
 		);
 	}
 
 	return (
 		<div className="dg-repo">
-			<div className="dg-repo-head">
-				<span className="dg-repo-branch">{status?.branch ?? "…"}</span>
-				{status !== undefined && status.upstream !== null && (
-					// The arrows are the git convention, but they are decoration:
-					// the count only means something with "ahead"/"behind" said
-					// out loud, so the accessible name carries the words.
-					<span
-						className="dg-repo-track"
-						role="img"
-						title={`${status.ahead} ahead, ${status.behind} behind`}
-						aria-label={`${status.ahead} ahead, ${status.behind} behind`}
-					>
-						<IconAhead />
-						{status.ahead} <IconBehind />
-						{status.behind}
-					</span>
-				)}
-				{status !== undefined && status.upstream === null && (
-					<span className="dg-repo-track dg-dim">no upstream</span>
-				)}
-			</div>
+			{status !== undefined && (
+				// One line instead of a header: what is changed, how much of
+				// it is going in the next commit, and whether there is
+				// anywhere to push it.
+				<p className="dg-repo-summary">
+					<b>{status.total}</b> changed
+					{ticked.length > 0 && (
+						<>
+							{" "}
+							· <b>{ticked.length}</b> staged
+						</>
+					)}
+					{status.upstream === null && (
+						<span className="dg-dim"> · no upstream</span>
+					)}
+				</p>
+			)}
 
 			{error !== undefined && (
 				<p className="dg-sidebar-empty dg-test-failed">{error}</p>
@@ -187,8 +245,9 @@ export function RepoSection(props: RepoSectionProps) {
 							onChange={(event) => setMessage(event.target.value)}
 						/>
 						<div className="dg-repo-buttons">
-							<button
-								type="button"
+							<Button
+								size="sm"
+								tone="primary"
 								disabled={message.trim() === "" || busy !== undefined}
 								onClick={() => {
 									void useRepoStore
@@ -206,26 +265,33 @@ export function RepoSection(props: RepoSectionProps) {
 								}}
 							>
 								commit {ticked.length > 0 ? `(${ticked.length})` : ""}
-							</button>
-							<button type="button" onClick={() => setComposing(false)}>
+							</Button>
+							<Button size="sm" onClick={() => setComposing(false)}>
 								cancel
-							</button>
+							</Button>
 						</div>
 					</div>
 				) : (
 					<div className="dg-repo-buttons">
-						<button
-							type="button"
+						<Button
+							size="sm"
+							tone="primary"
 							disabled={busy !== undefined}
 							onClick={() => setComposing(true)}
 						>
 							commit…
-						</button>
+						</Button>
 						{/* The only button here that leaves the machine, which is
-							    why it is always its own press. */}
-						<button
-							type="button"
+							    why it is always its own press. The number on it is
+							    what it would send. */}
+						<Button
+							size="sm"
 							disabled={busy !== undefined}
+							title={
+								status?.upstream === null
+									? "No upstream yet — this sets one"
+									: `Push to ${status?.upstream}`
+							}
 							onClick={() =>
 								void useRepoStore
 									.getState()
@@ -233,21 +299,25 @@ export function RepoSection(props: RepoSectionProps) {
 							}
 						>
 							{busy === "push" ? "pushing…" : "push"}
-						</button>
-						<button
-							type="button"
+							{status !== undefined && status.upstream !== null && (
+								<span className="dg-repo-n">{status.ahead}</span>
+							)}
+						</Button>
+						<Button
+							size="sm"
 							disabled={busy !== undefined}
+							title={
+								status?.upstream === null
+									? "Nothing to pull from — no upstream"
+									: `Pull from ${status?.upstream}`
+							}
 							onClick={() => void useRepoStore.getState().pull(connectionRef)}
 						>
 							{busy === "pull" ? "pulling…" : "pull"}
-						</button>
-						<button
-							type="button"
-							disabled={loading}
-							onClick={() => void useRepoStore.getState().load(connectionRef)}
-						>
-							refresh
-						</button>
+							{status !== undefined && status.upstream !== null && (
+								<span className="dg-repo-n">{status.behind}</span>
+							)}
+						</Button>
 					</div>
 				)}
 			</div>

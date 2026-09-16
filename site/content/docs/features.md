@@ -70,6 +70,13 @@ and *New project…* is the last item in it.
   `new`, and every section — Files, Repository, Online, MCP Server —
   starts collapsed and stays where it is in the list whether it is open
   or shut.
+- **A section header carries the facts you would otherwise open it
+  for**: the branch, the number of changed files and a refresh on
+  Repository; how many people are here on Online; whether an agent can
+  connect, and with what, on MCP Server.
+- **`refresh` on a repository fetches first**, so *0 behind* is about
+  the remote as it is now rather than the last time somebody pulled.
+  The counts sit on the buttons that change them — `push 2`, `pull 0`.
 - **One avatar in the header** opens the account menu: the project you
   are in and your role, the two settings panels, and the way out. Set a
   name in Account settings and the button wears it.

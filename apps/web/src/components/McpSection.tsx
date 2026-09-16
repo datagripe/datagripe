@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMcpStore } from "../stores/mcp";
 import { useSessionStore } from "../stores/session";
-import { TextInput } from "./controls";
+import { Button, TextInput } from "./controls";
 
 /**
  * The MCP panel (docs/spec/mcp.md "The panel").
@@ -15,12 +15,22 @@ import { TextInput } from "./controls";
  */
 
 /**
- * The switch, in the section header (`SidebarSection.actions`).
+ * The switch and what it means, in the section header
+ * (`SidebarSection.actions`).
  *
  * Separate from the panel because it outlives it: the panel mounts when
  * somebody opens the section, and this has to say whether an agent can
  * reach the project whether or not anybody ever does. It reads
- * `status` — one settings row — rather than the panel's whole state.
+ * `status` — one settings row and a count — rather than the panel's
+ * whole state.
+ *
+ * Three states, three colours, and the words are there for the third of
+ * men who cannot tell two of them apart (brand-system.md
+ * "Accessibility"): **no tokens** is grey, because a server nothing can
+ * connect to is on in name only; **read only** is green; **read/write**
+ * is violet, because an agent that can commit its own changes to your
+ * database is not the same fact and should not wear the same colour as
+ * the safe one.
  */
 export function McpSwitch() {
 	const status = useMcpStore((store) => store.status);
@@ -30,26 +40,47 @@ export function McpSwitch() {
 		return null;
 	}
 
+	const pill =
+		status.tokenCount === 0
+			? { label: "no tokens", className: "" }
+			: status.mode === "read-write"
+				? { label: "read/write", className: " dg-mcp-pill-write" }
+				: { label: "read only", className: " dg-mcp-pill-read" };
+
 	return (
-		<button
-			type="button"
-			className="dg-sw"
-			aria-pressed={status.enabled}
-			aria-label="MCP server"
-			disabled={busy}
-			title={
-				status.enabled
-					? "On — an agent with a token can read this project"
-					: "Off — nothing is listening for this project"
-			}
-			onClick={() =>
-				void useMcpStore
-					.getState()
-					.setSettings({ enabled: !status.enabled, mode: status.mode })
-			}
-		>
-			<i />
-		</button>
+		<>
+			{status.enabled && (
+				<span
+					className={`dg-mcp-pill${pill.className}`}
+					title={
+						status.tokenCount === 0
+							? "On, but no token exists — nothing can connect yet"
+							: `${status.tokenCount} ${status.tokenCount === 1 ? "token" : "tokens"} can connect, ${pill.label}`
+					}
+				>
+					{pill.label}
+				</span>
+			)}
+			<button
+				type="button"
+				className="dg-sw"
+				aria-pressed={status.enabled}
+				aria-label="MCP server"
+				disabled={busy}
+				title={
+					status.enabled
+						? "On — an agent with a token can read this project"
+						: "Off — nothing is listening for this project"
+				}
+				onClick={() =>
+					void useMcpStore
+						.getState()
+						.setSettings({ enabled: !status.enabled, mode: status.mode })
+				}
+			>
+				<i />
+			</button>
+		</>
 	);
 }
 
@@ -135,77 +166,58 @@ export function McpSection() {
 
 	return (
 		<div className="dg-mcp">
-			<p className="dg-mcp-lead">
-				{state.enabled
-					? "An agent with a token can read this project and query its datasources."
-					: "Nothing is listening for this project. The switch is in the header."}
-			</p>
+			{!state.enabled && (
+				<p className="dg-mcp-lead">
+					Nothing is listening for this project. The switch is in the header.
+				</p>
+			)}
 
 			{state.enabled && (
 				<>
-					<div className="dg-mcp-mode">
-						<fieldset className="dg-seg" aria-label="Access">
-							<button
-								type="button"
-								aria-pressed={state.mode === "read-only"}
-								disabled={busy}
-								onClick={() =>
-									void useMcpStore
-										.getState()
-										.setSettings({ enabled: true, mode: "read-only" })
-								}
-							>
-								read only
-							</button>
-							<button
-								type="button"
-								aria-pressed={state.mode === "read-write"}
-								disabled={busy}
-								onClick={() =>
-									void useMcpStore
-										.getState()
-										.setSettings({ enabled: true, mode: "read-write" })
-								}
-							>
-								read/write
-							</button>
-						</fieldset>
-						<p className="dg-mcp-note">
-							{state.mode === "read-only"
-								? "Writes are refused before they reach the database, and every query runs in a transaction that is rolled back."
-								: "Every query an agent runs commits."}
+					{/* The ceiling first: everything below is about who reaches
+						  the project, and this is what they get when they do. */}
+					<fieldset className="dg-seg dg-mcp-seg" aria-label="Access">
+						<button
+							type="button"
+							aria-pressed={state.mode === "read-only"}
+							disabled={busy}
+							onClick={() =>
+								void useMcpStore
+									.getState()
+									.setSettings({ enabled: true, mode: "read-only" })
+							}
+						>
+							read only
+						</button>
+						<button
+							type="button"
+							aria-pressed={state.mode === "read-write"}
+							disabled={busy}
+							onClick={() =>
+								void useMcpStore
+									.getState()
+									.setSettings({ enabled: true, mode: "read-write" })
+							}
+						>
+							read/write
+						</button>
+					</fieldset>
+					<p className="dg-mcp-note">
+						{state.mode === "read-only"
+							? "Writes are refused before they reach the database, and every query runs in a transaction that is rolled back."
+							: "Every query an agent runs commits."}
+					</p>
+					{/* The ceiling, named. Flipping this switch does not lift a
+						  datasource's own read-only setting, and finding that out
+						  from a failed query is a worse way to learn it. */}
+					{state.mode === "read-write" && readOnlyDatasources.length > 0 && (
+						<p className="dg-mcp-note dg-mcp-ceiling">
+							Still read-only, by their own setting:{" "}
+							{readOnlyDatasources.map((entry) => entry.name).join(", ")}.
 						</p>
-						{/* The ceiling, named. Flipping this switch does not lift a
-							  datasource's own read-only setting, and finding that out
-							  from a failed query is a worse way to learn it. */}
-						{state.mode === "read-write" && readOnlyDatasources.length > 0 && (
-							<p className="dg-mcp-note dg-mcp-ceiling">
-								Still read-only, by their own setting:{" "}
-								{readOnlyDatasources.map((entry) => entry.name).join(", ")}.
-							</p>
-						)}
-					</div>
+					)}
 
-					<div className="dg-mcp-url">
-						<code>{state.url}</code>
-						<div className="dg-repo-buttons">
-							<button
-								type="button"
-								className="dg-doc-new"
-								onClick={() => copy("url", state.url)}
-							>
-								{copied === "url" ? "copied" : "copy url"}
-							</button>
-							<button
-								type="button"
-								className="dg-doc-new"
-								onClick={() => copy("config", clientConfig)}
-							>
-								{copied === "config" ? "copied" : "copy client config"}
-							</button>
-						</div>
-					</div>
-
+					<p className="dg-mcp-head">tokens</p>
 					{revealed !== null && (
 						<div className="dg-mcp-revealed">
 							<p>
@@ -214,20 +226,19 @@ export function McpSection() {
 							</p>
 							<code>{revealed.value}</code>
 							<div className="dg-repo-buttons">
-								<button
-									type="button"
-									className="dg-doc-new"
+								<Button
+									size="sm"
+									tone="primary"
 									onClick={() => copy("token", revealed.value)}
 								>
 									{copied === "token" ? "copied" : "copy token"}
-								</button>
-								<button
-									type="button"
-									className="dg-doc-new"
+								</Button>
+								<Button
+									size="sm"
 									onClick={() => useMcpStore.getState().dismissRevealed()}
 								>
 									done
-								</button>
+								</Button>
 							</div>
 						</div>
 					)}
@@ -239,9 +250,9 @@ export function McpSection() {
 								<span className="dg-mcp-token-meta">
 									{relative(token.lastUsedAt)}
 								</span>
-								<button
-									type="button"
-									className="dg-doc-new"
+								<Button
+									size="sm"
+									tone="danger"
 									disabled={busy}
 									onClick={() => {
 										if (
@@ -254,7 +265,7 @@ export function McpSection() {
 									}}
 								>
 									revoke
-								</button>
+								</Button>
 							</li>
 						))}
 						{state.tokens.length === 0 && (
@@ -281,18 +292,39 @@ export function McpSection() {
 							type="text"
 							value={name}
 							maxLength={60}
-							placeholder="claude code on the laptop"
+							placeholder="name this token…"
 							aria-label="New token name"
 							onChange={(event) => setName(event.target.value)}
 						/>
-						<button
+						<Button
 							type="submit"
-							className="dg-doc-new"
+							size="sm"
+							tone="primary"
 							disabled={busy || name.trim() === ""}
 						>
-							create token
-						</button>
+							create
+						</Button>
 					</form>
+
+					<p className="dg-mcp-head">
+						endpoint
+						<button
+							type="button"
+							className="dg-mcp-copy"
+							onClick={() => copy("url", state.url)}
+						>
+							{copied === "url" ? "copied" : "copy uri"}
+						</button>
+					</p>
+					<code className="dg-mcp-url">{state.url}</code>
+					<Button
+						size="sm"
+						tone="primary"
+						className="dg-mcp-config"
+						onClick={() => copy("config", clientConfig)}
+					>
+						{copied === "config" ? "copied" : "copy client config"}
+					</Button>
 
 					<p className="dg-mcp-status">
 						{state.mode === "read-only" ? "read only" : "read/write"} ·{" "}

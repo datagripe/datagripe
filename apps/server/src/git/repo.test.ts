@@ -2,7 +2,15 @@ import { describe, expect, test } from "bun:test";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { commit, incomingPaths, pull, push, stage, status } from "./repo";
+import {
+	commit,
+	fetch as gitFetch,
+	incomingPaths,
+	pull,
+	push,
+	stage,
+	status,
+} from "./repo";
 import { parseStatus, unquotePath } from "./run";
 
 /**
@@ -190,6 +198,67 @@ describe("push and pull", () => {
 		"incomingPaths is empty with no upstream, and fetches nothing",
 		async () => {
 			expect(await incomingPaths(await repoWithChanges(), OPTIONS)).toEqual([]);
+		},
+	);
+});
+
+describe("fetch", () => {
+	/** A bare origin, and a clone of it, so "behind" can be made true. */
+	async function clonedPair(): Promise<{ origin: string; clone: string }> {
+		const base = await mkdtemp(path.join(tmpdir(), "dg-remote-"));
+		const origin = path.join(base, "origin.git");
+		const seed = path.join(base, "seed");
+		await git(base, ["init", "--bare", "--initial-branch=main", origin]);
+		await git(base, ["clone", origin, seed]);
+		await git(seed, ["config", "user.email", "test@example.com"]);
+		await git(seed, ["config", "user.name", "Test"]);
+		await writeFile(path.join(seed, "a.sql"), "select 1;\n");
+		await git(seed, ["add", "."]);
+		await git(seed, ["commit", "-m", "initial"]);
+		await git(seed, ["push", "-u", "origin", "main"]);
+		const clone = path.join(base, "clone");
+		await git(base, ["clone", origin, clone]);
+		return { origin, clone };
+	}
+
+	// The whole point of the refresh button: `rev-list` counts against
+	// the remote-tracking ref, which is a memory of the last fetch. A
+	// "0 behind" that nobody fetched for is a button telling you there is
+	// nothing to pull when there is.
+	gitTest("makes behind true rather than remembered", async () => {
+		const { origin, clone } = await clonedPair();
+		const other = path.join(path.dirname(origin), "other");
+		await git(path.dirname(origin), ["clone", origin, other]);
+		await git(other, ["config", "user.email", "test@example.com"]);
+		await git(other, ["config", "user.name", "Test"]);
+		await writeFile(path.join(other, "b.sql"), "select 2;\n");
+		await git(other, ["add", "."]);
+		await git(other, ["commit", "-m", "second"]);
+		await git(other, ["push"]);
+
+		// Before the fetch the clone is behind and does not know it.
+		expect((await status(clone, OPTIONS)).behind).toBe(0);
+
+		const result = await gitFetch(clone, OPTIONS, AUDIT);
+
+		expect(result.exitCode).toBe(0);
+		expect(result.status.behind).toBe(1);
+		expect(result.headMoved).toBe(false);
+		// A fetch moves no file: the work tree is exactly as it was.
+		expect(result.status.entries).toHaveLength(0);
+	});
+
+	// Git treats a fetch with nothing to fetch from as a no-op rather
+	// than an error, so the refresh button is safe to press in a
+	// repository that has never had a remote: it comes back with a
+	// status and no complaint.
+	gitTest(
+		"with no remote, it is a no-op that still reads the status",
+		async () => {
+			const result = await gitFetch(await repoWithChanges(), OPTIONS, AUDIT);
+			expect(result.exitCode).toBe(0);
+			expect(result.status.upstream).toBeNull();
+			expect(result.status.entries).toHaveLength(5);
 		},
 	);
 });

@@ -271,8 +271,10 @@ const RATE_SCOPES: Partial<Record<ClientAction, string>> = {
 	"file.list": "schema.children",
 	"file.open": "schema.children",
 	// A status is a `git` process, so it shares the same budget rather
-	// than being free to hammer from a refresh button.
+	// than being free to hammer from a refresh button. A fetch is that
+	// plus a round trip to the remote.
 	"git.status": "schema.children",
+	"git.fetch": "schema.children",
 };
 
 export function createDispatcher(deps: DispatcherDeps): Dispatch {
@@ -1026,6 +1028,7 @@ export function createDispatcher(deps: DispatcherDeps): Dispatch {
 						available: false,
 						enabled: false,
 						mode: "read-only",
+						tokenCount: 0,
 					}
 				);
 
@@ -1575,6 +1578,19 @@ export function createDispatcher(deps: DispatcherDeps): Dispatch {
 			case "git.status": {
 				const { entry } = await requireRepo(workspace.id, payload);
 				return gitRepo.status(entry.repoPath, gitOptions());
+			}
+
+			// Refresh, properly: the counts the header shows are about a
+			// remote, and reading them out of the last fetch is how a
+			// button that says "0 behind" lies to somebody.
+			case "git.fetch": {
+				const request = gitStatusRequestSchema.parse(payload);
+				const { entry } = await requireRepo(workspace.id, payload);
+				return gitRepo.fetch(
+					entry.repoPath,
+					gitOptions(),
+					audit(ctx, request.connectionRef),
+				);
 			}
 
 			case "git.stage": {

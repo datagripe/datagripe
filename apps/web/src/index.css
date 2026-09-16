@@ -417,6 +417,24 @@ button:disabled {
 	padding-right: 10px;
 }
 
+/* An icon press in a section header (refresh). Borderless, because the
+   header is a row and a bordered button in it reads as a second header.
+   */
+.dg-section-icon {
+	display: inline-flex;
+	align-items: center;
+	background: none;
+	border: none;
+	border-radius: 4px;
+	padding: 2px;
+	color: var(--dg-ink-faint);
+}
+
+.dg-section-icon:hover:not(:disabled) {
+	background: var(--dg-raised);
+	color: var(--dg-green);
+}
+
 .dg-section-chevron {
 	display: inline-flex;
 	align-items: center;
@@ -2927,6 +2945,26 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	color: var(--dg-green);
 }
 
+/* The press that takes something away. Magenta is the complaint and the
+   destructive action (brand-system.md "Colour"). */
+.dg-btn-dan {
+	border-color: var(--dg-magenta);
+	color: var(--dg-magenta);
+}
+
+.dg-btn-dan:hover:not(:disabled) {
+	background: var(--dg-sev-blocker-bg);
+	color: var(--dg-magenta);
+}
+
+/* The sidebar's size: three of these share a line in a column 260px
+   wide, so they wear the tree's type and lose the form's padding. */
+.dg-btn-sm {
+	padding: 3px 8px;
+	font-size: var(--dg-fs-meta);
+	border-radius: 5px;
+}
+
 .dg-testline {
 	font-family: var(--dg-font-mono);
 	font-size: calc(11px * var(--dg-scale));
@@ -4731,25 +4769,44 @@ th.dg-tv-pk .dg-tv-th {
 	padding: 4px 0 8px;
 }
 
-.dg-repo-head {
-	display: flex;
-	align-items: baseline;
-	gap: 8px;
+/* One line where the header block used to be: what changed, and how
+   much of it is staged. The branch moved to the section header. */
+.dg-repo-summary {
+	margin: 0 0 6px;
 	padding: 0 10px;
-	font-family: var(--dg-font-mono);
-	font-size: var(--dg-fs-tree);
-}
-
-.dg-repo-branch {
-	color: var(--dg-cyan);
-}
-
-.dg-repo-track {
-	display: inline-flex;
-	align-items: center;
-	gap: 2px;
 	color: var(--dg-ink-mute);
+	font-family: var(--dg-font-mono);
 	font-size: var(--dg-fs-meta);
+}
+
+.dg-repo-summary b {
+	color: var(--dg-ink-dim);
+	font-weight: 400;
+}
+
+/* The branch, in the section header. Cyan is the tree's colour for
+   "this is a name from somewhere else", which a branch is. */
+.dg-repo-chip {
+	max-width: 10ch;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	padding: 0 6px;
+	border-radius: var(--dg-radius-pill);
+	background: #12242a;
+	color: var(--dg-cyan);
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-meta);
+}
+
+/* A count riding on the button whose press changes it: push 2, pull 0. */
+.dg-repo-n {
+	margin-left: 5px;
+	color: var(--dg-ink-mute);
+}
+
+.dg-btn:hover:not(:disabled) .dg-repo-n {
+	color: inherit;
 }
 
 .dg-repo-list {
@@ -5172,10 +5229,66 @@ th.dg-tv-pk .dg-tv-th {
 	max-width: 40ch;
 }
 
-.dg-mcp-mode {
+/* A subheading inside the panel: "tokens", "endpoint". Lowercase and
+   quiet — it is a label on a group, not a section of its own. */
+.dg-mcp-head {
 	display: flex;
-	flex-direction: column;
-	gap: 4px;
+	align-items: baseline;
+	justify-content: space-between;
+	margin: 2px 0 -2px;
+	color: var(--dg-ink-faint);
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-meta);
+}
+
+.dg-mcp-copy {
+	background: none;
+	border: none;
+	border-radius: 0;
+	padding: 0;
+	color: var(--dg-ink-faint);
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-meta);
+}
+
+.dg-mcp-copy:hover:not(:disabled) {
+	background: none;
+	color: var(--dg-green);
+}
+
+.dg-mcp-seg {
+	align-self: flex-start;
+}
+
+/* What the header pill says, and the whole of what it means. Grey: on,
+   but nothing can connect. Green: read only. Violet: read/write — an
+   agent that commits is not the same fact as one that cannot
+   (brand-system.md "Colour": violet is fills and borders, never text,
+   so the text is the lighter #A78BFA). */
+.dg-mcp-pill {
+	padding: 0 6px;
+	border-radius: var(--dg-radius-pill);
+	background: #1b2333;
+	color: var(--dg-ink-faint);
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-meta);
+	white-space: nowrap;
+}
+
+.dg-mcp-pill-read {
+	background: #0f2c24;
+	color: var(--dg-green);
+}
+
+.dg-mcp-pill-write {
+	background: #241b3a;
+	color: var(--dg-violet-text);
+}
+
+/* Full width, because it is the one press this panel is for: the thing
+   you paste into the agent. */
+.dg-mcp-config {
+	width: 100%;
 }
 
 .dg-mcp-note {
@@ -5191,14 +5304,13 @@ th.dg-tv-pk .dg-tv-th {
 	color: var(--dg-sev-warning);
 }
 
-.dg-mcp-url,
 .dg-mcp-revealed {
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
 }
 
-.dg-mcp-url code,
+.dg-mcp-url,
 .dg-mcp-revealed code {
 	background: var(--dg-void);
 	border: 1px solid var(--dg-rule);

@@ -51,6 +51,7 @@ function statusOf(state: McpState): McpStatus {
 		available: state.available,
 		enabled: state.enabled,
 		mode: state.mode,
+		tokenCount: state.tokens.length,
 	};
 }
 

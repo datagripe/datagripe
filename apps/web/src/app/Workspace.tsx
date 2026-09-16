@@ -36,7 +36,7 @@ import { ObjectView } from "../components/ObjectView";
 import { PresenceSidebar } from "../components/PresenceSidebar";
 import { ProjectPrompt } from "../components/ProjectPrompt";
 import { ProjectSettingsPanel } from "../components/ProjectSettingsPanel";
-import { RepoSection } from "../components/RepoSection";
+import { RepoHeader, RepoSection } from "../components/RepoSection";
 import { ResultsPanel } from "../components/ResultsPanel";
 import { RunPanel } from "../components/RunPanel";
 import { SidebarSections } from "../components/SidebarSections";
@@ -606,6 +606,11 @@ export function Workspace() {
 										{
 											id: `repo:${activeConnectionId}`,
 											title: "Repository",
+											// Branch, change count and refresh, legible whether
+											// or not the section is open.
+											actions: (
+												<RepoHeader connectionRef={activeConnectionId} />
+											),
 											body: (
 												<RepoSection
 													connectionRef={activeConnectionId}

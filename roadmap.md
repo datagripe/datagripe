@@ -580,7 +580,7 @@ useful than its absence.
 - [accepted] object-view · danger-zone-inert — The danger zone states real consequences and then does nothing. Truncate and drop are decoration until project class leaves the browser.
 - [accepted] brand · placeholder-icon — The app icon is a scowling cylinder drawn by hand. The mascot is real; the flat version that can animate in-app is not drawn.
 - [accepted] ui · browser-chrome-in-an-app — Right-click anywhere it has nothing to say and the browser's own menu arrives, offering to reload the frame and save the image. Drag past the edge of a tree and the whole page selects, prose and all. Both are the moment it stops feeling like an application.
-- [accepted] ui · one-of-each-control — Inputs and selects are one component now; buttons, toggles, segmented controls and the rest are not. Every variation is a fix that has to be made twice, and eventually is made once.
+- [accepted] ui · one-of-each-control — Inputs, selects and now buttons are one component, but only the sidebar goes through the button: the forms, the status bar and the object view still hand-roll theirs, and toggles and segmented controls have no component at all. Every variation is a fix that has to be made twice, and eventually is made once.
 - [accepted] rules · catalogue-too-thin — Eighteen rules, and seven of them are about grants. A rules page wants about thirty before it stops looking like a sample.
 - [accepted] docs · counts-in-prose — The website no longer states a count it cannot derive. The specs still do, in prose, and prose is not checked by anything.
 - [unscheduled] engine · explain-aware-gripes — Nothing reads an execution plan. The worst queries in the database still look completely fine in text.

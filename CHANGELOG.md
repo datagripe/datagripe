@@ -59,6 +59,35 @@
   dirty; it could not offer to undo it, and the way back was closing the
   tab and answering a confirm about discarding the whole file.
 
+- **The repository section got its space back.** The branch, the number
+  of changed files and `refresh` moved into the section header, where
+  they are legible whether or not the section is open — *which branch am
+  I on* is a question people ask without wanting the file list. What is
+  left inside is one line (`3 changed · 2 staged`) and the buttons, and
+  the ahead/behind counts now ride on the presses that change them:
+  `push 2`, `pull 0`, instead of a pair of arrows above them.
+
+  **Refresh fetches.** The counts come from `rev-list` against the
+  remote-tracking ref, which is a memory of the last fetch — so the old
+  refresh could only ever repeat what the last pull had learned, and a
+  button saying *0 behind* when there are four commits waiting is worse
+  than no button. It is still a press: nothing fetches on a timer.
+
+- **The MCP section says what it is without being opened.** A pill
+  beside the switch: grey *no tokens* while nothing can connect, green
+  *read only* once something can, violet *read/write* when what connects
+  can commit. Inside, the panel lost the paragraph at the top — the pill
+  says it in two words — and gained the two headings that were missing,
+  so it reads *tokens* then *endpoint* with the client config across the
+  bottom.
+
+- **One button in the sidebar.** `commit…`, `push`, `create`, `revoke`,
+  `copy client config` and the rest were six hand-written buttons with
+  five different paddings; they are one `Button` with three tones now,
+  so the next improvement to any of them is made once. The forms and the
+  status bar still have their own — that is on the roadmap rather than
+  claimed here.
+
 ### Fixed
 
 - **Every save of a shared file said the server was ahead of you.** The

@@ -26,6 +26,13 @@ export interface RepoState {
 	output: Record<string, GitCommandResult>;
 	busy: Record<string, string>;
 	load: (connectionRef: string) => Promise<void>;
+	/**
+	 * What the refresh button does: fetch, then read the status, so the
+	 * ahead/behind counts are about the remote as it is now rather than
+	 * as it was the last time somebody pulled. Falls back to a plain
+	 * status where there is no upstream to fetch from.
+	 */
+	refresh: (connectionRef: string) => Promise<void>;
 	toggle: (connectionRef: string, path: string) => void;
 	selectAll: (connectionRef: string, on: boolean) => void;
 	commit: (connectionRef: string, message: string) => Promise<void>;
@@ -88,6 +95,19 @@ export const useRepoStore = create<RepoState>()((set, get) => ({
 			const { [connectionRef]: _done, ...loading } = get().loading;
 			set({ loading });
 		}
+	},
+
+	async refresh(connectionRef) {
+		if (get().status[connectionRef]?.upstream == null) {
+			await get().load(connectionRef);
+			return;
+		}
+		// A fetch that failed leaves git's own stderr under the buttons,
+		// like every other operation here — silently showing yesterday's
+		// counts would be the worse answer.
+		await runOperation(set, get, connectionRef, "fetch", () =>
+			wsClient.request<GitCommandResult>("git.fetch", { connectionRef }),
+		);
 	},
 
 	toggle(connectionRef, path) {

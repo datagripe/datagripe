@@ -4,6 +4,7 @@ import type { EditorDocument } from "../stores/documents";
 import { useDocumentsStore } from "../stores/documents";
 import { dirKey, useFilesStore } from "../stores/files";
 import { useViewsStore } from "../stores/views";
+import { Button } from "./controls";
 import { IconChevronDown, IconChevronRight, IconSpinner } from "./icons";
 
 /**
@@ -73,9 +74,8 @@ export function PathTree(props: PathTreeProps) {
 				<p className="dg-path-root" title={path.path}>
 					{path.path}
 				</p>
-				<button
-					type="button"
-					className="dg-doc-new"
+				<Button
+					size="sm"
 					onClick={() => {
 						useFilesStore.getState().invalidate(path.id);
 						void useFilesStore
@@ -84,7 +84,7 @@ export function PathTree(props: PathTreeProps) {
 					}}
 				>
 					try again
-				</button>
+				</Button>
 			</div>
 		);
 	}

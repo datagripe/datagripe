@@ -37,7 +37,7 @@ is handing you a SQL prompt, would be a promise DataGripe cannot keep.
 | **Manage datasources** | Add, edit and remove them, and their per-project settings. |
 | **Manage domains** | Create domains and tag objects into them. |
 | **Mark roles untrusted** | Which database roles the grant rules treat as untrusted. Reading the report needs nothing. |
-| **Commit and pull** | Stage, commit and pull in a repository datasource. Local only. |
+| **Commit and pull** | Stage, commit, fetch and pull in a repository datasource. Fetching and pulling read the remote; neither writes to it. |
 | **Push, and add repositories** | Reaches the remote. |
 | **Export and import domains** | Writes the host's filesystem. |
 | **Approve and run repo commands** | The only feature that runs a program DataGripe did not write. |

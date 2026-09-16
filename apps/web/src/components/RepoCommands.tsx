@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { openRunPanel } from "../app/viewPanels";
 import { useRepoRunsStore } from "../stores/repoRuns";
+import { Button } from "./controls";
 import { IconRun } from "./icons";
 
 /**
@@ -57,13 +58,9 @@ export function RepoCommands(props: {
 							? "These commands changed since they were approved. Read them again before running anything — a pull can bring in a different command under the same name."
 							: "This repository declares commands DataGripe can run. Nothing runs until somebody here approves them."}
 					</p>
-					<button
-						type="button"
-						className="dg-doc-new"
-						onClick={() => setReviewing((open) => !open)}
-					>
+					<Button size="sm" onClick={() => setReviewing((open) => !open)}>
 						{reviewing ? "hide" : "review"} what would run
-					</button>
+					</Button>
 					{reviewing && (
 						<ul className="dg-repo-argv">
 							{state.commands.map((command) => (
@@ -76,15 +73,15 @@ export function RepoCommands(props: {
 						</ul>
 					)}
 					{reviewing && (
-						<button
-							type="button"
-							className="dg-doc-new"
+						<Button
+							size="sm"
+							tone="primary"
 							onClick={() =>
 								void useRepoRunsStore.getState().approve(connectionRef, true)
 							}
 						>
 							approve these commands
-						</button>
+						</Button>
 					)}
 				</div>
 			)}
@@ -116,15 +113,15 @@ export function RepoCommands(props: {
 							</li>
 						))}
 					</ul>
-					<button
-						type="button"
-						className="dg-doc-new"
+					<Button
+						size="sm"
+						tone="danger"
 						onClick={() =>
 							void useRepoRunsStore.getState().approve(connectionRef, false)
 						}
 					>
 						withdraw approval
-					</button>
+					</Button>
 				</>
 			)}
 		</div>

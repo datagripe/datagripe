@@ -44,7 +44,7 @@ promise it cannot keep.
 | `datasource.manage` | Add, edit and remove datasources and their per-project settings |
 | `domain.manage` | Create domains and tag objects into them |
 | `access.manage` | Mark a database role untrusted |
-| `git.commit` | Stage, commit and pull — local only |
+| `git.commit` | Stage, commit, fetch and pull |
 | `git.push` | Push, and add or remove a git datasource — reaches a remote |
 | `sync.run` | Export and import domains: writes the host's disk |
 | `repo.commands` | Approve and run a repository's declared commands |

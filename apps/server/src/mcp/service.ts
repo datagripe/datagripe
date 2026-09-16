@@ -93,10 +93,15 @@ export function createMcpService(deps: McpDeps): McpService {
 	 */
 	async function status(workspace: { id: string }): Promise<McpStatus> {
 		const settings = await readSettings(deps.appDb, workspace.id);
+		const counted = await deps.appDb<{ count: string }[]>`
+			SELECT count(*) AS count FROM mcp_tokens
+			WHERE workspace_id = ${workspace.id} AND revoked_at IS NULL
+		`;
 		return {
 			available: deps.config.MCP_ENABLED,
 			enabled: settings.enabled,
 			mode: settings.mode,
+			tokenCount: Number(counted[0]?.count ?? 0),
 		};
 	}
 

@@ -24,6 +24,12 @@ repository commands: a second default-off gate would only mean editing
 | `MCP_READ_MAX_BYTES` | `65536` | Per call, reading a file or a resource. The reply says how to continue rather than silently ending. |
 | `MCP_INSTRUCTIONS_MAX_BYTES` | `16384` | Cap on the briefing handed to every client at `initialize`. |
 
+The sidebar section says what is true of it without being opened: a
+grey **no tokens** while nothing can connect, green **read only** once
+something can, and violet **read/write** when what connects can commit.
+Three words, three colours, and the words are there because colour on
+its own is not a label anybody can rely on.
+
 An MCP query is an execution like any other: it appears in history under
 the token's name, with the same timeouts and the same concurrency limit
 a person has. A read-only project cannot change a row no matter what an

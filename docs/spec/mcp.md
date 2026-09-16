@@ -334,8 +334,18 @@ it wears a green frame whether it is open or shut. Whether something
 outside this app can read the project is not a fact that should need a
 panel opened to see, and turning it off should not either.
 
-That costs one cheap read. `mcp.status` — available, enabled, mode, off
-the settings row — is asked for on every project open by an owner, and
+**Beside the switch, a pill says what is true of it.** Three states,
+three colours, and the word every time, because colour alone never
+distinguishes two states here (brand-system.md "Accessibility"):
+*no tokens* in grey, because a server nothing can connect to is on in
+name only; *read only* in green; *read/write* in violet, because an
+agent whose writes commit is not the same fact and must not wear the
+colour of the safe one. The pill is absent while the server is off —
+the switch already says that.
+
+That costs one cheap read. `mcp.status` — available, enabled, mode and
+the number of live tokens, off the settings row and one indexed count —
+is asked for on every project open by an owner, and
 is deliberately not `mcp.settings`: the panel's state walks every
 datasource path to count the files an agent would see, and that is a
 disk read nobody asked for while the section sits shut. The section body
@@ -348,25 +358,31 @@ thrown `Forbidden` would leave the sidebar unable to tell "off" from
 "broken". The section is absent in that case, as it is for anybody who
 is not an owner.
 
-Top to bottom, inside the panel:
+Top to bottom, inside the panel. It is a column 260 pixels wide, so the
+order is what somebody does in it — decide the ceiling, mint a token,
+take the endpoint away — and the prose that used to head it is gone: the
+header pill says the same thing in two words.
 
-- one line saying what the switch in the header just did. Off reads
-  "Nothing is listening for this project."
 - read-only ⇄ read/write, the segmented shape the datasource page's
   overrides use. Read/write is a deliberate second press, its
   description states that every tool call commits, and when it is
   selected the row below names any datasource whose own `read only`
-  still stands in the way.
-- this project's endpoint URL with **copy url**, and **copy client
-  config** producing the snippet a client wants
+  still stands in the way. Off, the panel says only "Nothing is
+  listening for this project."
+- **tokens**, under that word: the list, and a name field with
+  **create** beside it.
+- **endpoint**, under that word, with **copy uri** on the same line,
+  the URL itself, and **copy client config** across the width beneath it
+  — it is the one press this panel exists for. The snippet is what a
+  client wants
   (`{"mcpServers": {"datagripe-<project>": {"type": "http", "url": …,
   "headers": {"Authorization": "Bearer …"}}}}`). The token is inlined
   only while it is on screen at creation; afterwards the snippet carries
   a placeholder, because a value that was never stored cannot be shown
   twice.
-- tokens: name, when it was last used, revoke. Creating one reveals the
-  value once, in a row that says as much. Revoking asks first, because
-  it stops an agent mid-task.
+- a token row is a name, when it was last used, and **revoke**. Creating
+  one reveals the value once, in a row that says as much. Revoking asks
+  first, because it stops an agent mid-task.
 - one honest status line: `read only · 3 datasources · 12 files ·
   briefing from …`.
 

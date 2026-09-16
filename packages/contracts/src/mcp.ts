@@ -59,6 +59,13 @@ export const mcpStatusSchema = z.object({
 	available: z.boolean(),
 	enabled: z.boolean(),
 	mode: mcpModeSchema,
+	/**
+	 * How many tokens exist, not which. The header says whether anything
+	 * *can* connect, and "on with no tokens" is a different state from
+	 * "on" — one is listening, the other is listening to nobody. A count
+	 * is one indexed read; the token list is the panel's business.
+	 */
+	tokenCount: z.number().int().nonnegative().default(0),
 });
 
 export type McpStatus = z.infer<typeof mcpStatusSchema>;

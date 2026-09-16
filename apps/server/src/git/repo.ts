@@ -165,6 +165,36 @@ export async function push(
 }
 
 /**
+ * `fetch --quiet`: the only read here that leaves the machine.
+ *
+ * It moves no file and touches no work tree — it updates the
+ * remote-tracking refs, which is what makes "2 ahead, 0 behind" a fact
+ * rather than a memory of the last time somebody pulled. The refresh
+ * button asks for it; nothing asks for it on a timer.
+ *
+ * Git's verdict comes back verbatim like every other command here, so a
+ * fetch that failed for want of credentials says so instead of quietly
+ * showing stale counts.
+ */
+export async function fetch(
+	root: string,
+	options: GitOptions,
+	audit: RepoAudit,
+): Promise<GitCommandResult> {
+	log.audit("git.fetch", { ...audit, root });
+	const fetched = await run(root, ["fetch", "--quiet"], options);
+	return {
+		exitCode: fetched.exitCode,
+		stdout: fetched.stdout,
+		stderr: fetched.stderr,
+		commitSha: null,
+		status: await repoStatus(root, options),
+		headMoved: false,
+		changedPaths: [],
+	};
+}
+
+/**
  * `pull --ff-only`.
  *
  * Anything that would need a merge commit, a rebase or a conflict

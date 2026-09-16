@@ -1,4 +1,5 @@
 import type {
+	ButtonHTMLAttributes,
 	InputHTMLAttributes,
 	ReactNode,
 	Ref,
@@ -21,9 +22,13 @@ import type {
  * inventing itself — the filter boxes in the tree and the breadcrumb are
  * the two that legitimately do.
  *
- * Buttons, toggles and the segmented control are still written by hand
- * in a dozen places; that is on the roadmap (`ui · one-of-each-control`)
- * rather than pretended away here.
+ * `Button` is the same bargain for the thing you press. Every action
+ * in the sidebar goes through it, so `commit…`, `push`, `create` and
+ * `copy client config` are one control with one hover and one disabled
+ * state rather than four buttons that were each written where they were
+ * needed. Toggles and the segmented control are still written by hand;
+ * that is on the roadmap (`ui · one-of-each-control`) rather than
+ * pretended away here.
  */
 
 function classes(base: string, extra: string | undefined): string {
@@ -68,5 +73,48 @@ export function Field(props: {
 			{props.children}
 			{props.hint !== undefined && <p className="dg-form-hint">{props.hint}</p>}
 		</label>
+	);
+}
+
+/**
+ * A pressable thing.
+ *
+ * `tone` is what it means, not what colour it is: `primary` is the one
+ * press a panel is about, `danger` is the one that takes something
+ * away. `size="sm"` is the sidebar's, where a button sits in a column
+ * 260 pixels wide and shares a line with two others.
+ *
+ * `type` defaults to `button`, because a button inside a form that
+ * nobody gave a type to submits the form, and that has never once been
+ * what anybody wanted.
+ */
+export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+	tone?: "default" | "primary" | "danger";
+	size?: "sm" | "md";
+	ref?: Ref<HTMLButtonElement>;
+};
+
+const BUTTON_TONE = {
+	default: "",
+	primary: " dg-btn-pri",
+	danger: " dg-btn-dan",
+} as const;
+
+export function Button({
+	className,
+	tone = "default",
+	size = "md",
+	type = "button",
+	...rest
+}: ButtonProps) {
+	return (
+		<button
+			type={type}
+			className={classes(
+				`dg-btn${BUTTON_TONE[tone]}${size === "sm" ? " dg-btn-sm" : ""}`,
+				className,
+			)}
+			{...rest}
+		/>
 	);
 }
