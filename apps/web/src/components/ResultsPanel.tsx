@@ -635,6 +635,7 @@ export function ResultsPanel() {
 																}
 																className={classes}
 																onMouseDown={(event) => {
+																	if (event.button !== 0) return;
 																	// The browser's own text selection would
 																	// fight this one, and neither would win.
 																	event.preventDefault();
@@ -643,6 +644,7 @@ export function ResultsPanel() {
 																		rowIndex,
 																		columnIndex,
 																		event.shiftKey,
+																		event.ctrlKey || event.metaKey,
 																	);
 																}}
 																onMouseOver={() =>

@@ -46,6 +46,27 @@ Everything else is Monaco's own, unmodified: `Ctrl/Cmd+F` to find,
 `Ctrl/Cmd+D` for the next occurrence, `Alt+Up`/`Alt+Down` to move a line,
 `F1` for the command palette, and multi-cursor on `Alt+Click`.
 
+## Cell selection in table and result views
+
+| Gesture | Action |
+| --- | --- |
+| Click | Start a new selection with one cell |
+| Shift-click | Select the rectangle from the original cell to this one |
+| Drag | Select a rectangle across rows and columns |
+| Ctrl/Cmd-click | Add or remove any individual cell, keeping the others selected |
+| Shift+arrow | Extend the rectangle in table view |
+| Ctrl/Cmd+C | Copy selected cells as tab-separated rows |
+
+With more than one cell selected, the bottom bar shows cell count and
+`sum`, `avg`, `min`, `max` for numeric values; nonnumeric selections show
+`distinct`, and nulls are counted separately. Numeric strings count as
+numbers. Only highlighted cells on the current page contribute.
+
+Shift-click returns a disjoint selection to a rectangle from its original
+anchor, including when Ctrl/Cmd is held too. Disjoint copies contain only
+selected cells in row/column order, with gaps and empty rows omitted.
+In results, Escape clears the selection.
+
 ## Table view
 
 A focused cell behaves like a spreadsheet cell. It is a button, not a
@@ -55,7 +76,7 @@ shortcuts are what make it work.
 | | |
 | --- | --- |
 | `Enter` or `F2` | Edit the focused cell |
-| `Ctrl/Cmd` `C` | Copy the cell's value |
+| `Ctrl/Cmd` `C` | Copy selected cells, or the focused cell’s value |
 | `Ctrl/Cmd` `V` | Paste into the cell |
 | `Ctrl/Cmd` `Backspace` | Set the cell to `NULL` |
 | `Enter` | Commit the edit |

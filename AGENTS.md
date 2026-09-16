@@ -18,6 +18,12 @@ So: before you finish, ask what a reader of the site would now be told
 that is no longer true. If the answer is "nothing", say so in the commit
 message rather than assuming it.
 
+Before completing **every task**, review the behaviour changed against
+all relevant user documentation and published specs, including gestures
+and shortcuts. Update the right sections in the same change; a changelog
+entry alone is not a documentation update. State which pages changed, or
+why no documentation change was needed, in the completion report.
+
 ### What is already automatic
 
 Five things are rendered from the repository and cannot drift. Change
@@ -183,15 +189,18 @@ including the one-time registry setup and what to do when a release
 gets part way — and it is worth reading before the first one rather
 than during it. The short version:
 
-1. Bump the version in the eight `package.json` files and in
+1. Review the diff and changelog since the previous release tag. Check
+   that every behaviour change is documented in the relevant site pages
+   and specs; fix missing or stale prose before proceeding.
+2. Bump the version in the eight `package.json` files and in
    `deploy/helm/datagripe/Chart.yaml` (both `version` and
    `appVersion`), then run `bun install` so `bun.lock` follows. CI
    installs `--frozen-lockfile`, so a lock left behind fails the build
    rather than the release.
-2. Rename `## Unreleased` to `## X.Y.Z — YYYY-MM-DD`.
-3. Run what CI runs: `bun run typecheck`, `bun run lint`,
+3. Rename `## Unreleased` to `## X.Y.Z — YYYY-MM-DD`.
+4. Run what CI runs: `bun run typecheck`, `bun run lint`,
    `bun run check:brand`, `bun test`, `bun run build:site`.
-4. `git commit -am "release X.Y.Z"`, `git tag vX.Y.Z`,
+5. `git commit -am "release X.Y.Z"`, `git tag vX.Y.Z`,
    `git push origin main --tags`.
 
 ## Brand

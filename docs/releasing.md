@@ -10,17 +10,25 @@ DataGripe ships, from one commit:
 | `oci://ghcr.io/datagripe/charts/datagripe` | GHCR, the Helm chart |
 | Web bundle, desktop builds for three platforms | GitHub release assets |
 
+**Step 1: review documentation against the release diff.** Compare the
+previous release tag with HEAD and read `## Unreleased`. For each behaviour
+change, check the relevant `site/content/docs/` sections and published
+`docs/spec/` pages, including shortcuts and gestures. Fix omissions and
+stale prose before bumping versions. Release notes alone do not document
+how to use a feature. Record which pages were updated, or why none needed
+changes, in the release commit message.
+
 ```bash
-# 1. Version everything that carries one: eight package.json files —
+# 2. Version everything that carries one: eight package.json files —
 #    the root, three apps, four packages — and the chart.
 $EDITOR package.json apps/*/package.json packages/*/package.json
 $EDITOR deploy/helm/datagripe/Chart.yaml    # version and appVersion
 bun install                                 # bun.lock carries them too
 
-# 2. Date the notes: `## Unreleased` becomes `## 0.0.6 — 2026-09-16`.
+# 3. Date the notes: `## Unreleased` becomes `## 0.0.6 — 2026-09-16`.
 $EDITOR CHANGELOG.md
 
-# 3. Run what CI runs, before the thing that publishes.
+# 4. Run what CI runs, before the thing that publishes.
 bun run typecheck && bun run lint && bun run check:brand &&
   bun test && bun run build:site
 
@@ -29,11 +37,12 @@ git tag v0.0.6
 git push origin main --tags
 ```
 
-Eleven files change and no more: the eight `package.json`s, `bun.lock`,
+The version and notes update changes eleven files: the eight `package.json`s, `bun.lock`,
 `Chart.yaml`, `CHANGELOG.md`. `git show` of any previous release commit
-is the diff to compare against.
+is the version diff to compare against. Documentation corrections from
+step 1 belong in the release too.
 
-**`bun install` is step one and a half, not an afterthought.** The
+**`bun install` is part of the version bump, not an afterthought.** The
 lockfile records every workspace version, every job installs
 `--frozen-lockfile`, and a lock that disagrees with the manifests fails
 the install rather than the publish — which is a red release that never

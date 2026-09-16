@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * A rectangle of cells, in both grids (docs/spec/table-view.md
+ * A selection of cells, in both grids (docs/spec/table-view.md
  * "Selecting cells").
  *
  * One shape, not two: the results grid is read-only and the table view
@@ -10,10 +10,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * you query in and the panel you browse in would be two things to
  * learn. The geometry is pure so it can be tested without a DOM.
  *
- * Rectangular on purpose. Disjoint selections (ctrl-click a cell here,
- * a cell there) make every consumer — copy, the aggregate bar — answer
- * "in what order?", and nobody has ever needed the answer badly enough
- * to justify the column of special cases.
+ * Rectangles stay compact; Ctrl/Cmd-click materializes an explicit set.
+ * Every consumer reads the same cells in row/column order so highlights,
+ * statistics and clipboard contents agree even for disjoint selections.
  */
 
 export interface CellRef {
@@ -25,6 +24,8 @@ export interface CellRef {
 export interface CellRange {
 	anchor: CellRef;
 	head: CellRef;
+	/** Present for a disjoint selection; absent for a rectangle. */
+	cells?: CellRef[];
 }
 
 export interface RangeBounds {
@@ -51,6 +52,11 @@ export function rangeIncludes(
 	if (range === null) {
 		return false;
 	}
+	if (range.cells !== undefined) {
+		return range.cells.some(
+			(cell) => cell.row === row && cell.column === column,
+		);
+	}
 	const bounds = rangeBounds(range);
 	return (
 		row >= bounds.top &&
@@ -60,17 +66,22 @@ export function rangeIncludes(
 	);
 }
 
-/** How many cells it covers — 1 for a single cell, never 0. */
+/** How many selected cells it covers. */
 export function rangeSize(range: CellRange | null): number {
 	if (range === null) {
 		return 0;
 	}
+	if (range.cells !== undefined) return range.cells.length;
 	const bounds = rangeBounds(range);
 	return (bounds.bottom - bounds.top + 1) * (bounds.right - bounds.left + 1);
 }
 
-/** Every cell in the rectangle, row by row, left to right. */
+/** Every selected cell, row by row, left to right. */
 export function rangeCells(range: CellRange): CellRef[] {
+	if (range.cells !== undefined)
+		return [...range.cells].sort(
+			(a, b) => a.row - b.row || a.column - b.column,
+		);
 	const bounds = rangeBounds(range);
 	const cells: CellRef[] = [];
 	for (let row = bounds.top; row <= bounds.bottom; row++) {
@@ -81,7 +92,7 @@ export function rangeCells(range: CellRange): CellRef[] {
 	return cells;
 }
 
-/** Every value in the rectangle, in the same order. */
+/** Every selected value, in the same order. */
 export function rangeValues<T>(
 	range: CellRange,
 	valueAt: (row: number, column: number) => T,
@@ -102,18 +113,48 @@ export function rangeToTsv(
 	range: CellRange,
 	textAt: (row: number, column: number) => string,
 ): string {
-	const bounds = rangeBounds(range);
+	// Copy only selected values, packing each selected row in column order.
 	const lines: string[] = [];
-	for (let row = bounds.top; row <= bounds.bottom; row++) {
-		const cells: string[] = [];
-		for (let column = bounds.left; column <= bounds.right; column++) {
-			cells.push(
-				textAt(row, column).replaceAll("\t", "\\t").replaceAll("\n", "\\n"),
-			);
+	let previousRow = -1;
+	let cells: string[] = [];
+	for (const cell of rangeCells(range)) {
+		if (cell.row !== previousRow && cells.length > 0) {
+			lines.push(cells.join("\t"));
+			cells = [];
 		}
-		lines.push(cells.join("\t"));
+		cells.push(
+			textAt(cell.row, cell.column)
+				.replaceAll("\t", "\\t")
+				.replaceAll("\n", "\\n"),
+		);
+		previousRow = cell.row;
 	}
+	if (cells.length > 0) lines.push(cells.join("\t"));
 	return lines.join("\n");
+}
+
+/** Shift preserves the original anchor; a plain click starts afresh. */
+export function beginSelection(
+	current: CellRange | null,
+	row: number,
+	column: number,
+	shiftKey: boolean,
+	additive = false,
+): CellRange | null {
+	const cell = { row, column };
+	if (shiftKey && current !== null)
+		return { anchor: current.anchor, head: cell };
+	if (additive && current !== null) {
+		const cells = rangeIncludes(current, row, column)
+			? rangeCells(current).filter(
+					(entry) => entry.row !== row || entry.column !== column,
+				)
+			: [...rangeCells(current), cell];
+		return cells.length === 0
+			? null
+			: { anchor: current.anchor, head: cell, cells };
+	}
+	return { anchor: cell, head: cell };
 }
 
 export interface CellSelection {
@@ -125,7 +166,12 @@ export interface CellSelection {
 	 * A press on a cell. Shift keeps the anchor and moves the far corner,
 	 * which is the gesture every grid and every file list already has.
 	 */
-	begin: (row: number, column: number, shiftKey: boolean) => void;
+	begin: (
+		row: number,
+		column: number,
+		shiftKey: boolean,
+		additive?: boolean,
+	) => void;
 	/**
 	 * The pointer over a cell with the button still down. Wired to
 	 * `mouseover` rather than `mouseenter`: a cell contains a control in
@@ -163,12 +209,10 @@ export function useCellSelection(): CellSelection {
 	}, []);
 
 	const begin = useCallback(
-		(row: number, column: number, shiftKey: boolean) => {
-			dragging.current = true;
+		(row: number, column: number, shiftKey: boolean, additive = false) => {
+			dragging.current = !additive || shiftKey;
 			setRange((current) =>
-				shiftKey && current !== null
-					? { anchor: current.anchor, head: { row, column } }
-					: { anchor: { row, column }, head: { row, column } },
+				beginSelection(current, row, column, shiftKey, additive),
 			);
 		},
 		[],

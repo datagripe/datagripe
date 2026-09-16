@@ -358,7 +358,7 @@ export function TableView(props: IDockviewPanelProps) {
 	const [loading, setLoading] = useState(false);
 	const [edits, setEdits] = useState<PendingEdits>(NO_PENDING_EDITS);
 	const [focus, setFocus] = useState<Focus | null>(null);
-	// A rectangle of cells, for copying a block of them and for the bar
+	// A selection of cells, for copying a block of them and for the bar
 	// that adds them up (docs/spec/table-view.md "Selecting cells").
 	// In data coordinates, so transposing the grid changes how it is
 	// drawn and not what is selected.
@@ -758,7 +758,19 @@ export function TableView(props: IDockviewPanelProps) {
 				key={cellKey}
 				className={classes.join(" ")}
 				onMouseDown={(event) => {
-					selection.begin(rowIndex, columnIndex, event.shiftKey);
+					if (event.button !== 0) return;
+					// Keep native focus from re-selecting a cell just toggled off.
+					if (
+						selection.range !== null &&
+						(event.ctrlKey || event.metaKey || event.shiftKey)
+					)
+						event.preventDefault();
+					selection.begin(
+						rowIndex,
+						columnIndex,
+						event.shiftKey,
+						event.ctrlKey || event.metaKey,
+					);
 				}}
 				onMouseOver={() => selection.extendTo(rowIndex, columnIndex)}
 				// Focus landing on a cell — tab, or a click — selects it,
@@ -790,7 +802,7 @@ export function TableView(props: IDockviewPanelProps) {
 					onCopy={() => {
 						// One press, two honest answers: a block if a block is
 						// highlighted, otherwise the cell under the cursor.
-						if (selection.size > 1) {
+						if (selection.size > 1 || selection.range?.cells !== undefined) {
 							copySelection();
 						} else {
 							copyText(cellDetail(cellValue(target)));

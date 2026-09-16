@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.0.12 — 2026-09-16
+
+### Added
+
+- Ctrl/Cmd-click toggles individual cells across rows and columns in table
+  and result views. Statistics and copy use only selected cells; Shift-click
+  and dragging still select rectangles.
+- Documented selection gestures, statistics and disjoint copying in the
+  keyboard reference, features page and table-view spec. Task completion
+  now explicitly checks documentation; release step 1 audits docs against
+  changes since the previous release.
+
 ## 0.0.11 — 2026-09-16
 
 ### Added

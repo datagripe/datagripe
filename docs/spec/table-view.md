@@ -93,7 +93,7 @@ read-only when the grid is, and when the column is generated.
 
 ### Selecting cells
 
-A rectangle, in both grids — this one and the results panel — because
+Cell selection, in both grids — this one and the results panel — because
 "which cells am I looking at" is the same question whether the rows came
 from browsing a table or from a query, and a selection that behaved
 differently between them would be two things to learn. The geometry
@@ -118,10 +118,14 @@ are shared, and both are pure enough to test without a DOM.
 - **Pending edits are copied as they are shown.** An uncommitted change
   is the value in the cell somebody is looking at; copying the old one
   would be copying something that is not on screen.
-- **Disjoint selections are deliberately not built.** Ctrl-clicking
-  cells in three places makes every consumer answer "in what order?",
-  and the answer is worth less than the column of special cases it
-  costs.
+- **Ctrl/Cmd-click toggles individual cells** anywhere in the grid,
+  including inside an existing rectangle. Each selected cell counts once.
+  Shift-click (also with Ctrl/Cmd held) returns to a rectangle from the
+  original anchor; a plain click starts a new selection. Ctrl/Cmd-click
+  does not start a drag.
+- **Disjoint copies contain only selected cells**, in row order and then
+  column order. Cells within each selected row are tab-separated; gaps
+  are omitted, including entirely unselected rows.
 
 **The bar along the bottom** appears once more than one cell is
 selected — the sum of one number is that number — and says `cells`
