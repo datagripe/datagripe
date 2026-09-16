@@ -417,8 +417,10 @@ const server = serve<SocketData>({
 					requestId,
 				);
 			}
-			const userRow = await appDb<{ email: string }[]>`
-				SELECT email FROM users WHERE id = ${session.userId}
+			const userRow = await appDb<
+				{ email: string; display_name: string | null }[]
+			>`
+				SELECT email, display_name FROM users WHERE id = ${session.userId}
 			`;
 
 			if (
@@ -427,6 +429,7 @@ const server = serve<SocketData>({
 						requestId,
 						userId: session.userId,
 						email: userRow[0]?.email ?? "",
+						name: userRow[0]?.display_name ?? null,
 						sessionId: session.id,
 						workspace: {
 							id: workspace.id,

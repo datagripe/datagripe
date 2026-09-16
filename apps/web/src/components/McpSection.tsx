@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMcpStore } from "../stores/mcp";
 import { useSessionStore } from "../stores/session";
+import { TextInput } from "./controls";
 
 /**
  * The MCP panel (docs/spec/mcp.md "The panel").
@@ -276,7 +277,7 @@ export function McpSection() {
 								.then(() => setName(""));
 						}}
 					>
-						<input
+						<TextInput
 							type="text"
 							value={name}
 							maxLength={60}

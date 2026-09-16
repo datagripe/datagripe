@@ -17,7 +17,7 @@ import {
 	tlsModeSchema,
 } from "@datagripe/contracts";
 import type { IDockviewPanelProps } from "dockview-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { wsClient } from "../api/ws";
 import {
 	closeImportDatasource,
@@ -33,6 +33,7 @@ import {
 } from "../stores/datasource";
 import { type ConnectionDraft, useConnectionsStore } from "../stores/runtime";
 import { applyParsed } from "./connectionPaste";
+import { Select, TextInput } from "./controls";
 import { ExportConfigPanel } from "./ExportConfigPanel";
 import { GitDatasourceRepo } from "./GitDatasourceRepo";
 import { ImportDatasource } from "./ImportDatasource";
@@ -193,6 +194,13 @@ function ConnectionFormBody(props: {
 	const readOnly = editing?.source === "predefined" || fromRepo;
 	const editingId = editing?.source === "managed" ? editing.id : null;
 
+	/**
+	 * Focus the name once, on a new datasource. This was an inline `ref`
+	 * callback, which React re-runs on every render because the function
+	 * is a new one every time — so every keystroke in every other field
+	 * threw the caret back into Name.
+	 */
+	const nameRef = useRef<HTMLInputElement>(null);
 	const [draft, setDraft] = useState<ConnectionDraft>(() => {
 		if (editing === null) {
 			return EMPTY_DRAFT;
@@ -236,6 +244,12 @@ function ConnectionFormBody(props: {
 	 * reason a parameter could not be honoured is the part worth reading
 	 * after the fields have filled in.
 	 */
+	useEffect(() => {
+		if (!readOnly && editing === null) {
+			nameRef.current?.focus();
+		}
+	}, [readOnly, editing]);
+
 	const [pasted, setPasted] = useState("");
 	const [pasteError, setPasteError] = useState<string | null>(null);
 	const [pasteNotes, setPasteNotes] = useState<IgnoredParam[]>([]);
@@ -712,7 +726,7 @@ function ConnectionFormBody(props: {
 						are what gets saved. The box is cleared once it has filled them in.
 					</p>
 					<div className="dg-paste-row">
-						<input
+						<TextInput
 							type="text"
 							value={pasted}
 							placeholder="postgresql://user:password@host/database?sslmode=require"
@@ -771,21 +785,17 @@ function ConnectionFormBody(props: {
 			<div className="dg-fgrid">
 				<label className="dg-field">
 					<span>Name</span>
-					<input
+					<TextInput
 						value={draft.name}
 						disabled={readOnly}
-						ref={(input) => {
-							if (!readOnly && editing === null) {
-								input?.focus();
-							}
-						}}
+						ref={nameRef}
 						onChange={(event) => patch({ name: event.target.value })}
 					/>
 				</label>
 				{has("host") && (
 					<label className="dg-field">
 						<span>Host</span>
-						<input
+						<TextInput
 							value={draft.host}
 							disabled={readOnly}
 							onChange={(event) => patch({ host: event.target.value })}
@@ -795,7 +805,7 @@ function ConnectionFormBody(props: {
 				{has("port") && (
 					<label className="dg-field">
 						<span>Port</span>
-						<input
+						<TextInput
 							type="number"
 							min={1}
 							max={65535}
@@ -812,7 +822,7 @@ function ConnectionFormBody(props: {
 			<div className="dg-fgrid">
 				<label className="dg-field">
 					<span>{capabilities.databaseLabel}</span>
-					<input
+					<TextInput
 						value={draft.databaseName}
 						disabled={readOnly}
 						placeholder={
@@ -828,7 +838,7 @@ function ConnectionFormBody(props: {
 						<span>
 							Username{draft.adapter === "redis" ? " (optional)" : ""}
 						</span>
-						<input
+						<TextInput
 							value={draft.username}
 							disabled={readOnly}
 							onChange={(event) => patch({ username: event.target.value })}
@@ -838,7 +848,7 @@ function ConnectionFormBody(props: {
 				{has("password") && (
 					<label className="dg-field">
 						<span>Password</span>
-						<input
+						<TextInput
 							type="password"
 							value={draft.password}
 							disabled={readOnly}
@@ -857,7 +867,7 @@ function ConnectionFormBody(props: {
 				{has("tlsMode") && (
 					<label className="dg-field">
 						<span>TLS</span>
-						<select
+						<Select
 							value={draft.tlsMode}
 							disabled={readOnly}
 							onChange={(event) =>
@@ -871,7 +881,7 @@ function ConnectionFormBody(props: {
 									{mode}
 								</option>
 							))}
-						</select>
+						</Select>
 					</label>
 				)}
 			</div>
@@ -891,7 +901,7 @@ function ConnectionFormBody(props: {
 					{Object.entries(RUNTIME_PARAMS).map(([name, info]) => (
 						<label className="dg-field dg-field-path" key={name}>
 							<span>{name}</span>
-							<input
+							<TextInput
 								type="text"
 								value={draft.params[name] ?? ""}
 								disabled={readOnly}
@@ -991,7 +1001,7 @@ function ConnectionFormBody(props: {
 					</p>
 					<label className="dg-field">
 						<span>Password</span>
-						<input
+						<TextInput
 							type="password"
 							value={repoPassword ?? ""}
 							placeholder={
@@ -1023,7 +1033,7 @@ function ConnectionFormBody(props: {
 						<label htmlFor="dg-export-path">
 							<span>Directory</span>
 						</label>
-						<input
+						<TextInput
 							id="dg-export-path"
 							value={exportPath}
 							placeholder="/home/you/repo/datasource/schema"
@@ -1128,7 +1138,7 @@ function ConnectionFormBody(props: {
 							<div key={row.key} className="dg-path-row">
 								<label className="dg-field">
 									<span>Name</span>
-									<input
+									<TextInput
 										value={row.name}
 										placeholder="migrations"
 										onChange={(event) =>
@@ -1138,7 +1148,7 @@ function ConnectionFormBody(props: {
 								</label>
 								<label className="dg-field">
 									<span>Directory</span>
-									<input
+									<TextInput
 										value={row.path}
 										placeholder="/home/you/repo/db/migrations"
 										onChange={(event) =>

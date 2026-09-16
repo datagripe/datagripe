@@ -10,6 +10,7 @@ import {
 	useBrandingStore,
 } from "../stores/branding";
 import { useSessionStore } from "../stores/session";
+import { Select, TextInput } from "./controls";
 import { IconClose } from "./icons";
 import { MockBadge } from "./MockBadge";
 
@@ -78,7 +79,7 @@ export function ProjectSettingsPanel() {
 				<div className="dg-fgrid">
 					<label className="dg-field">
 						<span>Name</span>
-						<input
+						<TextInput
 							value={name}
 							disabled={!isOwner}
 							onChange={(event) => setName(event.target.value)}
@@ -211,7 +212,7 @@ function MembersSection(props: { isOwner: boolean }) {
 							);
 					}}
 				>
-					<input
+					<TextInput
 						type="email"
 						placeholder="member@example.com"
 						aria-label="Member email"
@@ -219,7 +220,7 @@ function MembersSection(props: { isOwner: boolean }) {
 						required
 						onChange={(event) => setEmail(event.target.value)}
 					/>
-					<select
+					<Select
 						value={role}
 						aria-label="Member role"
 						onChange={(event) =>
@@ -228,7 +229,7 @@ function MembersSection(props: { isOwner: boolean }) {
 					>
 						<option value="editor">editor</option>
 						<option value="viewer">viewer</option>
-					</select>
+					</Select>
 					<button type="submit">Add</button>
 				</form>
 			)}

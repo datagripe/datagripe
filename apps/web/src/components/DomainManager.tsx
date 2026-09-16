@@ -8,6 +8,7 @@ import {
 	useDomainsStore,
 } from "../stores/domains";
 import { useConnectionsStore } from "../stores/runtime";
+import { TextInput } from "./controls";
 import { RailHelp, TabShell } from "./TabRail";
 
 /**
@@ -154,7 +155,7 @@ export function DomainManager(props: { params?: unknown }) {
 			</p>
 
 			<div className="dg-domain-new">
-				<input
+				<TextInput
 					value={name}
 					placeholder="new domain name"
 					aria-label="New domain name"
@@ -241,7 +242,7 @@ export function DomainManager(props: { params?: unknown }) {
 									</div>
 								</td>
 								<td>
-									<input
+									<TextInput
 										value={domain.name}
 										aria-label={`Rename ${domain.name}`}
 										onChange={(event) =>
@@ -252,7 +253,7 @@ export function DomainManager(props: { params?: unknown }) {
 									/>
 								</td>
 								<td>
-									<input
+									<TextInput
 										value={domain.description}
 										placeholder="—"
 										aria-label={`Describe ${domain.name}`}
@@ -265,7 +266,7 @@ export function DomainManager(props: { params?: unknown }) {
 								</td>
 								<td className="dg-domain-count">{count}</td>
 								<td>
-									<input
+									<TextInput
 										type="checkbox"
 										checked={domain.includeData}
 										aria-label={`Export data for ${domain.name}`}
@@ -287,7 +288,7 @@ export function DomainManager(props: { params?: unknown }) {
 									    domains"). Nothing is untagged by flipping it: the
 									    same objects are still in the same domain, they
 									    just stop competing for the tree. */}
-									<input
+									<TextInput
 										type="checkbox"
 										checked={domain.hidden}
 										aria-label={`Hide ${domain.name}`}

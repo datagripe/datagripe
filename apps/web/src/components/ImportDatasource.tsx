@@ -2,6 +2,7 @@ import type { ConnectionMetadata } from "@datagripe/contracts";
 import { useState } from "react";
 import { wsClient } from "../api/ws";
 import { useConnectionsStore } from "../stores/runtime";
+import { TextInput } from "./controls";
 
 /**
  * Importing a datasource from a repository
@@ -95,7 +96,7 @@ export function ImportDatasource(props: ImportDatasourceProps) {
 				<div className="dg-fgrid">
 					<label className="dg-field">
 						<span>Repository URL</span>
-						<input
+						<TextInput
 							value={url}
 							placeholder="https://github.com/you/wallet.git"
 							onChange={(event) => setUrl(event.target.value)}
@@ -103,7 +104,7 @@ export function ImportDatasource(props: ImportDatasourceProps) {
 					</label>
 					<label className="dg-field">
 						<span>Branch (optional)</span>
-						<input
+						<TextInput
 							value={branch}
 							placeholder="main"
 							onChange={(event) => setBranch(event.target.value)}
@@ -113,7 +114,7 @@ export function ImportDatasource(props: ImportDatasourceProps) {
 			) : (
 				<label className="dg-field dg-field-path">
 					<span>Work tree root</span>
-					<input
+					<TextInput
 						value={path}
 						placeholder="/home/you/repos/wallet"
 						onChange={(event) => setPath(event.target.value)}

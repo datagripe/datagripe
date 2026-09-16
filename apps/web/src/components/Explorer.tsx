@@ -890,7 +890,7 @@ export function Explorer() {
 			{active !== null && rootPath !== null && grouped && (
 				<DomainGroups
 					connectionId={active.id}
-					schema={rootPath[0]?.name ?? ""}
+					rootPath={rootPath}
 					filter={filter.trim().toLowerCase()}
 				/>
 			)}

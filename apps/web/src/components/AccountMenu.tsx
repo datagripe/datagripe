@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { openAccountSettings, openProjectSettings } from "../app/viewPanels";
-import { useAppearanceStore } from "../stores/appearance";
 import { useSessionStore } from "../stores/session";
 import { avatarSlot, gravatarUrl, initials } from "../utils/gravatar";
 
@@ -36,7 +35,7 @@ export function AccountMenu() {
 	const workspace = useSessionStore((state) => state.currentWorkspace);
 	const logout = useSessionStore((state) => state.logout);
 
-	const name = useAppearanceStore((state) => state.name);
+	const name = useSessionStore((state) => state.bootstrap?.user?.name ?? "");
 
 	const email = sessionUser?.email ?? "";
 
@@ -90,7 +89,7 @@ export function AccountMenu() {
 					{showAvatar ? (
 						<img src={avatar} alt="" onError={() => setAvatarFailed(true)} />
 					) : (
-						<span aria-hidden="true">{initials(email || "?")}</span>
+						<span aria-hidden="true">{initials(name || email || "?")}</span>
 					)}
 				</span>
 				{name !== "" && <span className="dg-avatar-name">{name}</span>}

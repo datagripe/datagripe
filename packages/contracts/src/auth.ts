@@ -6,9 +6,18 @@ export const workspaceRoleSchema = z.enum(["owner", "editor", "viewer"]);
 
 export type WorkspaceRole = z.infer<typeof workspaceRoleSchema>;
 
+/** Length of a display name; a header button is not a biography. */
+export const DISPLAY_NAME_MAX = 32;
+
 export const sessionUserSchema = z.object({
 	id: z.uuid(),
 	email: z.string().email(),
+	/**
+	 * What to call this person, when they have said. Null is the normal
+	 * state and means "use the address": the address is the identity, and
+	 * this is only what the header button and the online list show.
+	 */
+	name: z.string().nullable(),
 });
 
 export type SessionUser = z.infer<typeof sessionUserSchema>;
@@ -127,3 +136,10 @@ export const workspaceSetDefaultConnectionRequestSchema = z.object({
 export type WorkspaceSetDefaultConnectionRequest = z.infer<
 	typeof workspaceSetDefaultConnectionRequestSchema
 >;
+
+/** `account.set-name` — null or empty clears it back to the address. */
+export const accountSetNameRequestSchema = z.object({
+	name: z.string().max(DISPLAY_NAME_MAX).nullable(),
+});
+
+export type AccountSetNameRequest = z.infer<typeof accountSetNameRequestSchema>;

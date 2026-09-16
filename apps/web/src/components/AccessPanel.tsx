@@ -15,6 +15,7 @@ import {
 	readDatasourcePanelParams,
 } from "../app/viewPanels";
 import { useGripesStore } from "../stores/gripes";
+import { Select, TextInput } from "./controls";
 import { RailFact, RailHelp, RailSection, TabShell } from "./TabRail";
 
 /**
@@ -364,7 +365,7 @@ export function AccessPanel(props: { params?: unknown }) {
 									{role.memberOf.join(", ") || "—"}
 								</td>
 								<td>
-									<input
+									<TextInput
 										type="checkbox"
 										checked={role.shown}
 										aria-label={`Show ${role.name} as a column`}
@@ -374,7 +375,7 @@ export function AccessPanel(props: { params?: unknown }) {
 									/>
 								</td>
 								<td>
-									<input
+									<TextInput
 										type="checkbox"
 										checked={role.untrusted}
 										aria-label={`Mark ${role.name} untrusted`}
@@ -384,7 +385,7 @@ export function AccessPanel(props: { params?: unknown }) {
 									/>
 								</td>
 								<td>
-									<input
+									<TextInput
 										type="checkbox"
 										checked={role.authenticator}
 										aria-label={`Mark ${role.name} the authenticator`}
@@ -413,7 +414,7 @@ export function AccessPanel(props: { params?: unknown }) {
 				{report !== null && (
 					<>
 						<label>
-							<input
+							<TextInput
 								type="checkbox"
 								checked={differencesOnly}
 								onChange={(event) => setDifferencesOnly(event.target.checked)}
@@ -421,7 +422,7 @@ export function AccessPanel(props: { params?: unknown }) {
 							differences only
 						</label>
 						{domains.length > 0 && (
-							<select
+							<Select
 								value={domainFilter}
 								aria-label="Filter by domain"
 								onChange={(event) => setDomainFilter(event.target.value)}
@@ -432,7 +433,7 @@ export function AccessPanel(props: { params?: unknown }) {
 										{name}
 									</option>
 								))}
-							</select>
+							</Select>
 						)}
 					</>
 				)}

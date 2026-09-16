@@ -14,6 +14,7 @@ import {
 	readDatasourcePanelParams,
 } from "../app/viewPanels";
 import { useConnectionsStore } from "../stores/runtime";
+import { TextInput } from "./controls";
 import { RailFact, RailHelp, RailSection, TabShell } from "./TabRail";
 
 /**
@@ -456,7 +457,7 @@ export function SyncPanel(props: { params?: unknown }) {
 			{runs?.gitEnabled === true && (
 				<section className="dg-sync-git">
 					<h4>commit</h4>
-					<input
+					<TextInput
 						value={message}
 						aria-label="Commit message"
 						onChange={(event) => setMessage(event.target.value)}

@@ -4,6 +4,7 @@ import {
 	useSessionStore,
 	webAuthnAvailable,
 } from "../stores/session";
+import { TextInput } from "./controls";
 import { Mascot } from "./Mascot";
 
 /**
@@ -106,7 +107,7 @@ export function AuthScreen() {
 				{needsEmail && (
 					<label className="dg-field">
 						<span>Email</span>
-						<input
+						<TextInput
 							type="email"
 							required
 							autoComplete="email"
@@ -121,7 +122,7 @@ export function AuthScreen() {
 				{passwords && (
 					<label className="dg-field">
 						<span>Password</span>
-						<input
+						<TextInput
 							type="password"
 							required
 							minLength={mode === "signup" ? 12 : 1}

@@ -11,6 +11,7 @@ import {
 	groupByDomain,
 	initiallyCollapsed,
 	isShelved,
+	schemasToScan,
 	shelfIds,
 	UNTAGGED_GROUP,
 	visibleNodes,
@@ -236,5 +237,29 @@ describe("the drag payload round trip", () => {
 		expect(
 			decodeDragPayload('[{"schema":"p","name":"u","kind":"trigger"}]'),
 		).toBeNull();
+	});
+});
+
+describe("which schemas the grouped view walks", () => {
+	test("a scoped tree walks its one schema", () => {
+		expect(schemasToScan([{ name: "shop" }], null)).toEqual(["shop"]);
+	});
+
+	// The bug this exists for: "all schemas" is an *empty* root path, and
+	// it used to arrive as the schema named "", which matches nothing —
+	// so a fully tagged project rendered as a column of "nothing tagged".
+	test("an unscoped tree walks every schema the root listed", () => {
+		expect(schemasToScan([], [{ name: "public" }, { name: "shop" }])).toEqual([
+			"public",
+			"shop",
+		]);
+	});
+
+	test("an unscoped tree whose root has not arrived walks nothing yet", () => {
+		expect(schemasToScan([], null)).toEqual([]);
+	});
+
+	test("a scoped tree does not wait for the root list", () => {
+		expect(schemasToScan([{ name: "public" }], null)).toEqual(["public"]);
 	});
 });

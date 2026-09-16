@@ -7,6 +7,7 @@ import {
 	useBrandingStore,
 } from "../stores/branding";
 import { useSessionStore } from "../stores/session";
+import { TextInput } from "./controls";
 import { MockBadge } from "./MockBadge";
 
 /**
@@ -60,7 +61,7 @@ export function NewProjectForm(props: IDockviewPanelProps) {
 				<div className="dg-fgrid">
 					<label className="dg-field">
 						<span>Name</span>
-						<input
+						<TextInput
 							value={name}
 							ref={(input) => input?.focus()}
 							onChange={(event) => setName(event.target.value)}

@@ -2418,6 +2418,12 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	color: var(--dg-ink-mute);
 }
 
+/* One text box and one select, everywhere (components/controls.tsx).
+   The bare-element selectors stay so a control inside a field that has
+   not been converted yet still looks like the others rather than like
+   the browser's default. */
+.dg-input,
+.dg-select,
 .dg-field input,
 .dg-field select {
 	background: var(--dg-void);
@@ -2426,12 +2432,25 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	color: var(--dg-ink);
 	padding: 5px 8px;
 	font: inherit;
+	min-width: 0;
 }
 
+.dg-input:focus,
+.dg-select:focus,
 .dg-field input:focus,
 .dg-field select:focus {
 	outline: none;
 	border-color: var(--dg-violet);
+}
+
+.dg-input:disabled,
+.dg-select:disabled {
+	opacity: 0.55;
+	cursor: default;
+}
+
+.dg-input::placeholder {
+	color: var(--dg-ink-faint);
 }
 
 .dg-field-row {
@@ -2634,6 +2653,10 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
  * are sized in the tokens they set, so the control demonstrates what it
  * does while you drag it.
  */
+
+.dg-name-input {
+	max-width: 260px;
+}
 
 .dg-scale-row {
 	display: flex;
@@ -3377,6 +3400,14 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	padding-top: 4px;
 }
 
+/* The same disc the header wears, at the size a list row wants, and in
+   the colour this person's cursor is in the editor. */
+.dg-presence-face {
+	margin-right: 8px;
+	font-size: calc(0.8 * var(--dg-fs-meta));
+	color: var(--dg-void);
+}
+
 .dg-presence-dot {
 	width: 8px;
 	height: 8px;
@@ -3669,15 +3700,35 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	color: var(--dg-ink-mute);
 }
 
-.dg-ov-ddl {
-	margin: 0;
-	padding: 12px 14px;
-	font-family: var(--dg-font-mono);
-	font-size: var(--dg-fs-tree);
-	line-height: 1.8;
-	color: var(--dg-ink-dim);
-	white-space: pre;
-	overflow-x: auto;
+/* The definition tab is an editor (components/DdlTab.tsx): the same
+   tokenizer, theme and font as every other piece of SQL here, and
+   editable wherever running a statement is allowed. */
+.dg-ddl {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+}
+
+.dg-ddl-editor {
+	flex: 1;
+	min-height: 180px;
+}
+
+.dg-ddl-bar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex: none;
+	padding: 7px 12px;
+	border-top: 1px solid var(--dg-rule);
+	background: var(--dg-panel);
+	min-height: 30px;
+}
+
+.dg-ddl-note {
+	color: var(--dg-ink-mute);
+	font-size: var(--dg-fs-meta);
 }
 
 /* ---- danger zone --------------------------------------------------------

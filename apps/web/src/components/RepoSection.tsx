@@ -4,6 +4,7 @@ import type { EditorDocument } from "../stores/documents";
 import { useRepoStore } from "../stores/git";
 import { openRepoFile } from "../stores/openRepoFile";
 import { useConnectionsStore } from "../stores/runtime";
+import { TextInput } from "./controls";
 import { IconAhead, IconBehind } from "./icons";
 import { RepoCommands } from "./RepoCommands";
 
@@ -143,7 +144,7 @@ export function RepoSection(props: RepoSectionProps) {
 						{status.entries.map((entry) => (
 							<li key={entry.path} className="dg-repo-row">
 								<label className="dg-repo-check">
-									<input
+									<TextInput
 										type="checkbox"
 										checked={ticked.includes(entry.path)}
 										onChange={() =>

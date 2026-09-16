@@ -12,7 +12,7 @@ export class PresenceTracker {
 
 	join(
 		workspaceId: string,
-		user: { userId: string; email: string },
+		user: { userId: string; email: string; name: string | null },
 	): PresenceUser[] | null {
 		const counts = this.socketCounts.get(workspaceId) ?? new Map();
 		this.socketCounts.set(workspaceId, counts);
@@ -25,6 +25,7 @@ export class PresenceTracker {
 		members.set(user.userId, {
 			userId: user.userId,
 			email: user.email,
+			name: user.name,
 			activeDocumentId: members.get(user.userId)?.activeDocumentId ?? null,
 			lastSeenAt: new Date().toISOString(),
 		});
@@ -54,6 +55,24 @@ export class PresenceTracker {
 		}
 		member.activeDocumentId = documentId;
 		member.lastSeenAt = new Date().toISOString();
+		return this.list(workspaceId);
+	}
+
+	/**
+	 * A name changed while they were connected. Presence is what the
+	 * online list renders, so it has to hear about it — nobody is going
+	 * to reconnect to be called the right thing.
+	 */
+	rename(
+		workspaceId: string,
+		userId: string,
+		name: string | null,
+	): PresenceUser[] | null {
+		const member = this.workspaces.get(workspaceId)?.get(userId);
+		if (member === undefined || member.name === name) {
+			return null;
+		}
+		member.name = name;
 		return this.list(workspaceId);
 	}
 

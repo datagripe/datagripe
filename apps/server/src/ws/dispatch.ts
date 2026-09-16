@@ -7,6 +7,7 @@ import {
 	accessReportRequestSchema,
 	accessRoleSetRequestSchema,
 	accessRolesRequestSchema,
+	accountSetNameRequestSchema,
 	connectionCreateRequestSchema,
 	connectionDeleteRequestSchema,
 	connectionTestRequestSchema,
@@ -805,6 +806,31 @@ export function createDispatcher(deps: DispatcherDeps): Dispatch {
 					request.idempotencyKey,
 					() => connections.alterColumns(workspace, request),
 				);
+			}
+
+			// Your own account, so no role gates it — a viewer is still a
+			// person with a name (docs/spec/updates.md "The account menu").
+			case "account.set-name": {
+				const request = accountSetNameRequestSchema.parse(payload);
+				const trimmed = request.name?.trim() ?? "";
+				const name = trimmed === "" ? null : trimmed;
+				await appDb`
+					UPDATE users SET display_name = ${name} WHERE id = ${ctx.userId}
+				`;
+				// The online list renders presence, so it has to hear about
+				// this: nobody reconnects to be called the right thing.
+				const users = presence.rename(workspace.id, ctx.userId, name);
+				if (users !== null) {
+					hub.broadcastToWorkspace(workspace.id, {
+						version: 1,
+						kind: "event",
+						eventId: crypto.randomUUID(),
+						topic: "presence.update",
+						occurredAt: new Date().toISOString(),
+						payload: { users },
+					});
+				}
+				return { name };
 			}
 
 			case "app.version":

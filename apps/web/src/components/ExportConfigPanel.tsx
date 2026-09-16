@@ -1,6 +1,7 @@
 import type { ExportConfigResult } from "@datagripe/contracts";
 import { useState } from "react";
 import { wsClient } from "../api/ws";
+import { TextInput } from "./controls";
 
 /**
  * Generating a `.datagripe/` set from a datasource that already exists
@@ -66,7 +67,7 @@ export function ExportConfigPanel(props: ExportConfigPanelProps) {
 				<label htmlFor="dg-export-config-dir">
 					<span>Target directory</span>
 				</label>
-				<input
+				<TextInput
 					id="dg-export-config-dir"
 					value={targetDir}
 					placeholder="/home/you/repo"

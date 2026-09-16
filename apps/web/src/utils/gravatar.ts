@@ -30,10 +30,14 @@ export async function gravatarUrl(email: string): Promise<string | null> {
 	return `https://gravatar.com/avatar/${hash}?s=${SIZE}&d=404`;
 }
 
-/** One or two letters, from whatever the address gives us. */
-export function initials(email: string): string {
-	const local = email.split("@")[0] ?? email;
-	const parts = local.split(/[._-]+/).filter((part) => part.length > 0);
+/**
+ * One or two letters, from a name or an address — "Ada Lovelace" and
+ * `ada.lovelace@x.dev` both give AL, which is the point: the same person
+ * does not change initials the day they fill the name field in.
+ */
+export function initials(nameOrEmail: string): string {
+	const local = nameOrEmail.split("@")[0] ?? nameOrEmail;
+	const parts = local.split(/[\s._-]+/).filter((part) => part.length > 0);
 	const letters =
 		parts.length > 1
 			? `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`

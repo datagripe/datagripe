@@ -14,6 +14,7 @@ import { useDocumentsStore } from "../stores/documents";
 import { hiddenCount, useGripesStore } from "../stores/gripes";
 import { useConnectionsStore } from "../stores/runtime";
 import { useSessionStore } from "../stores/session";
+import { Select } from "./controls";
 import { GripeDismiss } from "./GripeDismiss";
 import { SeverityIcon } from "./icons";
 import { MascotArt } from "./MascotArt";
@@ -197,7 +198,7 @@ export function GripesPanel() {
 			)}
 			<div className="dg-gripes-attitude">
 				<span>Attitude</span>
-				<select
+				<Select
 					aria-label="Attitude level"
 					value={attitude}
 					disabled={currentWorkspaceId === null}
@@ -211,7 +212,7 @@ export function GripesPanel() {
 							{level}
 						</option>
 					))}
-				</select>
+				</Select>
 				<span>{ATTITUDE_BLURB[attitude]}</span>
 			</div>
 			<p className="dg-gripes-disclaimer">{DISCLAIMER}</p>

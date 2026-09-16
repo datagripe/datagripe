@@ -141,7 +141,9 @@ export function createAuthRoutes(deps: AuthRouteDeps) {
 			};
 		}
 		const [userRow, workspace] = await Promise.all([
-			appDb<{ email: string }[]>`SELECT email FROM users WHERE id = ${userId}`,
+			appDb<{ email: string; display_name: string | null }[]>`
+				SELECT email, display_name FROM users WHERE id = ${userId}
+			`,
 			localAuth !== null
 				? Promise.resolve({ ...localAuth.workspace, role: "owner" as const })
 				: defaultWorkspaceFor(appDb, userId),
@@ -150,7 +152,11 @@ export function createAuthRoutes(deps: AuthRouteDeps) {
 			user:
 				userRow[0] === undefined
 					? null
-					: { id: userId, email: userRow[0].email },
+					: {
+							id: userId,
+							email: userRow[0].email,
+							name: userRow[0].display_name,
+						},
 			workspace,
 			csrfToken: null, // filled by the caller, which holds the session
 			wsUrl: `ws://localhost:${config.PORT}/ws`,

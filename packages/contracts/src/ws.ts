@@ -67,6 +67,7 @@ export const clientActionSchema = z.enum([
 	"access.roles",
 	"access.roles.set",
 	"access.report",
+	"account.set-name",
 	"app.version",
 	"app.update.check",
 	"app.restart",

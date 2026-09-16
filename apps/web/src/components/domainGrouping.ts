@@ -12,6 +12,27 @@ import { domainTargetKey, domainTargetSchema } from "@datagripe/contracts";
  * They live here so a test can assert them directly.
  */
 
+/**
+ * Which namespaces the grouped view has to walk.
+ *
+ * The tree's root is one schema when the datasource is scoped to one,
+ * and **empty** when it shows all of them — which is the case that was
+ * wrong: an empty root arrived as the schema named `""`, nothing
+ * matched it, and a fully tagged project rendered as a column of
+ * "nothing tagged". `null` for the root list means it has not arrived
+ * yet, which is not the same as there being none.
+ */
+export function schemasToScan(
+	rootPath: readonly { name: string }[],
+	rootNodes: readonly { name: string }[] | null,
+): string[] {
+	const scoped = rootPath[0]?.name;
+	if (scoped !== undefined) {
+		return [scoped];
+	}
+	return rootNodes === null ? [] : rootNodes.map((node) => node.name);
+}
+
 /** The synthetic group id for objects no domain claims. */
 export const UNTAGGED_GROUP = "__untagged";
 

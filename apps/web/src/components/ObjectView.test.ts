@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { Finding, GripeSeverity, ObjectTab } from "@datagripe/contracts";
 import { defaultTabForKind } from "@datagripe/contracts";
-import { worstSeverityForTab } from "./ObjectView";
+import { worstSeverityForTab } from "./objectTabs";
 
 /**
  * The tab strip's finding marks (docs/spec/gripes.md "Object view").

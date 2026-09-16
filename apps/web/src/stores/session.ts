@@ -49,6 +49,13 @@ export type SessionState = {
 	/** Create an account whose only credential is a security key. */
 	signupWithPasskey: (email: string) => Promise<boolean>;
 	logout: () => Promise<void>;
+	/**
+	 * What to be called. An account field rather than a browser one: the
+	 * online list and anything else that names a person has to be able to
+	 * read it, and only the server can tell everybody
+	 * (docs/spec/updates.md "The account menu").
+	 */
+	setName: (name: string) => Promise<void>;
 };
 
 /** WebAuthn needs a secure context, so it is absent over plain http to
@@ -131,6 +138,23 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
 	workspaces: [],
 	error: null,
 	busy: false,
+
+	async setName(name) {
+		const trimmed = name.trim();
+		const { name: saved } = await wsClient.request<{ name: string | null }>(
+			"account.set-name",
+			{ name: trimmed === "" ? null : trimmed },
+		);
+		const bootstrap = get().bootstrap;
+		if (bootstrap?.user != null) {
+			set({
+				bootstrap: {
+					...bootstrap,
+					user: { ...bootstrap.user, name: saved },
+				},
+			});
+		}
+	},
 
 	async load() {
 		const res = await fetch("/api/session");

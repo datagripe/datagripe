@@ -17,6 +17,8 @@ export type SocketData = {
 	requestId: string;
 	userId: string;
 	email: string;
+	/** Their display name, if they have set one (docs/spec/updates.md). */
+	name: string | null;
 	sessionId: string;
 	workspace: { id: string; name: string; defaultConnectionRef: string | null };
 	role: "owner" | "editor" | "viewer";
@@ -76,6 +78,7 @@ export function createWebsocketHandler(
 			const changed = presence.join(ws.data.workspace.id, {
 				userId: ws.data.userId,
 				email: ws.data.email,
+				name: ws.data.name,
 			});
 			if (changed !== null) {
 				broadcastPresence(ws.data.workspace.id);

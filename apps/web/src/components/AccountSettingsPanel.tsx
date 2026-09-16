@@ -1,8 +1,8 @@
 import type { Passkey, PasskeyListResult } from "@datagripe/contracts";
+import { DISPLAY_NAME_MAX } from "@datagripe/contracts";
 import { startRegistration } from "@simplewebauthn/browser";
 import { useCallback, useEffect, useState } from "react";
 import {
-	NAME_MAX,
 	SCALE_DEFAULT,
 	SCALE_MAX,
 	SCALE_MIN,
@@ -14,6 +14,7 @@ import {
 	useSessionStore,
 	webAuthnAvailable,
 } from "../stores/session";
+import { TextInput } from "./controls";
 import { IconClose } from "./icons";
 
 /**
@@ -54,31 +55,64 @@ function describe(passkey: Passkey): string {
 }
 
 /**
- * Your name, as this browser addresses you. Local like the scale, and
- * for the same reason: it is a preference, not an identity. Other
- * members see the address, here and everywhere else.
+ * What to be called.
+ *
+ * An account field, not a browser one: the online list names other
+ * people with it, and only the server can tell everybody
+ * (docs/spec/updates.md "The account menu"). The address stays the
+ * identity — this is a label, it is not unique, and nothing looks
+ * anybody up by it.
  */
 function Name() {
-	const name = useAppearanceStore((state) => state.name);
-	const setName = useAppearanceStore((state) => state.setName);
+	const saved = useSessionStore((state) => state.bootstrap?.user?.name ?? "");
+	const [draft, setDraft] = useState(saved);
+	const [error, setError] = useState<string | null>(null);
+
+	// Follow the account when something else changes it — a second tab,
+	// or a reconnect — but never mid-edit.
+	const [lastSaved, setLastSaved] = useState(saved);
+	if (saved !== lastSaved) {
+		setLastSaved(saved);
+		setDraft(saved);
+	}
+
+	/** On blur rather than per keystroke: this is a round trip and a
+	 * broadcast to everybody in the project. */
+	const commit = () => {
+		if (draft.trim() === saved) {
+			return;
+		}
+		setError(null);
+		void useSessionStore
+			.getState()
+			.setName(draft)
+			.catch(() => setError("Could not save that name."));
+	};
 
 	return (
 		<div className="dg-form-section">
 			<span className="dg-form-section-title">Name</span>
 			<p className="dg-form-note">
-				Shown in the header button instead of the initials taken from your
-				address. Stored in this browser; it does not rename your account, and
-				other members still see the address.
+				What to call you: shown in the header button instead of the initials
+				taken from your address, and in the online list to everybody else in the
+				project. Your address stays your account.
 			</p>
-			<input
+			<TextInput
 				className="dg-name-input"
 				type="text"
-				value={name}
-				maxLength={NAME_MAX}
+				value={draft}
+				maxLength={DISPLAY_NAME_MAX}
 				placeholder="Your name"
 				aria-label="Your name"
-				onChange={(event) => setName(event.target.value)}
+				onChange={(event) => setDraft(event.target.value)}
+				onBlur={commit}
+				onKeyDown={(event) => {
+					if (event.key === "Enter") {
+						event.currentTarget.blur();
+					}
+				}}
 			/>
+			{error !== null && <p className="dg-test-failed">{error}</p>}
 		</div>
 	);
 }
@@ -282,7 +316,7 @@ export function AccountSettingsPanel() {
 						<ul className="dg-member-list">
 							{passkeys.map((passkey) => (
 								<li key={passkey.id} className="dg-member-row">
-									<input
+									<TextInput
 										className="dg-passkey-name"
 										aria-label={`Name of ${passkey.name}`}
 										defaultValue={passkey.name}

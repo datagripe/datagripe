@@ -3,6 +3,7 @@ import type { IDockviewPanelProps } from "dockview-react";
 import { useEffect, useState } from "react";
 import { wsClient } from "../api/ws";
 import { useConnectionsStore } from "../stores/runtime";
+import { TextInput } from "./controls";
 
 /**
  * The repository behind a git datasource, on its edit page
@@ -116,7 +117,7 @@ export function GitDatasourceRepo(props: {
 							<>
 								{repo.managedClone && (
 									<label className="dg-field-inline">
-										<input
+										<TextInput
 											type="checkbox"
 											checked={deleteCheckout}
 											onChange={(event) =>

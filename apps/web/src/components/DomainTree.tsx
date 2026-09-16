@@ -24,6 +24,7 @@ import {
 	encodeDragPayload,
 	groupByDomain,
 	initiallyCollapsed,
+	schemasToScan,
 	UNTAGGED_GROUP,
 } from "./domainGrouping";
 import { IconChevronDown, IconChevronRight, IconHidden } from "./icons";
@@ -62,48 +63,77 @@ export type { GroupedObject } from "./domainGrouping";
  * the lazy category loads the tree would otherwise defer. Categories
  * still resolve one at a time, and the rows appear as they land — a
  * group that is still fetching must not look like an empty one.
+ *
+ * `rootPath` is the tree's own root, and it is empty when the datasource
+ * shows **all** schemas. That case used to arrive here as the schema
+ * named `""`, which loads nothing: every group read zero and the whole
+ * view said "nothing tagged" over a project that was fully tagged. So
+ * the schema list is a load like any other, and the objects are the
+ * union of every schema's categories.
  */
 function useAllObjects(
 	connectionId: string,
-	schema: string,
+	rootPath: readonly SchemaPathSegment[],
 ): { objects: GroupedObject[]; loading: boolean } {
 	const ensure = useExplorerStore((state) => state.ensure);
 	const children = useExplorerStore((state) => state.children);
 	const tags = useDomainsStore(selectTags(connectionId));
 
+	/** The namespaces to walk: the one we are scoped to, or all of them. */
+	const scoped = rootPath[0]?.name;
+	const schemaList = useMemo(() => {
+		const root = children[nodeKey(connectionId, [])];
+		const pending =
+			scoped === undefined && (root === undefined || root.status === "loading");
+		return {
+			names: schemasToScan(
+				scoped === undefined ? [] : [{ name: scoped }],
+				root?.status === "loaded" ? root.nodes : null,
+			),
+			loading: pending,
+		};
+	}, [children, connectionId, scoped]);
+
+	const names = schemaList.names.join("\u0000");
 	useEffect(() => {
-		for (const { category } of CATEGORIES) {
-			void ensure(connectionId, [
-				{ kind: "schema", name: schema },
-				{ kind: category as SchemaPathSegment["kind"], name: category },
-			]);
+		// The root list first, when nothing has scoped us to one schema.
+		void ensure(connectionId, []);
+		for (const schema of names === "" ? [] : names.split("\u0000")) {
+			for (const { category } of CATEGORIES) {
+				void ensure(connectionId, [
+					{ kind: "schema", name: schema },
+					{ kind: category as SchemaPathSegment["kind"], name: category },
+				]);
+			}
 		}
-	}, [connectionId, schema, ensure]);
+	}, [connectionId, names, ensure]);
 
 	return useMemo(() => {
 		const objects: GroupedObject[] = [];
-		let loading = false;
-		for (const { category, kind } of CATEGORIES) {
-			const key = nodeKey(connectionId, [
-				{ kind: "schema", name: schema },
-				{ kind: category as SchemaPathSegment["kind"], name: category },
-			]);
-			const state = children[key];
-			if (state === undefined || state.status === "loading") {
-				loading = true;
-				continue;
-			}
-			if (state.status === "error") {
-				// A category this engine does not have is not a failure worth
-				// reporting here; the ungrouped tree already says so.
-				continue;
-			}
-			for (const node of state.nodes) {
-				const target: DomainTarget = { schema, name: node.name, kind };
-				objects.push({
-					...target,
-					domainId: tags[domainTargetKey(target)] ?? null,
-				});
+		let loading = schemaList.loading;
+		for (const schema of schemaList.names) {
+			for (const { category, kind } of CATEGORIES) {
+				const key = nodeKey(connectionId, [
+					{ kind: "schema", name: schema },
+					{ kind: category as SchemaPathSegment["kind"], name: category },
+				]);
+				const state = children[key];
+				if (state === undefined || state.status === "loading") {
+					loading = true;
+					continue;
+				}
+				if (state.status === "error") {
+					// A category this engine does not have is not a failure worth
+					// reporting here; the ungrouped tree already says so.
+					continue;
+				}
+				for (const node of state.nodes) {
+					const target: DomainTarget = { schema, name: node.name, kind };
+					objects.push({
+						...target,
+						domainId: tags[domainTargetKey(target)] ?? null,
+					});
+				}
 			}
 		}
 		objects.sort(
@@ -111,7 +141,7 @@ function useAllObjects(
 				a.schema.localeCompare(b.schema) || a.name.localeCompare(b.name),
 		);
 		return { objects, loading };
-	}, [children, connectionId, schema, tags]);
+	}, [children, connectionId, schemaList, tags]);
 }
 
 type DropHandlers = {
@@ -379,11 +409,15 @@ function Group(props: {
 
 export function DomainGroups(props: {
 	connectionId: string;
-	schema: string;
+	/** The tree's root: one schema, or empty for "all schemas". */
+	rootPath: readonly SchemaPathSegment[];
 	filter: string;
 }) {
 	const domains = useDomainsStore(selectDomains(props.connectionId));
-	const { objects, loading } = useAllObjects(props.connectionId, props.schema);
+	const { objects, loading } = useAllObjects(
+		props.connectionId,
+		props.rootPath,
+	);
 	const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 	const [seeded, setSeeded] = useState(false);
 

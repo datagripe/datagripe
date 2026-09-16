@@ -64,6 +64,8 @@ export type DocumentFocusRequest = z.infer<typeof documentFocusRequestSchema>;
 export const presenceUserSchema = z.object({
 	userId: z.uuid(),
 	email: z.string().email(),
+	/** Their display name, when they have set one (docs/spec/updates.md). */
+	name: z.string().nullable(),
 	activeDocumentId: z.uuid().nullable(),
 	lastSeenAt: z.iso.datetime(),
 });

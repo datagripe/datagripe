@@ -1,9 +1,4 @@
-import type {
-	Finding,
-	GripeSeverity,
-	ObjectDescribeResult,
-	ObjectTab,
-} from "@datagripe/contracts";
+import type { ObjectDescribeResult, ObjectTab } from "@datagripe/contracts";
 import {
 	ADAPTER_CAPABILITIES,
 	defaultTabForKind,
@@ -27,8 +22,11 @@ import { useGripesStore } from "../stores/gripes";
 import { useConnectionsStore } from "../stores/runtime";
 import { useSessionStore } from "../stores/session";
 import { ColumnsTab } from "./ColumnsTab";
+import { TextInput } from "./controls";
+import { DdlTab } from "./DdlTab";
 import { GripeAnnotations } from "./GripeAnnotations";
 import { IconRefresh, IconTable, SeverityIcon } from "./icons";
+import { worstSeverityForTab } from "./objectTabs";
 
 /**
  * Object view (docs/spec/object-view.md, brand-system.md "Object view —
@@ -61,29 +59,6 @@ const TAB_EMPTY: Record<ObjectTab, string> = {
 	statistics: "No statistics available for this object.",
 	ddl: "This engine did not return a definition.",
 };
-
-/** Matches the glyphs the gripe rows use, so the strip reads the same. */
-const SEVERITY_ORDER: GripeSeverity[] = ["blocker", "warning", "style"];
-
-/**
- * The worst severity among a tab's findings, or null when it has none.
- * A finding with no tab belongs to every tab, so it marks all of them.
- */
-export function worstSeverityForTab(
-	findings: Finding[],
-	tab: ObjectTab,
-): GripeSeverity | null {
-	const present = new Set(
-		findings
-			.filter(
-				(finding) =>
-					finding.at.kind === "object" &&
-					(finding.at.tab === undefined || finding.at.tab === tab),
-			)
-			.map((finding) => finding.severity),
-	);
-	return SEVERITY_ORDER.find((severity) => present.has(severity)) ?? null;
-}
 
 /** Why a tab is empty when the engine cannot answer it at all. */
 function unsupportedNote(tab: ObjectTab, adapter: string): string {
@@ -180,7 +155,7 @@ function DangerAction(props: {
 						" — production confirms with the project name, not the table"}
 					.
 				</span>
-				<input
+				<TextInput
 					value={typed}
 					onChange={(event) => setTyped(event.target.value)}
 					placeholder={expected}
@@ -256,6 +231,14 @@ function TabBody(props: {
 	data: ObjectDescribeResult;
 	adapterName: string;
 	columnEditing: React.ComponentProps<typeof ColumnsTab> | null;
+	/** What the definition tab needs to be an editor rather than a page. */
+	ddl: {
+		viewId: string;
+		connectionId: string;
+		readOnly: boolean;
+		canApply: boolean;
+		onApplied: () => void;
+	} | null;
 }) {
 	const { data, tab } = props;
 
@@ -401,19 +384,18 @@ function TabBody(props: {
 			);
 
 		default:
-			return data.ddl === null ? (
+			return data.ddl === null || props.ddl === null ? (
 				<div className="dg-tree-note">{TAB_EMPTY.ddl}</div>
 			) : (
-				<>
-					{data.ddlReconstructed && (
-						<div className="dg-tree-note">
-							Reconstructed from the catalog — PostgreSQL has no server-side DDL
-							export, so this is accurate but not byte-for-byte what was
-							executed.
-						</div>
-					)}
-					<pre className="dg-ov-ddl">{data.ddl}</pre>
-				</>
+				<DdlTab
+					viewId={props.ddl.viewId}
+					connectionId={props.ddl.connectionId}
+					ddl={data.ddl}
+					reconstructed={data.ddlReconstructed}
+					readOnly={props.ddl.readOnly}
+					canApply={props.ddl.canApply}
+					onApplied={props.ddl.onApplied}
+				/>
 			);
 	}
 }
@@ -677,6 +659,13 @@ export function ObjectView(props: IDockviewPanelProps) {
 						tab={tab}
 						data={data}
 						adapterName={connection?.adapter ?? "This engine"}
+						ddl={{
+							viewId: props.api.id,
+							connectionId: params.connectionId,
+							readOnly,
+							canApply: currentWorkspace?.role !== "viewer",
+							onApplied: () => void load(),
+						}}
 						columnEditing={
 							// A view's columns come from its query and a routine has
 							// none, so only a base table's columns are editable.

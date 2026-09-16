@@ -2,10 +2,17 @@ import { userColor } from "../editor/remoteCursors";
 import { useDocumentsStore } from "../stores/documents";
 import { usePresenceStore } from "../stores/presence";
 import { useSessionStore } from "../stores/session";
+import { initials } from "../utils/gravatar";
 
 /**
  * Online members of the workspace (6b): who is connected and which
  * document they have open, with an opt-in Follow (6c).
+ *
+ * Named the way the header names you — the face, then the name if they
+ * have set one and the address if they have not (docs/spec/updates.md
+ * "The account menu"). One rule for calling a person something, so a
+ * project where everybody has a name is a project with no addresses in
+ * it, and the colour of the disc is the same colour their cursor is.
  */
 export function PresenceSidebar() {
 	const users = usePresenceStore((state) => state.users);
@@ -33,11 +40,17 @@ export function PresenceSidebar() {
 							<li key={user.userId}>
 								<div className="dg-document-row">
 									<span
-										className="dg-presence-dot"
+										className="dg-avatar-face dg-presence-face"
 										style={{ background: userColor(user.userId) }}
-									/>
-									<span className="dg-document-open dg-presence-name">
-										{user.email}
+										aria-hidden="true"
+									>
+										{initials(user.name ?? user.email)}
+									</span>
+									<span
+										className="dg-document-open dg-presence-name"
+										title={user.email}
+									>
+										{user.name ?? user.email}
 										{activeDoc !== undefined && (
 											<span className="dg-presence-doc"> · {activeDoc}</span>
 										)}

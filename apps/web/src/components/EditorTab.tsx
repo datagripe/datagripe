@@ -2,6 +2,7 @@ import type { IDockviewPanelHeaderProps } from "dockview-react";
 import { useEffect, useRef } from "react";
 import { panelDocumentId } from "../app/editorPanels";
 import { useDocumentsStore } from "../stores/documents";
+import { useObjectDraftsStore } from "../stores/objectDrafts";
 import { IconClose, IconObject, IconTable } from "./icons";
 
 /**
@@ -20,6 +21,11 @@ export function EditorTab(props: IDockviewPanelHeaderProps) {
 			: undefined;
 	const doc = useDocumentsStore((state) =>
 		documentId === undefined ? undefined : state.documents[documentId],
+	);
+	// An object view has no document; its unsaved definition is here
+	// (components/DdlTab.tsx).
+	const objectDirty = useObjectDraftsStore(
+		(state) => state.dirty[props.api.id] === true,
 	);
 
 	/**
@@ -70,7 +76,7 @@ export function EditorTab(props: IDockviewPanelHeaderProps) {
 				</span>
 			)}
 			<span className="dg-tab-title">{doc?.title ?? props.api.title}</span>
-			{doc?.dirty === true && (
+			{(doc?.dirty === true || objectDirty) && (
 				<span className="dg-tab-dirty" title="Unsaved changes" />
 			)}
 			<button
