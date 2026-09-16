@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { adapterInfoSchema, connectionAdapterSchema } from "./adapters";
-import { workspaceRoleSchema } from "./auth";
 import { connectionParamsSchema } from "./connectionParams";
 import { datasourcePathSchema } from "./files";
 import { documentListEntrySchema } from "./multiplayer";
+import { capabilitySchema } from "./permissions";
 
 /** Connection contracts. Secrets are write-only; never serialized back to clients. */
 
@@ -219,7 +219,10 @@ export type ConnectionTestRequest = z.infer<typeof connectionTestRequestSchema>;
 export const workspaceDescriptorSchema = z.object({
 	id: z.uuid(),
 	name: z.string().min(1).max(255),
-	role: workspaceRoleSchema,
+	/** The role's name: a built-in's, or one this project made. */
+	role: z.string(),
+	/** What that role may do here (docs/spec/permissions.md). */
+	capabilities: z.array(capabilitySchema),
 	/** Workspace default target: managed UUID or "predefined:<slug>". */
 	defaultConnectionRef: z.string().nullable(),
 });

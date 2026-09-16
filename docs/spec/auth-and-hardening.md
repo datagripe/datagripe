@@ -146,6 +146,14 @@ Configuration: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
 | `GET /api/auth/google/start` | – | 302 to Google + `dg_oauth` cookie |
 | `GET /api/auth/google/callback` | `?code&state` | session cookie, or 302 with `auth_error` |
 
+### Roles
+
+Superseded by `docs/spec/permissions.md`: a role is a project's own
+name and set of capabilities, and the three ranks are seeded rows with
+the capabilities they always had. What is still true here is where the
+check happens — on every message, in the dispatcher, against what the
+socket resolved at upgrade.
+
 ### Which methods a deployment offers
 
 Each method is independently switchable, so a server can be locked to

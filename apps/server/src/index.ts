@@ -1,5 +1,8 @@
 import path from "node:path";
-import { TABLE_PAGE_MAX_ROWS } from "@datagripe/contracts";
+import {
+	BUILTIN_ROLE_CAPABILITIES,
+	TABLE_PAGE_MAX_ROWS,
+} from "@datagripe/contracts";
 import {
 	MysqlAdapter,
 	PostgresAdapter,
@@ -404,7 +407,13 @@ const server = serve<SocketData>({
 			const requested = url.searchParams.get("workspace");
 			const workspace =
 				localAuth !== null
-					? { ...localAuth.workspace, role: "owner" as const }
+					? {
+							...localAuth.workspace,
+							role: "owner",
+							// Direct-in is one person with nothing to share, so the
+							// matrix has nothing to decide (docs/spec/permissions.md).
+							capabilities: BUILTIN_ROLE_CAPABILITIES.owner,
+						}
 					: requested !== null
 						? ((await workspaceForMember(appDb, session.userId, requested)) ??
 							(await defaultWorkspaceFor(appDb, session.userId)))
@@ -437,6 +446,7 @@ const server = serve<SocketData>({
 							defaultConnectionRef: workspace.defaultConnectionRef,
 						},
 						role: workspace.role,
+						capabilities: workspace.capabilities,
 					},
 				})
 			) {

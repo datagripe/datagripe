@@ -33,6 +33,20 @@ export class SocketHub {
 		}
 	}
 
+	/**
+	 * Every socket in a project, so a permission change reaches the
+	 * sessions it changes. A socket carries the capabilities it was
+	 * opened with — resolving them per message would be a query per
+	 * message — so the one thing that must not wait for a reconnect is
+	 * somebody having a capability taken away
+	 * (docs/spec/permissions.md).
+	 */
+	socketsInWorkspace(workspaceId: string): Bun.ServerWebSocket<SocketData>[] {
+		return [...this.sockets].filter(
+			(ws) => ws.data.workspace.id === workspaceId,
+		);
+	}
+
 	broadcastToWorkspace(workspaceId: string, event: ServerEvent): void {
 		const text = JSON.stringify(event);
 		for (const ws of this.sockets) {

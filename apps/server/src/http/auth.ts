@@ -1,4 +1,5 @@
 import {
+	BUILTIN_ROLE_CAPABILITIES,
 	loginRequestSchema,
 	type SessionBootstrap,
 	signupRequestSchema,
@@ -145,7 +146,13 @@ export function createAuthRoutes(deps: AuthRouteDeps) {
 				SELECT email, display_name FROM users WHERE id = ${userId}
 			`,
 			localAuth !== null
-				? Promise.resolve({ ...localAuth.workspace, role: "owner" as const })
+				? // Direct-in: one person, no membership rows, and everything
+					// they may do is everything there is.
+					Promise.resolve({
+						...localAuth.workspace,
+						role: "owner",
+						capabilities: BUILTIN_ROLE_CAPABILITIES.owner,
+					})
 				: defaultWorkspaceFor(appDb, userId),
 		]);
 		return {

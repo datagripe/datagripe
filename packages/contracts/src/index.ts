@@ -16,6 +16,7 @@ export * from "./gripes";
 export * from "./mcp";
 export * from "./multiplayer";
 export * from "./objects";
+export * from "./permissions";
 export * from "./predefined";
 export * from "./repoCommands";
 export * from "./schemaChange";

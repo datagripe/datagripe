@@ -9,7 +9,10 @@ import { log } from "../log";
 type MemberRow = {
 	user_id: string;
 	email: string;
+	display_name: string | null;
 	role: "owner" | "editor" | "viewer";
+	role_id: string | null;
+	role_name: string | null;
 	since: string | Date;
 };
 
@@ -18,16 +21,20 @@ export async function listMembers(
 	workspaceId: string,
 ): Promise<WorkspaceMember[]> {
 	const rows = await appDb<MemberRow[]>`
-		SELECT m.user_id, u.email, m.role, m.created_at AS since
+		SELECT m.user_id, u.email, u.display_name, m.role, m.role_id,
+		       r.name AS role_name, m.created_at AS since
 		FROM workspace_members m
 		JOIN users u ON u.id = m.user_id
+		LEFT JOIN workspace_roles r ON r.id = m.role_id
 		WHERE m.workspace_id = ${workspaceId}
 		ORDER BY m.created_at
 	`;
 	return rows.map((row) => ({
 		userId: row.user_id,
 		email: row.email,
-		role: row.role,
+		name: row.display_name,
+		role: row.role_name ?? row.role,
+		roleId: row.role_id,
 		since: new Date(row.since).toISOString(),
 	}));
 }
@@ -58,15 +65,26 @@ export async function addMember(
 			`'${email}' is already a member`,
 		);
 	}
+	// Into the built-in role of that name, so a new member starts with
+	// whatever this project decided that role means
+	// (docs/spec/permissions.md).
 	await appDb`
-		INSERT INTO workspace_members (workspace_id, user_id, role)
-		VALUES (${workspaceId}, ${user.id}, ${role})
+		INSERT INTO workspace_members (workspace_id, user_id, role, role_id)
+		VALUES (
+			${workspaceId},
+			${user.id},
+			${role},
+			(SELECT id FROM workspace_roles
+			  WHERE workspace_id = ${workspaceId} AND builtin = ${role})
+		)
 	`;
 	log.audit("workspace.member.add", { workspaceId, userId: user.id, role });
 	return {
 		userId: user.id,
 		email: user.email,
+		name: null,
 		role,
+		roleId: null,
 		since: new Date().toISOString(),
 	};
 }

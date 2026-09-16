@@ -2654,6 +2654,92 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
  * does while you drag it.
  */
 
+/* ---- the role matrix (components/RolesSection.tsx) --------------- *
+ * Capabilities down, roles across. The first column is sticky because
+ * the question is always "which capability is this row" and a project
+ * with six roles scrolls sideways.
+ */
+
+.dg-matrix-scroll {
+	max-width: 100%;
+	overflow-x: auto;
+	border: 1px solid var(--dg-rule);
+	border-radius: var(--dg-radius-input);
+	margin-bottom: 10px;
+}
+
+.dg-matrix {
+	border-collapse: collapse;
+	font-size: var(--dg-fs-meta);
+	min-width: 100%;
+}
+
+.dg-matrix th,
+.dg-matrix td {
+	text-align: left;
+	font-weight: 400;
+	padding: 6px 10px;
+	border-bottom: 1px solid var(--dg-rule-soft);
+	vertical-align: top;
+}
+
+.dg-matrix-head,
+.dg-matrix-capability {
+	position: sticky;
+	left: 0;
+	background: var(--dg-panel);
+	min-width: 220px;
+	max-width: 340px;
+}
+
+.dg-matrix-capability span {
+	display: block;
+	color: var(--dg-ink-dim);
+}
+
+.dg-matrix-detail {
+	color: var(--dg-ink-faint);
+	max-width: 46ch;
+	line-height: 1.45;
+}
+
+.dg-matrix-role {
+	white-space: nowrap;
+	color: var(--dg-ink);
+	font-family: var(--dg-font-mono);
+}
+
+.dg-matrix-role span {
+	display: block;
+}
+
+.dg-matrix-members {
+	color: var(--dg-ink-faint);
+	font-size: calc(10px * var(--dg-scale));
+}
+
+/* A group heading is a row, so it scrolls with the matrix rather than
+   pretending to be a second table. */
+.dg-matrix-group th {
+	background: var(--dg-raised);
+	color: var(--dg-ink-mute);
+	font-family: var(--dg-font-mono);
+	position: sticky;
+	left: 0;
+}
+
+.dg-matrix-cell {
+	text-align: center;
+}
+
+.dg-matrix-new {
+	gap: 8px;
+}
+
+.dg-member-role {
+	max-width: 140px;
+}
+
 .dg-name-input {
 	max-width: 260px;
 }

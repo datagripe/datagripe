@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+### Added
+
+- **Roles are yours now.** A role is a name and a set of capabilities —
+  sixteen of them, from "run queries" to "manage the MCP server" to
+  "restart the server" — edited as a matrix in project settings, and a
+  project can add its own beside the three that ship with it. The
+  question people actually have is narrow and does not nest: *this*
+  person should be able to expose the project over MCP, *that* one runs
+  the sync, support tags domains and touches nothing. A rank could not
+  express any of it.
+
+  Owner, editor and viewer are still there, seeded with exactly the
+  capabilities those ranks always had, so **an upgrade changes nothing
+  about what anybody can do** — there is a test asserting precisely
+  that. Every action names at most one capability, the dispatcher checks
+  it on every message where the rank check used to be, and taking a
+  capability away reaches open sessions immediately rather than on their
+  next reconnect.
+
+  Reading stays off the list. Being a member is being able to read, and
+  hiding a table behind a checkbox in an application that hands out SQL
+  prompts would be a promise it cannot keep — that is written down in
+  [the spec](/specs/permissions/) rather than left to be discovered.
+
+  Two rules will stop you, and both are the old "cannot remove the last
+  owner" in a new shape: somebody must keep *manage members and roles*,
+  and a role somebody still holds cannot be deleted.
+
 ### Fixed
 
 - **A server that upgraded under an open tab left it there.** Restarting

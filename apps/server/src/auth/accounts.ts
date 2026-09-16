@@ -1,3 +1,5 @@
+import type { BuiltinRole, Capability } from "@datagripe/contracts";
+import { BUILTIN_ROLE_CAPABILITIES, CAPABILITIES } from "@datagripe/contracts";
 import type { AppDb } from "../db/app/pool";
 
 /**
@@ -187,9 +189,11 @@ export async function defaultWorkspaceFor(
 	userId: string,
 ): Promise<WorkspaceContext | null> {
 	const rows = await appDb<WorkspaceContextRow[]>`
-		SELECT w.id, w.name, m.role, w.default_connection_ref
+		SELECT w.id, w.name, m.role, w.default_connection_ref,
+		       r.name AS role_name, r.capabilities
 		FROM workspace_members m
 		JOIN workspaces w ON w.id = m.workspace_id
+		LEFT JOIN workspace_roles r ON r.id = m.role_id
 		WHERE m.user_id = ${userId}
 		ORDER BY w.created_at
 		LIMIT 1
@@ -204,9 +208,11 @@ export async function workspaceForMember(
 	workspaceId: string,
 ): Promise<WorkspaceContext | null> {
 	const rows = await appDb<WorkspaceContextRow[]>`
-		SELECT w.id, w.name, m.role, w.default_connection_ref
+		SELECT w.id, w.name, m.role, w.default_connection_ref,
+		       r.name AS role_name, r.capabilities
 		FROM workspace_members m
 		JOIN workspaces w ON w.id = m.workspace_id
+		LEFT JOIN workspace_roles r ON r.id = m.role_id
 		WHERE m.user_id = ${userId} AND w.id = ${workspaceId}
 	`;
 	return rows[0] === undefined ? null : rowToContext(rows[0]);
@@ -215,22 +221,36 @@ export async function workspaceForMember(
 export interface WorkspaceContext {
 	id: string;
 	name: string;
-	role: "owner" | "editor" | "viewer";
+	/** The role's name: a built-in's, or whatever this project called it. */
+	role: string;
+	/** What that role may do here (docs/spec/permissions.md). */
+	capabilities: Capability[];
 	defaultConnectionRef: string | null;
 }
 
 type WorkspaceContextRow = {
 	id: string;
 	name: string;
-	role: "owner" | "editor" | "viewer";
+	role: BuiltinRole;
+	role_name: string | null;
+	capabilities: string[] | null;
 	default_connection_ref: string | null;
 };
 
 function rowToContext(row: WorkspaceContextRow): WorkspaceContext {
+	const known = new Set<string>(CAPABILITIES);
 	return {
 		id: row.id,
 		name: row.name,
-		role: row.role,
+		role: row.role_name ?? row.role,
+		// The rank is the fallback: a database mid-upgrade has no role rows
+		// yet, and its members must not lose what they could already do.
+		capabilities:
+			row.capabilities === null
+				? BUILTIN_ROLE_CAPABILITIES[row.role]
+				: row.capabilities.filter((value): value is Capability =>
+						known.has(value),
+					),
 		defaultConnectionRef: row.default_connection_ref,
 	};
 }

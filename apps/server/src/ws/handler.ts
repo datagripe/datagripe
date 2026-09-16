@@ -1,3 +1,4 @@
+import type { Capability } from "@datagripe/contracts";
 import { ErrorCodes } from "@datagripe/contracts/errors";
 import {
 	clientRequestSchema,
@@ -21,7 +22,10 @@ export type SocketData = {
 	name: string | null;
 	sessionId: string;
 	workspace: { id: string; name: string; defaultConnectionRef: string | null };
-	role: "owner" | "editor" | "viewer";
+	/** The role's name, for messages and for display. */
+	role: string;
+	/** What that role may do here (docs/spec/permissions.md). */
+	capabilities: Capability[];
 };
 
 type ServerWebSocket = Bun.ServerWebSocket<SocketData>;
@@ -118,6 +122,7 @@ export function createWebsocketHandler(
 							sessionId: ws.data.sessionId,
 							workspace: ws.data.workspace,
 							role: ws.data.role,
+							capabilities: ws.data.capabilities,
 						},
 						request.action,
 						request.payload,

@@ -515,6 +515,33 @@ pixels for one particular pair of eyes.
 Exit: nothing in the shell is sized, ordered or documented by accident,
 and the version you are running is one click away.
 
+## Phase 20 — Roles with capabilities · shipped 2026-09-16
+
+Three ranks answered "can this person edit" and nothing else. What
+projects ask is narrower: this one may expose the project over MCP, that
+one runs the sync, support tags domains and touches nothing.
+
+- [x] A role is a **name and a set of capabilities**, roles belong to a
+      project, and a project can add its own beside the three that ship
+      with it
+- [x] Sixteen capabilities, grouped into four decisions, edited as a
+      matrix in project settings; each member row picks a role
+- [x] Owner, editor and viewer seeded with exactly what those ranks
+      always had, with a test asserting it — an upgrade changes nothing
+      about what anybody can already do
+- [x] Every action names at most one capability, checked on every
+      message where the rank check used to be; a test refuses a new
+      writing action that names none
+- [x] Taking a capability away reaches open sessions **now** rather than
+      on their next reconnect
+- [x] Somebody must keep *manage members and roles*, and a role somebody
+      holds cannot be deleted — the old "cannot remove the last owner",
+      in the shape a matrix gives it
+- [x] Reading is deliberately not a capability, and the spec says why
+
+Exit: what a person may do in a project is a sentence somebody wrote
+down, not a rank somebody chose from three.
+
 ## Gripes about Datagripe
 
 It has opinions about your schema. These are the ones it has about

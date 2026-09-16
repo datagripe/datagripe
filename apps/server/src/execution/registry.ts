@@ -139,7 +139,13 @@ export interface ExecutionRegistry {
 	) => Promise<ExecutionOutcome>;
 	cancel: (
 		userId: string,
-		role: "owner" | "editor" | "viewer",
+		/**
+		 * Whether this person may cancel an execution that is not theirs.
+		 * A boolean rather than a role: who that is became a project's
+		 * decision (docs/spec/permissions.md), and the registry should not
+		 * have to know which capability it is this week.
+		 */
+		canCancelOthers: boolean,
 		executionId: string,
 	) => Promise<ExecutionCancelResult>;
 	replay: (
@@ -547,7 +553,7 @@ export function createExecutionRegistry(
 			};
 		},
 
-		async cancel(userId, role, executionId) {
+		async cancel(userId, canCancelOthers, executionId) {
 			const record = records.get(executionId);
 			if (record === undefined) {
 				throw new ServiceError(
@@ -555,11 +561,12 @@ export function createExecutionRegistry(
 					`Execution '${executionId}' not found`,
 				);
 			}
-			// Executors cancel their own; cancelling someone else's needs owner.
-			if (record.userId !== userId && role !== "owner") {
+			// Executors cancel their own; cancelling someone else's is an
+			// administrative act over their work.
+			if (record.userId !== userId && !canCancelOthers) {
 				throw new ServiceError(
 					ErrorCodes.Forbidden,
-					"Only the executor or an owner can cancel an execution",
+					"Only the executor, or somebody who manages this project, can cancel an execution",
 				);
 			}
 			if (

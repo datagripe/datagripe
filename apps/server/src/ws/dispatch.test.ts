@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { BUILTIN_ROLE_CAPABILITIES } from "@datagripe/contracts";
 import type { ClientAction } from "@datagripe/contracts/ws";
 import { createConnectionsService } from "../connections/service";
 import { createRateLimiter } from "../security/rateLimit";
@@ -12,12 +13,13 @@ const WORKSPACE = {
 	defaultConnectionRef: null,
 };
 
-function ctx(role: AuthContext["role"]): AuthContext {
+function ctx(role: "owner" | "editor" | "viewer"): AuthContext {
 	return {
 		userId: "00000000-0000-4000-8000-000000000002",
 		sessionId: "00000000-0000-4000-8000-000000000003",
 		workspace: WORKSPACE,
 		role,
+		capabilities: BUILTIN_ROLE_CAPABILITIES[role],
 	};
 }
 

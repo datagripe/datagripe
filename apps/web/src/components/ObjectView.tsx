@@ -20,7 +20,7 @@ import {
 } from "../stores/branding";
 import { useGripesStore } from "../stores/gripes";
 import { useConnectionsStore } from "../stores/runtime";
-import { useSessionStore } from "../stores/session";
+import { useCan, useSessionStore } from "../stores/session";
 import { ColumnsTab } from "./ColumnsTab";
 import { TextInput } from "./controls";
 import { DdlTab } from "./DdlTab";
@@ -421,6 +421,11 @@ export function ObjectView(props: IDockviewPanelProps) {
 	const projectClass = useBrandingStore((state) =>
 		state.classFor(currentWorkspace?.id ?? null),
 	);
+	// Applying a definition runs a statement; changing a column is a
+	// structure change. Two capabilities, two questions
+	// (docs/spec/permissions.md).
+	const canRunQueries = useCan("query.run");
+	const canChangeSchema = useCan("schema.change");
 
 	// Which tabs exist depends on the kind, and the kind is known from the
 	// panel params before the describe lands — so the strip does not
@@ -663,7 +668,7 @@ export function ObjectView(props: IDockviewPanelProps) {
 							viewId: props.api.id,
 							connectionId: params.connectionId,
 							readOnly,
-							canApply: currentWorkspace?.role !== "viewer",
+							canApply: canRunQueries,
 							onApplied: () => void load(),
 						}}
 						columnEditing={
@@ -673,13 +678,12 @@ export function ObjectView(props: IDockviewPanelProps) {
 								? {
 										data,
 										supported: capabilities.columnChanges,
-										canEdit: currentWorkspace?.role !== "viewer" && !readOnly,
-										readOnlyReason:
-											currentWorkspace?.role === "viewer"
-												? "viewers cannot change structure"
-												: readOnly
-													? "read-only analytics replica"
-													: null,
+										canEdit: canChangeSchema && !readOnly,
+										readOnlyReason: !canChangeSchema
+											? "your role cannot change structure"
+											: readOnly
+												? "read-only analytics replica"
+												: null,
 										connectionId: params.connectionId,
 										onApplied: () => void load(),
 									}

@@ -1,8 +1,10 @@
 import type {
+	Capability,
 	WorkspaceMember,
 	WorkspaceMembersResult,
+	WorkspaceRoleEntry,
 } from "@datagripe/contracts";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { wsClient } from "../api/ws";
 import {
 	PROJECT_CLASS_COLORS,
@@ -13,6 +15,7 @@ import { useSessionStore } from "../stores/session";
 import { Select, TextInput } from "./controls";
 import { IconClose } from "./icons";
 import { MockBadge } from "./MockBadge";
+import { RolesSection } from "./RolesSection";
 
 /**
  * Project settings tab (header cog): rename, the mock class picker, and
@@ -20,6 +23,9 @@ import { MockBadge } from "./MockBadge";
  * class select and the Members modal. Rename and member edits are
  * owner-only; everyone else sees the current values.
  */
+/** Stable, so the selector above does not re-render on every read. */
+const EMPTY_CAPABILITIES: Capability[] = [];
+
 export function ProjectSettingsPanel() {
 	const currentWorkspace = useSessionStore((state) => state.currentWorkspace);
 	const authDisabled = useSessionStore(
@@ -32,6 +38,23 @@ export function ProjectSettingsPanel() {
 
 	const [name, setName] = useState(currentWorkspace?.name ?? "");
 	const [renameBusy, setRenameBusy] = useState(false);
+	// The project's roles, owned here: the member rows pick from the same
+	// list the matrix edits, and a role added in one has to appear in the
+	// other (docs/spec/permissions.md).
+	const [roles, setRoles] = useState<WorkspaceRoleEntry[] | null>(null);
+	const reloadRoles = useCallback(() => {
+		void wsClient
+			.request<{ roles: WorkspaceRoleEntry[] }>("role.list", {})
+			.then((result) => setRoles(result.roles))
+			.catch(() => setRoles([]));
+	}, []);
+	useEffect(reloadRoles, [reloadRoles]);
+
+	// What this member may do here decides what the page offers
+	// (docs/spec/permissions.md).
+	const capabilities = useSessionStore(
+		(state) => state.currentWorkspace?.capabilities ?? EMPTY_CAPABILITIES,
+	);
 	const [renameError, setRenameError] = useState<string | null>(null);
 
 	// The workspace can arrive after the panel (layout restore on boot).
@@ -52,9 +75,11 @@ export function ProjectSettingsPanel() {
 		);
 	}
 
-	const isOwner = currentWorkspace.role === "owner";
+	const canManageMembers = capabilities.includes("members.manage");
 	const canRename =
-		isOwner && name.trim().length > 0 && name.trim() !== currentWorkspace.name;
+		capabilities.includes("project.manage") &&
+		name.trim().length > 0 &&
+		name.trim() !== currentWorkspace.name;
 
 	const rename = async () => {
 		setRenameBusy(true);
@@ -81,18 +106,20 @@ export function ProjectSettingsPanel() {
 						<span>Name</span>
 						<TextInput
 							value={name}
-							disabled={!isOwner}
+							disabled={!canRename && name === currentWorkspace.name}
 							onChange={(event) => setName(event.target.value)}
 						/>
 					</label>
 				</div>
-				{!isOwner && (
-					<p className="dg-form-note">Only the project owner can rename it.</p>
+				{!capabilities.includes("project.manage") && (
+					<p className="dg-form-note">
+						Your role in this project cannot rename it.
+					</p>
 				)}
 				{renameError !== null && (
 					<p className="dg-test-failed">{renameError}</p>
 				)}
-				{isOwner && (
+				{capabilities.includes("project.manage") && (
 					<div className="dg-frow">
 						<button
 							type="button"
@@ -131,14 +158,32 @@ export function ProjectSettingsPanel() {
 					</p>
 				</fieldset>
 
-				{!authDisabled && <MembersSection isOwner={isOwner} />}
+				{!authDisabled && (
+					<MembersSection
+						canManage={canManageMembers}
+						roles={roles ?? []}
+						onChanged={reloadRoles}
+					/>
+				)}
+				{!authDisabled && (
+					<RolesSection
+						canManage={canManageMembers}
+						roles={roles}
+						reload={reloadRoles}
+					/>
+				)}
 			</div>
 		</div>
 	);
 }
 
 /** Workspace members: list for everyone; add/remove for owners. */
-function MembersSection(props: { isOwner: boolean }) {
+function MembersSection(props: {
+	canManage: boolean;
+	roles: WorkspaceRoleEntry[];
+	/** A member moving changes the counts the matrix shows. */
+	onChanged: () => void;
+}) {
 	const [members, setMembers] = useState<WorkspaceMember[] | null>(null);
 	const [email, setEmail] = useState("");
 	const [role, setRole] = useState<"editor" | "viewer">("editor");
@@ -153,6 +198,8 @@ function MembersSection(props: { isOwner: boolean }) {
 			);
 	};
 
+	const roles = props.roles;
+
 	useEffect(reload, []);
 
 	return (
@@ -165,9 +212,45 @@ function MembersSection(props: { isOwner: boolean }) {
 				<ul className="dg-member-list">
 					{members.map((member) => (
 						<li key={member.userId} className="dg-member-row">
-							<span className="dg-member-email">{member.email}</span>
-							<span className="dg-badge">{member.role}</span>
-							{props.isOwner && member.role !== "owner" && (
+							<span className="dg-member-email">
+								{member.name ?? member.email}
+							</span>
+							{props.canManage && roles.length > 0 ? (
+								<Select
+									className="dg-member-role"
+									value={member.roleId ?? ""}
+									aria-label={`Role for ${member.email}`}
+									onChange={(event) => {
+										setError(null);
+										void wsClient
+											.request("member.set-role", {
+												userId: member.userId,
+												roleId: event.target.value,
+											})
+											.then(() => {
+												reload();
+												props.onChanged();
+											})
+											.catch((err: unknown) =>
+												setError(
+													err instanceof Error ? err.message : "Change failed",
+												),
+											);
+									}}
+								>
+									{member.roleId === null && (
+										<option value="">{member.role}</option>
+									)}
+									{roles.map((role) => (
+										<option key={role.id} value={role.id}>
+											{role.name}
+										</option>
+									))}
+								</Select>
+							) : (
+								<span className="dg-badge">{member.role}</span>
+							)}
+							{props.canManage && member.role !== "owner" && (
 								<button
 									type="button"
 									className="dg-document-delete"
@@ -192,7 +275,7 @@ function MembersSection(props: { isOwner: boolean }) {
 					))}
 				</ul>
 			)}
-			{props.isOwner && (
+			{props.canManage && (
 				<form
 					className="dg-member-add"
 					onSubmit={(event) => {

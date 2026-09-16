@@ -1,4 +1,5 @@
 import type {
+	Capability,
 	Document,
 	DocumentOrigin,
 	RepoCommandsState,
@@ -8,6 +9,7 @@ import {
 	accessRoleSetRequestSchema,
 	accessRolesRequestSchema,
 	accountSetNameRequestSchema,
+	CAPABILITY_LABELS,
 	connectionCreateRequestSchema,
 	connectionDeleteRequestSchema,
 	connectionTestRequestSchema,
@@ -51,6 +53,7 @@ import {
 	mcpTokenRevokeRequestSchema,
 	memberAddRequestSchema,
 	memberRemoveRequestSchema,
+	memberSetRoleRequestSchema,
 	objectAlterRequestSchema,
 	objectDescribeRequestSchema,
 	redisGetRequestSchema,
@@ -58,6 +61,8 @@ import {
 	repoRunCancelRequestSchema,
 	repoRunRequestSchema,
 	repoTrustRequestSchema,
+	roleDeleteRequestSchema,
+	roleUpsertRequestSchema,
 	schemaChildrenRequestSchema,
 	tableMutateRequestSchema,
 	tableRowsRequestSchema,
@@ -129,6 +134,14 @@ import { log } from "../log";
 import type { McpService } from "../mcp/service";
 import type { PresenceTracker } from "../multiplayer/presence";
 import type { ViewBroadcastThrottle } from "../multiplayer/views";
+import {
+	CAPABILITY_FOR_ACTION,
+	capabilityArray,
+	listRoles as listWorkspaceRoles,
+	membershipFor,
+	seedBuiltinRoles,
+	wouldStrandProject,
+} from "../permissions";
 import type { RateLimiter } from "../security/rateLimit";
 import { addMember, listMembers, removeMember } from "../workspaces/members";
 import {
@@ -149,7 +162,10 @@ export interface AuthContext {
 	userId: string;
 	sessionId: string;
 	workspace: { id: string; name: string; defaultConnectionRef: string | null };
-	role: "owner" | "editor" | "viewer";
+	/** The role's name, for messages and for what a member row shows. */
+	role: string;
+	/** What that role may do here (docs/spec/permissions.md). */
+	capabilities: Capability[];
 }
 
 export type Dispatch = (
@@ -183,105 +199,54 @@ export interface DispatcherDeps {
 	restart?: (reason: string) => void;
 }
 
-const ROLE_RANK = { viewer: 0, editor: 1, owner: 2 } as const;
-type Role = keyof typeof ROLE_RANK;
-
-/** Minimum role per action (default viewer). */
-const MINIMUM_ROLE: Partial<Record<ClientAction, Role>> = {
-	"connection.create": "editor",
-	"connection.update": "editor",
-	"connection.delete": "editor",
-	"connection.test": "editor",
-	"document.create": "editor",
-	"document.save": "editor",
-	"document.archive": "editor",
-	"execution.start": "editor",
-	"execution.cancel": "editor",
-	"workspace.set-default-connection": "editor",
-	"table.mutate": "editor",
-	"object.alter": "editor",
-	"gripe.dismiss": "editor",
-	"gripe.restore": "editor",
-	"domain.upsert": "editor",
-	"domain.delete": "editor",
-	"domain.tag": "editor",
-	// Editor, like the other datasource settings it sits beside on the
-	// edit page. Using it still needs `owner`, because that is the step
-	// that writes to disk.
-	"domain.set-export-path": "editor",
-	// Same reasoning: configuring a datasource's paths is a datasource
-	// setting, sitting on the edit page with the rest of them. Reading
-	// what is inside one is a viewer action — the sidebar is how you find
-	// the query you were asked to run.
-	"datasource.set-paths": "editor",
-	"datasource.check-path": "editor",
-	// `file.open` caches the file as a workspace document, and a save
-	// writes it back to disk, so it is an editor action rather than a
-	// viewer one.
-	"file.open": "editor",
-	// Export writes to the host filesystem and git talks to a remote.
-	// Reading who can do what is not a mutation, so `access.report` and
-	// `domain.list` stay open to viewers: hiding the report from viewers
-	// would mean the people most likely to notice a mistake cannot look.
-	"access.roles.set": "editor",
-	"domain.export": "owner",
-	"domain.import": "owner",
-	"domain.git": "owner",
-	// The repository section (docs/spec/git-datasources.md "Actions").
-	//
-	// `commit` and `pull` are a deliberate departure from
-	// docs/spec/domains.md, where every git verb is `owner`. That rule
-	// exists because `domain.git` writes a generated tree and pushes it;
-	// an editor who may already open a file, edit it and write it back to
-	// disk is not meaningfully more dangerous for being able to record
-	// that in the local history.
-	"git.status": "editor",
-	"git.stage": "editor",
-	"git.commit": "editor",
-	"git.pull": "editor",
-	"git.datasource.reload": "editor",
-	// The password and the two overrides are this project's settings
-	// about a datasource, like the export path it sits beside on the same
-	// page — not a change to the datasource itself.
-	"git.datasource.set-options": "editor",
-	"datasource.export-config": "editor",
-	// Approving a command list is the moment somebody vouches for code
-	// from a repository, and running one executes it on the host. Both
-	// are `owner`: this is the only feature in DataGripe that runs a
-	// program it did not write (docs/spec/repo-commands.md).
-	"repo.trust": "owner",
-	"repo.run": "owner",
-	"repo.run.cancel": "owner",
-	// These two reach the network, which is where the line is.
-	"git.push": "owner",
-	"git.datasource.add": "owner",
-	"git.datasource.remove": "owner",
-	"workspace.rename": "owner",
-	"workspace.member.add": "owner",
-	"workspace.member.remove": "owner",
-	// MCP is an owner decision, like repository trust: it is the switch
-	// that lets something outside the app read the project and run
-	// queries in a member's name (docs/spec/mcp.md). Reading the state is
-	// owner-only too, because it carries the token list — and because the
-	// panel is absent for everybody else rather than disabled.
-	// Restarting is the one action here that is about the deployment
-	// rather than the project. Owner, because it interrupts everybody in
-	// it — and it is only ever offered where a supervisor will bring the
-	// process back (docs/spec/updates.md).
-	"app.restart": "owner",
-	"mcp.status": "owner",
-	"mcp.settings": "owner",
-	"mcp.settings.set": "owner",
-	"mcp.token.create": "owner",
-	"mcp.token.revoke": "owner",
-};
-
-function requireRole(ctx: AuthContext, action: ClientAction): void {
-	const minimum = MINIMUM_ROLE[action] ?? "viewer";
-	if (ROLE_RANK[ctx.role] < ROLE_RANK[minimum]) {
+/**
+ * An action needs at most one capability, and most need none: being a
+ * member is being able to read (apps/server/src/permissions.ts, which
+ * holds the map — it is the security boundary and lives in one place).
+ */
+function requireCapability(ctx: AuthContext, action: ClientAction): void {
+	const needed = CAPABILITY_FOR_ACTION[action];
+	if (needed !== undefined && !ctx.capabilities.includes(needed)) {
 		throw new ServiceError(
 			ErrorCodes.Forbidden,
-			`Role '${ctx.role}' cannot perform '${action}'`,
+			`Role '${ctx.role}' cannot '${CAPABILITY_LABELS[needed].title.toLowerCase()}' in this project`,
+		);
+	}
+}
+
+/**
+ * Re-resolve every open socket in a project and tell each session what
+ * it may now do. Called after anything that changes a role or who holds
+ * one: a capability taken away must not wait for a reconnect, and the
+ * interface has to stop offering what the server would now refuse.
+ */
+async function refreshPermissions(
+	deps: Pick<DispatcherDeps, "appDb" | "hub">,
+	workspaceId: string,
+): Promise<void> {
+	for (const ws of deps.hub.socketsInWorkspace(workspaceId)) {
+		const membership = await membershipFor(
+			deps.appDb,
+			workspaceId,
+			ws.data.userId,
+		);
+		if (membership === null) {
+			continue;
+		}
+		ws.data.role = membership.role;
+		ws.data.capabilities = membership.capabilities;
+		ws.send(
+			JSON.stringify({
+				version: 1,
+				kind: "event",
+				eventId: crypto.randomUUID(),
+				topic: "workspace.permissions",
+				occurredAt: new Date().toISOString(),
+				payload: {
+					role: membership.role,
+					capabilities: membership.capabilities,
+				},
+			}),
 		);
 	}
 }
@@ -514,7 +479,7 @@ export function createDispatcher(deps: DispatcherDeps): Dispatch {
 	}
 
 	return async (ctx, action, payload) => {
-		requireRole(ctx, action);
+		requireCapability(ctx, action);
 		const scope = RATE_SCOPES[action];
 		if (scope !== undefined && !rateLimiter.take(scope, ctx.userId)) {
 			throw new ServiceError(
@@ -556,6 +521,7 @@ export function createDispatcher(deps: DispatcherDeps): Dispatch {
 						name: workspace.name,
 						defaultConnectionRef: workspace.defaultConnectionRef,
 						role: ctx.role,
+						capabilities: ctx.capabilities,
 					},
 					connections: await connections.listConnections(workspace),
 					adapters: connections.adapterInfos(),
@@ -806,6 +772,145 @@ export function createDispatcher(deps: DispatcherDeps): Dispatch {
 					request.idempotencyKey,
 					() => connections.alterColumns(workspace, request),
 				);
+			}
+
+			// The project's roles (docs/spec/permissions.md). Reading them is
+			// a member action: knowing what the roles here can do is how you
+			// know what you may ask somebody for.
+			case "role.list":
+				return { roles: await listWorkspaceRoles(appDb, workspace.id) };
+
+			case "role.upsert": {
+				const request = roleUpsertRequestSchema.parse(payload);
+				await seedBuiltinRoles(appDb, workspace.id);
+				const name = request.name.trim();
+				if (request.id === undefined) {
+					const rows = await appDb<Array<{ id: string }>>`
+						INSERT INTO workspace_roles (workspace_id, name, capabilities)
+						VALUES (
+							${workspace.id},
+							${name},
+							${capabilityArray(request.capabilities)}::text[]
+						)
+						RETURNING id
+					`;
+					log.audit("role.create", {
+						workspaceId: workspace.id,
+						userId: ctx.userId,
+						role: name,
+						capabilities: request.capabilities,
+					});
+					return { id: rows[0]?.id };
+				}
+				// A built-in's capabilities are editable; its name is not, so
+				// "owner" means the same thing in every project.
+				const rows = await appDb<Array<{ builtin: string | null }>>`
+					SELECT builtin FROM workspace_roles
+					WHERE id = ${request.id} AND workspace_id = ${workspace.id}
+				`;
+				const existing = rows[0];
+				if (existing === undefined) {
+					throw new ServiceError(ErrorCodes.NotFound, "No such role");
+				}
+				await appDb`
+					UPDATE workspace_roles
+					SET capabilities = ${capabilityArray(request.capabilities)}::text[],
+					    name = ${existing.builtin ?? name}
+					WHERE id = ${request.id} AND workspace_id = ${workspace.id}
+				`;
+				await refreshPermissions(deps, workspace.id);
+				log.audit("role.update", {
+					workspaceId: workspace.id,
+					userId: ctx.userId,
+					roleId: request.id,
+					capabilities: request.capabilities,
+				});
+				return { id: request.id };
+			}
+
+			case "role.delete": {
+				const request = roleDeleteRequestSchema.parse(payload);
+				const rows = await appDb<
+					Array<{ builtin: string | null; members: string }>
+				>`
+					SELECT r.builtin,
+					       (SELECT count(*) FROM workspace_members m
+					         WHERE m.role_id = r.id) AS members
+					FROM workspace_roles r
+					WHERE r.id = ${request.id} AND r.workspace_id = ${workspace.id}
+				`;
+				const role = rows[0];
+				if (role === undefined) {
+					throw new ServiceError(ErrorCodes.NotFound, "No such role");
+				}
+				if (role.builtin !== null) {
+					throw new ServiceError(
+						ErrorCodes.BadRequest,
+						"Owner, editor and viewer exist in every project and cannot be removed",
+					);
+				}
+				if (Number(role.members) > 0) {
+					// Deleting a role somebody holds would silently demote them,
+					// and a silent demotion is discovered as a bug report.
+					throw new ServiceError(
+						ErrorCodes.BadRequest,
+						`${role.members} member(s) still hold this role — move them first`,
+					);
+				}
+				await appDb`
+					DELETE FROM workspace_roles
+					WHERE id = ${request.id} AND workspace_id = ${workspace.id}
+				`;
+				log.audit("role.delete", {
+					workspaceId: workspace.id,
+					userId: ctx.userId,
+					roleId: request.id,
+				});
+				return {};
+			}
+
+			case "member.set-role": {
+				const request = memberSetRoleRequestSchema.parse(payload);
+				const rows = await appDb<Array<{ builtin: string | null }>>`
+					SELECT builtin FROM workspace_roles
+					WHERE id = ${request.roleId} AND workspace_id = ${workspace.id}
+				`;
+				const role = rows[0];
+				if (role === undefined) {
+					throw new ServiceError(ErrorCodes.NotFound, "No such role");
+				}
+				// Somebody has to keep the keys. The old rule was "not the last
+				// owner"; with a matrix it is "not the last person who can
+				// manage members", which is the same rule about the same door.
+				if (
+					await wouldStrandProject(
+						appDb,
+						workspace.id,
+						request.userId,
+						request.roleId,
+					)
+				) {
+					throw new ServiceError(
+						ErrorCodes.Forbidden,
+						"Somebody has to be able to manage members — give that to another role first",
+					);
+				}
+				// The legacy rank goes with it: it is what a half-upgraded
+				// server falls back to, and it must not say something else.
+				await appDb`
+					UPDATE workspace_members
+					SET role_id = ${request.roleId},
+					    role = ${role.builtin ?? "editor"}
+					WHERE workspace_id = ${workspace.id} AND user_id = ${request.userId}
+				`;
+				await refreshPermissions(deps, workspace.id);
+				log.audit("member.set-role", {
+					workspaceId: workspace.id,
+					userId: ctx.userId,
+					memberId: request.userId,
+					roleId: request.roleId,
+				});
+				return {};
 			}
 
 			// Your own account, so no role gates it — a viewer is still a
@@ -1605,7 +1710,11 @@ export function createDispatcher(deps: DispatcherDeps): Dispatch {
 
 			case "execution.cancel": {
 				const request = executionCancelRequestSchema.parse(payload);
-				return executions.cancel(ctx.userId, ctx.role, request.executionId);
+				return executions.cancel(
+					ctx.userId,
+					ctx.capabilities.includes("members.manage"),
+					request.executionId,
+				);
 			}
 
 			case "execution.subscribe": {

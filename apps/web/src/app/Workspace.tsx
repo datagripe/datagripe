@@ -1,4 +1,5 @@
 import type {
+	Capability,
 	DatasourcePath,
 	DocumentChangedPayload,
 	PresenceUser,
@@ -61,7 +62,7 @@ import {
 	useExecutionsStore,
 	useExplorerStore,
 } from "../stores/runtime";
-import { useSessionStore } from "../stores/session";
+import { can, useCan, useSessionStore } from "../stores/session";
 import { useViewsStore } from "../stores/views";
 import {
 	closeEditorPanels,
@@ -218,7 +219,6 @@ export function Workspace() {
 		window.addEventListener("pointerup", onUp);
 	};
 
-	const currentWorkspace = useSessionStore((state) => state.currentWorkspace);
 	const hydrated = useDocumentsStore((state) => state.hydrated);
 	// The path sections belong to the datasource the tree is scoped to:
 	// switching datasource swaps them, the way it swaps the tree.
@@ -253,6 +253,7 @@ export function Workspace() {
 	// Whether this deployment has MCP, and whether this project's server
 	// is on — the section header needs both before anybody opens it.
 	const mcpStatus = useMcpStore((state) => state.status);
+	const canManageMcp = useCan("mcp.manage");
 	const followingEmail = presenceUsers.find(
 		(u) => u.userId === followingUserId,
 	)?.email;
@@ -294,9 +295,9 @@ export function Workspace() {
 					useSessionStore.getState().confirmWorkspace(result.workspace);
 					// The MCP switch is in a section header, so its state is
 					// needed whether or not the panel is ever opened — and only
-					// an owner may ask for it (docs/spec/mcp.md).
+					// somebody who may manage it can ask (docs/spec/mcp.md).
 					useMcpStore.getState().reset();
-					if (useSessionStore.getState().currentWorkspace?.role === "owner") {
+					if (can("mcp.manage")) {
 						void useMcpStore.getState().loadStatus();
 					}
 					// The status bar says whether this deployment is behind, so
@@ -324,6 +325,17 @@ export function Workspace() {
 				});
 		});
 		const offEvent = wsClient.onEvent((event) => {
+			// Somebody changed what this role may do, or moved this member
+			// into another one (docs/spec/permissions.md). The interface has
+			// to stop offering what the server would now refuse.
+			if (event.topic === "workspace.permissions") {
+				const payload = event.payload as {
+					role: string;
+					capabilities: Capability[];
+				};
+				useSessionStore.getState().applyPermissions(payload);
+				return;
+			}
 			if (event.topic === "presence.update") {
 				const payload = event.payload as { users: PresenceUser[] };
 				usePresenceStore.getState().setUsers(payload.users);
@@ -632,8 +644,7 @@ export function Workspace() {
 							// whether something outside the app can read this project
 							// is not a fact you should have to open a panel to learn
 							// (docs/spec/mcp.md "The panel").
-							...(currentWorkspace?.role === "owner" &&
-							mcpStatus?.available === true
+							...(canManageMcp && mcpStatus?.available === true
 								? [
 										{
 											id: "mcp",

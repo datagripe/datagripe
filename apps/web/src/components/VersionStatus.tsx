@@ -2,7 +2,7 @@ import type { DeploymentShape } from "@datagripe/contracts";
 import { useEffect, useRef, useState } from "react";
 import { UI_VERSION, useAppStore } from "../stores/app";
 import { usePwaStore } from "../stores/pwa";
-import { useSessionStore } from "../stores/session";
+import { useCan } from "../stores/session";
 
 /**
  * The version, bottom left (docs/spec/updates.md "The status bar").
@@ -52,7 +52,7 @@ export function VersionStatus() {
 	const checking = useAppStore((state) => state.checking);
 	const restarting = useAppStore((state) => state.restarting);
 	const error = useAppStore((state) => state.error);
-	const workspace = useSessionStore((state) => state.currentWorkspace);
+	const canRestart = useCan("server.restart");
 	// A service worker holding a new build is the third way to be behind.
 	const bundleWaiting = usePwaStore((state) => state.updateAvailable);
 
@@ -203,7 +203,7 @@ export function VersionStatus() {
 					{/* Not conditional on the check having found something: a
 						  deployment building its own image from a moving tag has an
 						  update the release feed has never heard of. */}
-					{version?.supervised === true && workspace?.role === "owner" && (
+					{version?.supervised === true && canRestart && (
 						<button
 							type="button"
 							className="dg-btn dg-btn-pri dg-version-action"

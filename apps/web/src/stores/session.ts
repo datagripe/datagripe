@@ -1,4 +1,5 @@
 import type {
+	Capability,
 	SessionBootstrap,
 	WorkspaceListEntry,
 	WorkspaceListResult,
@@ -22,7 +23,10 @@ const WORKSPACE_STORAGE_KEY = "dg.currentWorkspace";
 export interface CurrentWorkspace {
 	id: string;
 	name: string;
-	role: "owner" | "editor" | "viewer";
+	/** The role's name — a built-in's, or one this project made. */
+	role: string;
+	/** What that role may do here (docs/spec/permissions.md). */
+	capabilities: Capability[];
 	defaultConnectionRef: string | null;
 }
 
@@ -42,6 +46,11 @@ export type SessionState = {
 	createWorkspace: (name: string) => Promise<WorkspaceListEntry>;
 	renameWorkspace: (name: string) => Promise<void>;
 	confirmWorkspace: (workspace: CurrentWorkspace) => void;
+	/** A role changed under this session (docs/spec/permissions.md). */
+	applyPermissions: (next: {
+		role: string;
+		capabilities: Capability[];
+	}) => void;
 	login: (email: string, password: string) => Promise<boolean>;
 	signup: (email: string, password: string) => Promise<boolean>;
 	/** Usernameless: the key names the account (docs/spec/auth-and-hardening.md). */
@@ -139,6 +148,20 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
 	error: null,
 	busy: false,
 
+	applyPermissions(next) {
+		const current = get().currentWorkspace;
+		if (current === null) {
+			return;
+		}
+		set({
+			currentWorkspace: {
+				...current,
+				role: next.role,
+				capabilities: next.capabilities,
+			},
+		});
+	},
+
 	async setName(name) {
 		const trimmed = name.trim();
 		const { name: saved } = await wsClient.request<{ name: string | null }>(
@@ -172,6 +195,7 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
 							id: bootstrap.workspace.id,
 							name: bootstrap.workspace.name,
 							role: bootstrap.workspace.role,
+							capabilities: bootstrap.workspace.capabilities,
 							defaultConnectionRef: bootstrap.workspace.defaultConnectionRef,
 						}
 					: null),
@@ -325,3 +349,27 @@ export const useSessionStore = create<SessionState>()((set, get) => ({
 		await get().load();
 	},
 }));
+
+/**
+ * Whether the signed-in member may do a thing here.
+ *
+ * Not a hook, so it can be called from an event handler or a store as
+ * easily as from a render — and the answer is only ever advisory. The
+ * server checks the same capability on every message; this is what
+ * stops the interface offering a button that would be refused.
+ */
+export function can(capability: Capability): boolean {
+	return (
+		useSessionStore
+			.getState()
+			.currentWorkspace?.capabilities.includes(capability) ?? false
+	);
+}
+
+/** The same question, as a subscription, for a component that renders on it. */
+export function useCan(capability: Capability): boolean {
+	return useSessionStore(
+		(state) =>
+			state.currentWorkspace?.capabilities.includes(capability) ?? false,
+	);
+}

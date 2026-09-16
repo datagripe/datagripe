@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { capabilitySchema } from "./permissions";
 
 /** Authentication and workspace-membership contracts (ADR 0002). */
 
@@ -29,7 +30,11 @@ export const sessionBootstrapSchema = z.object({
 		.object({
 			id: z.uuid(),
 			name: z.string(),
-			role: workspaceRoleSchema,
+			/** The name of the role they hold — "owner", or whatever this
+			 * project called the one it made (docs/spec/permissions.md). */
+			role: z.string(),
+			/** What that role may do here. The client asks this, not the rank. */
+			capabilities: z.array(capabilitySchema),
 			defaultConnectionRef: z.string().nullable(),
 		})
 		.nullable(),
@@ -70,7 +75,11 @@ export type SignupRequest = z.infer<typeof signupRequestSchema>;
 export const workspaceMemberSchema = z.object({
 	userId: z.uuid(),
 	email: z.string().email(),
-	role: workspaceRoleSchema,
+	/** Their display name, when they have set one. */
+	name: z.string().nullable(),
+	/** The role's name, and the role it is (docs/spec/permissions.md). */
+	role: z.string(),
+	roleId: z.uuid().nullable(),
 	since: z.iso.datetime(),
 });
 

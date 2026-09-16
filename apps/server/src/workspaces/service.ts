@@ -1,8 +1,10 @@
-import type { WorkspaceListEntry } from "@datagripe/contracts";
+import type { BuiltinRole, WorkspaceListEntry } from "@datagripe/contracts";
+import { BUILTIN_ROLE_CAPABILITIES } from "@datagripe/contracts";
 import { ErrorCodes } from "@datagripe/contracts/errors";
 import { ServiceError } from "../connections/service";
 import type { AppDb } from "../db/app/pool";
 import { log } from "../log";
+import { capabilityArray } from "../permissions";
 
 /** Workspace lifecycle (workspaces are the project unit). */
 
@@ -20,9 +22,30 @@ export async function createWorkspace(
 		if (workspace === undefined) {
 			throw new ServiceError(ErrorCodes.Internal, "Insert returned no row");
 		}
+		// The three roles, and the creator in the one that can do
+		// everything (docs/spec/permissions.md). Seeded here rather than
+		// lazily so a project always has them, including in the same
+		// transaction that made it.
+		for (const builtin of ["viewer", "editor", "owner"] as BuiltinRole[]) {
+			await tx`
+				INSERT INTO workspace_roles (workspace_id, name, capabilities, builtin)
+				VALUES (
+					${workspace.id},
+					${builtin},
+					${capabilityArray(BUILTIN_ROLE_CAPABILITIES[builtin])}::text[],
+					${builtin}
+				)
+			`;
+		}
 		await tx`
-			INSERT INTO workspace_members (workspace_id, user_id, role)
-			VALUES (${workspace.id}, ${userId}, 'owner')
+			INSERT INTO workspace_members (workspace_id, user_id, role, role_id)
+			VALUES (
+				${workspace.id},
+				${userId},
+				'owner',
+				(SELECT id FROM workspace_roles
+				  WHERE workspace_id = ${workspace.id} AND builtin = 'owner')
+			)
 		`;
 		log.audit("workspace.create", { workspaceId: workspace.id, userId });
 		return { id: workspace.id, name, role: "owner" };

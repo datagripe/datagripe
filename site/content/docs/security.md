@@ -62,18 +62,28 @@ State-changing HTTP routes require a CSRF token matching the session's.
 ## Authorization is per action
 
 Socket authentication is not object authorization. The upgrade binds the
-socket to a user, a session, a workspace and a role — and the dispatcher
-then enforces the role matrix on **every single message**, not once at
-the door.
+socket to a user, a session, a workspace and the **capabilities** their
+role holds — and the dispatcher checks the capability an action needs on
+**every single message**, not once at the door.
+
+Roles are a project's own: a name and a set of capabilities, edited as a
+matrix in project settings ([roles](/docs/roles/)). Owner, editor and
+viewer exist in every project with the capabilities those three ranks
+always had, so nothing about an upgraded deployment changes.
 
 | | viewer | editor | owner |
 | --- | :-: | :-: | :-: |
 | Browse schema, read history, watch executions | yes | yes | yes |
-| Run and cancel queries | – | yes | yes |
-| Create, edit, delete and test datasources | – | yes | yes |
-| Add and remove workspace members | – | – | yes |
+| Run queries, edit data and structure, manage datasources | – | yes | yes |
+| Push, sync, repo commands, MCP, members, restart | – | – | yes |
 
-Owners cannot remove the last owner.
+Reading is not a capability: being a member is being able to read. A
+project where somebody must not see the data wants a second datasource,
+not a checkbox.
+
+Somebody must always be able to manage members — the modern form of
+"owners cannot remove the last owner" — and taking a capability away
+reaches open sessions immediately rather than on their next reconnect.
 
 ## Datasource credentials
 

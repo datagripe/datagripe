@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { wsClient } from "../api/ws";
 import { readViewPanelParams } from "../app/viewPanels";
 import { useConnectionsStore } from "../stores/runtime";
-import { useSessionStore } from "../stores/session";
+import { useCan } from "../stores/session";
 import { CellMenu, type CellMenuItem } from "./CellMenu";
 import {
 	canSetDefault,
@@ -321,7 +321,10 @@ export function TableView(props: IDockviewPanelProps) {
 	const connection = useConnectionsStore((state) =>
 		state.connections.find((entry) => entry.id === params.connectionId),
 	);
-	const role = useSessionStore((state) => state.currentWorkspace?.role);
+	// Editing rows and running a predicate are two different permissions
+	// (docs/spec/permissions.md): a role may have one without the other.
+	const canEditData = useCan("data.write");
+	const canRunQueries = useCan("query.run");
 
 	const [limit, setLimit] = useState<number>(ROW_LIMITS[0]);
 	const [offset, setOffset] = useState(0);
@@ -398,8 +401,7 @@ export function TableView(props: IDockviewPanelProps) {
 	const columns = data?.columns ?? [];
 	const rows = data?.rows ?? [];
 	const writableColumns = columns.filter((column) => !column.generated);
-	const canEdit =
-		data?.editable === true && role !== "viewer" && !saving && !loading;
+	const canEdit = data?.editable === true && canEditData && !saving && !loading;
 	const dirty = isDirty(edits);
 
 	const commit = async () => {
@@ -573,11 +575,10 @@ export function TableView(props: IDockviewPanelProps) {
 			{
 				label: "filter by this value",
 				separatorBefore: true,
-				disabled: role === "viewer" || isInsert,
-				title:
-					role === "viewer"
-						? "A predicate is arbitrary SQL, which viewers cannot run"
-						: "Replace the where … box with this cell's value",
+				disabled: !canRunQueries || isInsert,
+				title: canRunQueries
+					? "Replace the where … box with this cell's value"
+					: "A predicate is arbitrary SQL, which your role cannot run",
 				onSelect: () => {
 					const dialect = capabilities?.sqlDialect;
 					if (dialect == null) {
@@ -802,14 +803,14 @@ export function TableView(props: IDockviewPanelProps) {
 				</button>
 				<input
 					className="dg-tv-filter"
-					placeholder={role === "viewer" ? "where … (editors only)" : "where …"}
+					placeholder={canRunQueries ? "where …" : "where … (not your role)"}
 					aria-label="Row filter"
 					title={
-						role === "viewer"
-							? "A predicate is arbitrary SQL, which viewers cannot run"
-							: "Filter rows — press Enter to apply, Escape to clear"
+						canRunQueries
+							? "Filter rows — press Enter to apply, Escape to clear"
+							: "A predicate is arbitrary SQL, which your role cannot run"
 					}
-					disabled={role === "viewer"}
+					disabled={!canRunQueries}
 					value={filterDraft}
 					onChange={(event) => setFilterDraft(event.target.value)}
 					onKeyDown={(event) => {
@@ -1110,7 +1111,7 @@ export function TableView(props: IDockviewPanelProps) {
 						? "saving…"
 						: dirty
 							? `${pendingCount(edits)} pending — commit or revert`
-							: data?.editable === true && role !== "viewer"
+							: data?.editable === true && canEditData
 								? "read only until you edit a cell"
 								: (data?.reason ?? "read only")}
 				</span>

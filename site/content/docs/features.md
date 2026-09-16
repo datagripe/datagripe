@@ -113,8 +113,11 @@ hiding something rather than quietly showing you less.
 - Workspace files, presence, and follow mode.
 - Queries other people ran, each under their own identity, with an audit
   trail.
-- Roles per workspace — owner, editor, viewer — checked on every action
-  rather than at the door.
+- **Roles you define**: a role is a name and a set of capabilities —
+  run queries, tag domains, run the sync, manage the MCP server,
+  sixteen of them — edited as a matrix and checked on every action
+  rather than at the door. Owner, editor and viewer are there in every
+  project as the ranks they always were.
 
 ## Git
 
