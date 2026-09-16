@@ -26,6 +26,13 @@ export type ModelFactory<T extends ModelHandle = ModelHandle> = (
 export type ModelRegistryDeps<T extends ModelHandle = ModelHandle> = {
 	createModel: ModelFactory<T>;
 	/**
+	 * Retune a live model. A rename decides the language — `notes.sql`
+	 * to `notes.md` is how somebody asks for markdown — and the model
+	 * cannot be rebuilt to answer it: rebuilding throws away the undo
+	 * history and every open editor's view state along with it.
+	 */
+	setModelLanguage: (model: T, language: DocumentLanguage) => void;
+	/**
 	 * Called just before the last view's model is disposed — the seam where
 	 * the final content is checkpointed to drafts.
 	 */
@@ -40,21 +47,34 @@ export type DeferHandle = number | TimerHandle;
 
 export type ModelRegistry<T extends ModelHandle = ModelHandle> = {
 	acquire: (doc: RegistryDocument) => T;
+	/** Follow a rename: no-op for a document with no live model. */
+	setLanguage: (documentId: string, language: DocumentLanguage) => void;
 	release: (documentId: string) => void;
 	refCount: (documentId: string) => number;
 	has: (documentId: string) => boolean;
+};
+
+const URI_EXTENSION: Record<DocumentLanguage, string> = {
+	sql: "sql",
+	markdown: "md",
+	plaintext: "txt",
 };
 
 /**
  * The extension follows the language, so a markdown document's model
  * does not claim to be SQL to anything that reads the URI — Monaco's own
  * tooling included.
+ *
+ * It is fixed when the model is made. A model that is retuned by a
+ * rename keeps the URI it was born with — Monaco has no way to change
+ * one — so the extension here answers "what was this when it opened",
+ * and the language is the live answer.
  */
 export function documentModelUri(
 	documentId: string,
 	language: DocumentLanguage = "sql",
 ): string {
-	return `datagripe://document/${documentId}.${language === "markdown" ? "md" : "sql"}`;
+	return `datagripe://document/${documentId}.${URI_EXTENSION[language]}`;
 }
 
 /**
@@ -71,7 +91,7 @@ export function documentIdFromModelUri(uri: {
 	if (uri.scheme !== "datagripe" || uri.authority !== "document") {
 		return undefined;
 	}
-	return /^\/(.+)\.(?:sql|md)$/.exec(uri.path)?.[1];
+	return /^\/(.+)\.(?:sql|md|txt)$/.exec(uri.path)?.[1];
 }
 
 type TimerHandle = ReturnType<typeof setTimeout>;
@@ -113,6 +133,13 @@ export function createModelRegistry<T extends ModelHandle = ModelHandle>(
 			);
 			entries.set(doc.id, { model, refs: 1, disposeTimer: undefined });
 			return model;
+		},
+
+		setLanguage(documentId, language) {
+			const entry = entries.get(documentId);
+			if (entry !== undefined) {
+				deps.setModelLanguage(entry.model, language);
+			}
 		},
 
 		release(documentId) {

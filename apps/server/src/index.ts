@@ -436,6 +436,9 @@ const server = serve<SocketData>({
 				server.upgrade(req, {
 					data: {
 						requestId,
+						// One id per socket, not per session: two tabs are two
+						// sockets and only one of them made any given change.
+						socketId: crypto.randomUUID(),
 						userId: session.userId,
 						email: userRow[0]?.email ?? "",
 						name: userRow[0]?.display_name ?? null,

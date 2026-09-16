@@ -53,8 +53,8 @@ The layering from `docs/initial_idea.md` §5 applies unchanged:
 ```ts
 type EditorDocument = {
   id: string;             // uuid
-  title: string;          // unique-ish display name, e.g. "query-1.sql"
-  language: "sql";
+  title: string;          // display name, unique per list, e.g. "query-1.sql"
+  language: "sql" | "markdown" | "plaintext"; // from the name
   savedContent: string;   // content at last explicit save
   currentContent: string; // live content, may differ from savedContent
   revision: number;       // increments on every save
@@ -66,6 +66,40 @@ type EditorDocument = {
 
 `revision` exists so the later server sync can adopt
 `WHERE id = ? AND revision = ?` guarded saves without a model change.
+
+### Naming a document
+
+Creating and renaming both ask for a name **in the row the file
+occupies**, prefilled with `query-N.sql` for a new one and with the
+current name for a rename, with the extension left out of the initial
+selection so typing replaces the stem and keeps the suffix that decides
+the language. Enter takes it, Escape abandons it, clicking away takes
+it. This replaced `window.prompt`, which is the browser's dialog in the
+middle of an application that has its own (roadmap: `ui ·
+browser-chrome-in-an-app`) and could not show what the name was about to
+become.
+
+**A collision suggests rather than refuses.** A name already used in the
+same list gets `-1`, `-2`, … before its extension (`uniqueName` in
+contracts, case-insensitively — two files whose names differ only in
+case are two files nobody can tell apart in a sidebar), and the person
+can rename afterwards. Typing a name that is taken is far more often "I
+want another one of these" than a mistake, and a modal saying *that name
+is taken* makes somebody invent `notes2.md` by hand. Shared files and
+scratchpads are two lists and collide separately.
+
+A rename of a shared file saves: the title is the project's, not this
+browser's, and saving is how a title (and the language it decides)
+reaches everybody else.
+
+### Reverting
+
+`revertDocument` puts `currentContent` back to `savedContent`, clears
+`dirty`, cancels the pending draft checkpoint and deletes the draft row.
+It is in the sidebar's context menu, on dirty documents only, and it
+asks first — it is the one action here that throws typed content away.
+It does not write: the saved row and the server revision are untouched,
+because going back to the last save is not a new save.
 
 ### Persistence schema (Dexie, database `datagripe`, version 1)
 

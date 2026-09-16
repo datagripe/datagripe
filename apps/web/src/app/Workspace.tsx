@@ -518,11 +518,11 @@ export function Workspace() {
 		);
 	};
 
-	const newDocument = (shared: boolean) => {
+	const newDocument = (shared: boolean, title?: string) => {
 		if (dockApi === null) {
 			return;
 		}
-		const doc = useDocumentsStore.getState().createDocument(undefined, shared);
+		const doc = useDocumentsStore.getState().createDocument(title, shared);
 		openEditorPanel(dockApi, doc);
 	};
 

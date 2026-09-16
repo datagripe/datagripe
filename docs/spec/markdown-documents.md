@@ -39,10 +39,12 @@ gripes, and flips back.
 - **Not HTML.** Raw HTML in markdown is escaped and rendered as text,
   never passed through. A file from a checkout is content somebody else
   may have written.
-- **Not a third language.** JSON, YAML, TOML and the rest stay `sql` and
-  keep the wart, deliberately: markdown earns a language because it has
-  runnable content, and the others would be a syntax-highlighting
-  project with no end.
+- **Not a syntax-highlighting project.** JSON, YAML, TOML and the rest
+  are `plaintext`: a name for "no formatting", not a feature. Markdown
+  earns a language because it has runnable content; a highlighter per
+  extension has no end. (This was "they stay `sql`", which meant a
+  `.csv` opened out of a datasource path was a query with a thousand
+  findings in it.)
 - **Not a notebook.** Blocks do not share state, do not run in order,
   have no persisted outputs, and produce no artifact. Running one is
   running a query.
@@ -57,7 +59,14 @@ One rule, everywhere: **the extension of the name decides.**
 | --- | --- |
 | `maintenance.md`, `README.markdown` | `markdown` |
 | `blah.sql`, `query22.sql` | `sql` |
-| `notes`, `analysis.json` | `sql` |
+| `notes`, `Makefile`, `.env` | `sql` |
+| `analysis.json`, `rows.csv`, `notes.txt` | `plaintext` |
+
+A name with no extension is `sql` because a document nobody has named
+yet is a query — `query-1.sql` without the suffix is still the thing it
+was. A name *with* an extension that is neither is plain text, which is
+the honest answer: DataGripe opens the file and does not pretend to
+understand it.
 
 The rule applies to file-backed documents (`origin.filePath`), to shared
 workspace files and to local scratchpads, because all three are named by
@@ -65,13 +74,21 @@ a person and all three show up in a files area. Renaming a document from
 `notes.sql` to `notes.md` changes its language, which is the behaviour
 somebody renaming it is asking for.
 
-`documentSchema.language` becomes `z.enum(["sql", "markdown"])` and
-migration 0015 adds `documents.language text NOT NULL DEFAULT 'sql'`
-with a check constraint. It is stored rather than derived on read
-because the client needs it before it has the content, and because a
-title is editable while a language change mid-edit is not something the
-editor should discover from a keystroke — the language is recomputed on
-save, with the title, and broadcast like any other document change.
+`documentSchema.language` is `z.enum(["sql", "markdown", "plaintext"])`;
+migration 0015 added `documents.language text NOT NULL DEFAULT 'sql'`
+with a check constraint and 0026 widened it. It is stored rather than
+derived on read because the client needs it before it has the content —
+the language is recomputed on save, with the title, and broadcast like
+any other document change.
+
+**A rename retunes the open model rather than rebuilding it.** Monaco
+cannot change a model's URI, and rebuilding the model to get a new one
+would throw away the undo history the person just typed, so
+`modelRegistry.setLanguage` calls `setModelLanguage` on the live model
+and the URI keeps the extension it was born with. Everything a reader
+sees — the highlighting, the markdown pane, the dialect the gripes
+engine uses — reads the store's `language`, so the change is immediate
+and a reload is not part of it.
 
 The default for `document.create` stays `sql`: a new scratchpad is a
 scratchpad. Name it `notes.md` and it is markdown on the next save.

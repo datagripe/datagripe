@@ -475,6 +475,17 @@ export function EditorView(props: IDockviewPanelProps) {
 		);
 	}, [findings, props.api]);
 
+	// A rename is how a language changes (notes.sql → notes.md), and the
+	// model is not rebuilt to answer it — rebuilding would throw away the
+	// undo history. Retuning the live model is the whole change: the
+	// markdown pane, the gripes dialect and the highlighting all read
+	// `language` from the store.
+	useEffect(() => {
+		if (documentId !== undefined && language !== undefined) {
+			modelRegistry.setLanguage(documentId, language);
+		}
+	}, [documentId, language]);
+
 	// External content changes (server sync adoption, conflict reload)
 	// replace the model's content for clean documents. Dirty documents are
 	// never touched — the conflict banner covers them.

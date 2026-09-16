@@ -26,7 +26,7 @@ const ROOTS_KEY = "dg.sidebar.files";
 export interface FilesSectionProps {
 	connectionRef: string | null;
 	paths: DatasourcePath[];
-	onCreate: (shared: boolean) => void;
+	onCreate: (shared: boolean, title: string) => void;
 	onOpenDocument: (documentId: string) => void;
 	onOpenFile: (doc: EditorDocument) => void;
 	onDiscard: (documentId: string) => void;
@@ -36,6 +36,8 @@ export function FilesSection(props: FilesSectionProps) {
 	const [openRoots, setOpenRoots] = useState<string[]>(() =>
 		readIds(ROOTS_KEY),
 	);
+	/** The root whose `new` was pressed: its list has a row to type in. */
+	const [naming, setNaming] = useState<"shared" | "scratch" | null>(null);
 
 	const setOpen = (ids: string[]) => {
 		setOpenRoots(ids);
@@ -45,14 +47,15 @@ export function FilesSection(props: FilesSectionProps) {
 	const toggle = (id: string) => setOpen(toggleId(openRoots, id));
 
 	/**
-	 * Creating opens the root it created in. A new file appearing in a
-	 * folder you cannot see is indistinguishable from nothing happening.
+	 * Creating opens the root it creates in. A new file appearing in a
+	 * folder you cannot see is indistinguishable from nothing happening
+	 * — and the row asking for its name is in that folder.
 	 */
-	const createIn = (id: string, create: () => void) => {
+	const nameIn = (id: "shared" | "scratch") => {
 		if (!openRoots.includes(id)) {
 			setOpen([...openRoots, id]);
 		}
-		create();
+		setNaming(id);
 	};
 
 	const root = (options: {
@@ -120,11 +123,17 @@ export function FilesSection(props: FilesSectionProps) {
 					id: "shared",
 					label: "Workspace files",
 					title: "Shared with every member of this project",
-					create: () => createIn("shared", () => props.onCreate(true)),
+					create: () => nameIn("shared"),
 					createLabel: "New shared file",
 					body: (
 						<DocumentSidebar
 							kind="shared"
+							creating={naming === "shared"}
+							onCreate={(title) => {
+								setNaming(null);
+								props.onCreate(true, title);
+							}}
+							onCancelCreate={() => setNaming(null)}
 							onOpen={props.onOpenDocument}
 							onDiscard={props.onDiscard}
 						/>
@@ -134,11 +143,17 @@ export function FilesSection(props: FilesSectionProps) {
 					id: "scratch",
 					label: "Scratchpads",
 					title: "Local to this browser — never shared",
-					create: () => createIn("scratch", () => props.onCreate(false)),
+					create: () => nameIn("scratch"),
 					createLabel: "New scratchpad",
 					body: (
 						<DocumentSidebar
 							kind="scratch"
+							creating={naming === "scratch"}
+							onCreate={(title) => {
+								setNaming(null);
+								props.onCreate(false, title);
+							}}
+							onCancelCreate={() => setNaming(null)}
 							onOpen={props.onOpenDocument}
 							onDiscard={props.onDiscard}
 						/>

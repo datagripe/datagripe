@@ -45,6 +45,14 @@ scratchpads that never sync.
   members, synced on open and live via `document.changed` broadcasts
   (create/save/archive). Docs synced before the flag existed self-repair
   on next sync.
+- **A broadcast skips the socket that caused it.** The event is sent
+  while the action is still running, so it reaches the sender *before*
+  the response to their own save does: the sender saw a revision ahead
+  of theirs while their document was still dirty, which is the
+  definition of a conflict, and every shared save raised the banner
+  against itself. The socket is identified by `socketId` rather than
+  `sessionId`, so a second tab of the same session is still told.
+  Everybody else needs the event; the sender has a better answer coming.
 - The sidebar shows "Workspace files" and "Scratchpads" as two roots of
   the one Files section, each with its own `new`
   (docs/spec/datasource-paths.md "What the sidebar shows"); the header
@@ -60,6 +68,9 @@ and editors can pin the current pick via `workspace.set-default-connection`
 
 ## Open questions
 
-- Title collisions across members (two "query-1.sql") need
-  disambiguation in the sidebar.
+- Title collisions *across members* — two people creating
+  `query-1.sql` in the same second. A name is deduplicated against what
+  the client can see (docs/spec/editor-workspace.md "Naming a
+  document"), which is everything it has synced; two simultaneous
+  creates are still two files with one name until somebody renames one.
 - Whether scratchpads should ever be promotable to shared files.

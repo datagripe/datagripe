@@ -15,6 +15,8 @@ import { monaco } from "./monacoSetup";
 export const modelRegistry = createModelRegistry<monaco.editor.ITextModel>({
 	createModel: (uri, content, language) =>
 		monaco.editor.createModel(content, language, monaco.Uri.parse(uri)),
+	setModelLanguage: (model, language) =>
+		monaco.editor.setModelLanguage(model, language),
 	onLastRelease: (documentId) => {
 		draftDebouncer.cancel(documentId);
 		const doc = useDocumentsStore.getState().documents[documentId];

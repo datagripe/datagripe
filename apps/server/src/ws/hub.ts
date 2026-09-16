@@ -47,10 +47,22 @@ export class SocketHub {
 		);
 	}
 
-	broadcastToWorkspace(workspaceId: string, event: ServerEvent): void {
+	/**
+	 * `except` is the socket that caused the event. Telling somebody what
+	 * they just told you is not information, it is a race: the event
+	 * leaves before the response does, so the sender would be handed a
+	 * "the server moved ahead of you" about their own write while their
+	 * own save was still in flight. Other tabs of the same session are
+	 * not the same socket and are told.
+	 */
+	broadcastToWorkspace(
+		workspaceId: string,
+		event: ServerEvent,
+		except?: string,
+	): void {
 		const text = JSON.stringify(event);
 		for (const ws of this.sockets) {
-			if (ws.data.workspace.id === workspaceId) {
+			if (ws.data.workspace.id === workspaceId && ws.data.socketId !== except) {
 				ws.send(text);
 			}
 		}

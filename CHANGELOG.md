@@ -34,7 +34,43 @@
   Deleting needs **rename or delete the project**, the capability that
   already gated renaming.
 
+- **You name a file when you make one.** `new` opens a row to type in,
+  prefilled with `query-N.sql` and with the extension left out of the
+  selection, so typing replaces the name and keeps the suffix. The
+  suffix is the whole rule and always has been — `.md` is a runbook,
+  `.sql` is a query — and it now has a third answer: **any other
+  extension opens as plain text** instead of being called SQL, so a
+  `.csv` from a datasource path is a file rather than a syntax error
+  with a thousand findings in it.
+
+  Renaming works the same way, in the row, and takes effect where you
+  are: renaming `notes.sql` to `notes.md` turns the open tab into a
+  rendered runbook without a reload. It was `window.prompt` before —
+  the browser's dialog in the middle of an application with its own —
+  and the language only followed on the next page load.
+
+  **A name that is taken counts up rather than being refused**:
+  `notes.md`, `notes-1.md`, `notes-2.md`. Typing a name somebody used is
+  far more often "another one of these" than a mistake, and a dialog
+  saying *that name is taken* is how people end up with `notes2.md`.
+
+- **Revert to last save**, in the right-click menu of any file with
+  unsaved changes. The sidebar has always been able to say a document is
+  dirty; it could not offer to undo it, and the way back was closing the
+  tab and answering a confirm about discarding the whole file.
+
 ### Fixed
+
+- **Every save of a shared file said the server was ahead of you.** The
+  `document.changed` broadcast went to every socket in the project
+  *including the one that saved*, and it left before the response to
+  that save did — so the saver was told a newer revision existed while
+  their own document was still dirty, which is exactly what a conflict
+  looks like. The banner then offered to take the server's version,
+  which was their own save, to see their own save.
+
+  A broadcast now skips the socket that caused it. Other tabs of the
+  same session are not that socket and are still told.
 
 - **Renaming a project was impossible from the interface.** The name
   field disabled itself unless the name already differed from the

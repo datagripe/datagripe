@@ -167,3 +167,102 @@ describe("documents store", () => {
 		expect(store.getState().hydrated).toBe(true);
 	});
 });
+
+/**
+ * Naming (docs/spec/editor-workspace.md). The name decides the
+ * language, and two files in one list may not share one.
+ */
+describe("naming a document", () => {
+	test("a new file takes the name it was given", () => {
+		const { store } = createTestStore();
+		const doc = store.getState().createDocument("nightly.md");
+		expect(doc).toMatchObject({ title: "nightly.md", language: "markdown" });
+	});
+
+	test("a colliding name counts up rather than being refused", () => {
+		const { store } = createTestStore();
+		store.getState().createDocument("notes.md");
+		const second = store.getState().createDocument("notes.md");
+		const third = store.getState().createDocument("notes.md");
+		expect(second.title).toBe("notes-1.md");
+		expect(third.title).toBe("notes-2.md");
+	});
+
+	// A scratchpad and a shared file are two lists, and a name taken in
+	// one says nothing about the other.
+	test("the two lists collide separately", () => {
+		const { store } = createTestStore();
+		store.getState().createDocument("notes.md", true);
+		const scratch = store.getState().createDocument("notes.md", false);
+		expect(scratch.title).toBe("notes.md");
+	});
+
+	test("renaming to .md makes it markdown, without a reload", () => {
+		const { store } = createTestStore();
+		const doc = store.getState().createDocument();
+		expect(doc.language).toBe("sql");
+		store.getState().renameDocument(doc.id, "runbook.md");
+		expect(store.getState().documents[doc.id]).toMatchObject({
+			title: "runbook.md",
+			language: "markdown",
+		});
+	});
+
+	test("an unknown extension is plain text, not a syntax error", () => {
+		const { store } = createTestStore();
+		const doc = store.getState().createDocument("rows.csv");
+		expect(doc.language).toBe("plaintext");
+	});
+
+	test("renaming onto a taken name counts up too", async () => {
+		const { store } = createTestStore();
+		store.getState().createDocument("notes.md");
+		const other = store.getState().createDocument("other.md");
+		store.getState().renameDocument(other.id, "notes.md");
+		expect(store.getState().documents[other.id]?.title).toBe("notes-1.md");
+		await Promise.resolve();
+	});
+
+	test("renaming a document to its own name is not a collision", () => {
+		const { store } = createTestStore();
+		const doc = store.getState().createDocument("notes.md");
+		store.getState().renameDocument(doc.id, "notes.md");
+		expect(store.getState().documents[doc.id]?.title).toBe("notes.md");
+	});
+});
+
+/** Reverting (the sidebar's "revert to last save"). */
+describe("revertDocument", () => {
+	test("throws away the edits and the draft, and keeps the save", async () => {
+		const { store, tracker } = createTestStore();
+		const doc = store.getState().createDocument();
+		store.getState().updateContent(doc.id, "select 1;");
+		await tracker.last;
+		await store.getState().saveDocument(doc.id);
+		store.getState().updateContent(doc.id, "drop table orders;");
+		await tracker.last;
+		expect(await db.drafts.get(doc.id)).toBeDefined();
+
+		await store.getState().revertDocument(doc.id);
+
+		expect(store.getState().documents[doc.id]).toMatchObject({
+			currentContent: "select 1;",
+			savedContent: "select 1;",
+			dirty: false,
+			revision: 1,
+		});
+		expect(await db.drafts.get(doc.id)).toBeUndefined();
+		// The saved row is untouched: reverting is not a write.
+		expect(await db.documents.get(doc.id)).toMatchObject({
+			content: "select 1;",
+			revision: 1,
+		});
+	});
+
+	test("a clean document has nothing to revert", async () => {
+		const { store } = createTestStore();
+		const doc = store.getState().createDocument();
+		await store.getState().revertDocument(doc.id);
+		expect(store.getState().documents[doc.id]?.currentContent).toBe("");
+	});
+});

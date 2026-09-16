@@ -17,6 +17,7 @@ function ctx(role: "owner" | "editor" | "viewer"): AuthContext {
 	return {
 		userId: "00000000-0000-4000-8000-000000000002",
 		sessionId: "00000000-0000-4000-8000-000000000003",
+		socketId: "00000000-0000-4000-8000-000000000004",
 		workspace: WORKSPACE,
 		role,
 		capabilities: BUILTIN_ROLE_CAPABILITIES[role],

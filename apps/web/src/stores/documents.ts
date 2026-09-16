@@ -5,7 +5,7 @@ import type {
 	DocumentOrigin,
 	FileOpenResult,
 } from "@datagripe/contracts";
-import { languageForName } from "@datagripe/contracts";
+import { languageForName, uniqueName } from "@datagripe/contracts";
 import { create } from "zustand";
 import { WsError, type WsRequestFn, wsClient } from "../api/ws";
 import { db } from "../persistence/db";
@@ -85,6 +85,12 @@ export type DocumentsState = {
 	 */
 	resyncFilesFrom: (connectionRef: string) => Promise<void>;
 	renameDocument: (id: string, title: string) => void;
+	/**
+	 * Throw away everything typed since the last save and go back to it.
+	 * The counterpart to the dirty dot: a document that can say it has
+	 * unsaved changes should be able to drop them.
+	 */
+	revertDocument: (id: string) => Promise<void>;
 	updateContent: (id: string, content: string) => void;
 	saveDocument: (id: string) => Promise<void>;
 	resolveConflict: (id: string, choice: "reload" | "keep") => Promise<void>;
@@ -708,11 +714,16 @@ export function createDocumentsStore(deps: DocumentsStoreDeps) {
 
 			createDocument(title, shared = false) {
 				const state = get();
-				const resolvedTitle =
+				const siblings = state.order
+					.filter((id) => state.documents[id]?.shared === shared)
+					.map((id) => state.documents[id]?.title ?? "");
+				const resolvedTitle = uniqueName(
 					title ??
-					`query-${nextUntitledIndex(
-						state.order.map((id) => state.documents[id]?.title ?? ""),
-					)}.sql`;
+						`query-${nextUntitledIndex(
+							state.order.map((id) => state.documents[id]?.title ?? ""),
+						)}.sql`,
+					siblings,
+				);
 				const timestamp = now();
 				const doc: EditorDocument = {
 					id: newId(),
@@ -917,12 +928,55 @@ export function createDocumentsStore(deps: DocumentsStoreDeps) {
 
 			renameDocument(id, title) {
 				const doc = get().documents[id];
-				if (doc === undefined || title.length === 0) {
+				if (doc === undefined || title.length === 0 || title === doc.title) {
 					return;
 				}
-				const renamed = { ...doc, title, updatedAt: now() };
+				const state = get();
+				const resolved = uniqueName(
+					title,
+					state.order
+						.filter((other) => state.documents[other]?.shared === doc.shared)
+						.map((other) => state.documents[other]?.title ?? ""),
+					{ except: doc.title },
+				);
+				// The name decides the language, and this is where somebody
+				// asks for markdown: renaming notes.sql to notes.md. A
+				// file-backed document keeps the language its path gave it —
+				// its title is the filename and does not move.
+				const renamed: EditorDocument = {
+					...doc,
+					title: resolved,
+					language:
+						doc.origin === null ? languageForName(resolved) : doc.language,
+					updatedAt: now(),
+				};
 				set({ documents: { ...get().documents, [id]: renamed } });
-				void db.documents.update(id, { title, updatedAt: renamed.updatedAt });
+				void db.documents.update(id, {
+					title: resolved,
+					updatedAt: renamed.updatedAt,
+				});
+				// A shared file's name is the project's, not this browser's.
+				// Saving is how a title reaches the server, so a rename with
+				// nothing else to say still saves.
+				if (renamed.shared && ws?.isOpen()) {
+					void get().saveDocument(id);
+				}
+			},
+
+			async revertDocument(id) {
+				const doc = get().documents[id];
+				if (doc === undefined || !doc.dirty) {
+					return;
+				}
+				// The pending checkpoint holds the content being thrown away.
+				debouncer.cancel(id);
+				const reverted: EditorDocument = {
+					...doc,
+					currentContent: doc.savedContent,
+					dirty: false,
+				};
+				set({ documents: { ...get().documents, [id]: reverted } });
+				await db.drafts.delete(id);
 			},
 
 			updateContent(id, content) {

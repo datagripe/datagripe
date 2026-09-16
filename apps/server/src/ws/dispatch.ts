@@ -163,6 +163,8 @@ import type { SocketHub } from "./hub";
 export interface AuthContext {
 	userId: string;
 	sessionId: string;
+	/** The socket this action arrived on, so an echo can skip it. */
+	socketId: string;
 	workspace: { id: string; name: string; defaultConnectionRef: string | null };
 	/** The role's name, for messages and for what a member row shows. */
 	role: string;
@@ -462,22 +464,28 @@ export function createDispatcher(deps: DispatcherDeps): Dispatch {
 			origin?: DocumentOrigin | null;
 		},
 		archived: boolean,
+		/** The socket that saved: its own response is the better answer. */
+		except?: string,
 	): void {
-		hub.broadcastToWorkspace(workspaceId, {
-			version: 1,
-			kind: "event",
-			eventId: crypto.randomUUID(),
-			topic: "document.changed",
-			occurredAt: new Date().toISOString(),
-			payload: {
-				id: entry.id,
-				title: entry.title,
-				revision: entry.revision,
-				updatedAt: entry.updatedAt,
-				archived,
-				origin: entry.origin ?? null,
+		hub.broadcastToWorkspace(
+			workspaceId,
+			{
+				version: 1,
+				kind: "event",
+				eventId: crypto.randomUUID(),
+				topic: "document.changed",
+				occurredAt: new Date().toISOString(),
+				payload: {
+					id: entry.id,
+					title: entry.title,
+					revision: entry.revision,
+					updatedAt: entry.updatedAt,
+					archived,
+					origin: entry.origin ?? null,
+				},
 			},
-		});
+			except,
+		);
 	}
 
 	return async (ctx, action, payload) => {
@@ -548,7 +556,12 @@ export function createDispatcher(deps: DispatcherDeps): Dispatch {
 						document: await documents.createDocument(workspace.id, request),
 					}),
 				);
-				broadcastDocumentChanged(workspace.id, result.document, false);
+				broadcastDocumentChanged(
+					workspace.id,
+					result.document,
+					false,
+					ctx.socketId,
+				);
 				return result;
 			}
 
@@ -571,7 +584,12 @@ export function createDispatcher(deps: DispatcherDeps): Dispatch {
 				if (result.document.origin !== null) {
 					await writeDocumentToDisk(workspace.id, result.document);
 				}
-				broadcastDocumentChanged(workspace.id, result.document, false);
+				broadcastDocumentChanged(
+					workspace.id,
+					result.document,
+					false,
+					ctx.socketId,
+				);
 				return result;
 			}
 
@@ -581,7 +599,7 @@ export function createDispatcher(deps: DispatcherDeps): Dispatch {
 					workspace.id,
 					request.id,
 				);
-				broadcastDocumentChanged(workspace.id, archived, true);
+				broadcastDocumentChanged(workspace.id, archived, true, ctx.socketId);
 				return {};
 			}
 
@@ -1351,7 +1369,7 @@ export function createDispatcher(deps: DispatcherDeps): Dispatch {
 						content: onDisk.content,
 						diskHash: onDisk.hash,
 					});
-					broadcastDocumentChanged(workspace.id, created, false);
+					broadcastDocumentChanged(workspace.id, created, false, ctx.socketId);
 					return { document: created, diskChanged: false, diskContent: null };
 				}
 				const synced = await documents.diskSyncState(workspace.id, existing.id);
@@ -1369,7 +1387,7 @@ export function createDispatcher(deps: DispatcherDeps): Dispatch {
 						onDisk.content,
 						onDisk.hash,
 					);
-					broadcastDocumentChanged(workspace.id, adopted, false);
+					broadcastDocumentChanged(workspace.id, adopted, false, ctx.socketId);
 					return { document: adopted, diskChanged: false, diskContent: null };
 				}
 				return {

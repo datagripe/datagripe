@@ -16,6 +16,12 @@ import type { SocketHub } from "./hub";
 
 export type SocketData = {
 	requestId: string;
+	/**
+	 * This socket, distinct from this session: two tabs share a session
+	 * cookie and must still be told apart, because one of them is the
+	 * one that made the change (`hub.broadcastToWorkspace`).
+	 */
+	socketId: string;
 	userId: string;
 	email: string;
 	/** Their display name, if they have set one (docs/spec/updates.md). */
@@ -120,6 +126,7 @@ export function createWebsocketHandler(
 						{
 							userId: ws.data.userId,
 							sessionId: ws.data.sessionId,
+							socketId: ws.data.socketId,
 							workspace: ws.data.workspace,
 							role: ws.data.role,
 							capabilities: ws.data.capabilities,

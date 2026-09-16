@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
 import type { EditorDocument } from "../stores/documents";
-import { useDocumentsStore } from "../stores/documents";
+import { nextUntitledIndex, useDocumentsStore } from "../stores/documents";
 import { useViewsStore } from "../stores/views";
 import { IconClose } from "./icons";
+import { NameInput } from "./NameInput";
 
 export type DocumentSidebarProps = {
 	/** Which list this renders; the tree root owns the heading and `new`. */
 	kind: "shared" | "scratch";
+	/** A `new` press on this root: the row to type a name into is here. */
+	creating: boolean;
+	onCreate: (title: string) => void;
+	onCancelCreate: () => void;
 	onOpen: (documentId: string) => void;
 	onDiscard: (documentId: string) => void;
 };
@@ -19,6 +24,12 @@ export type DocumentSidebarProps = {
  * own root (docs/spec/datasource-paths.md), so they are excluded here
  * rather than listed twice. Closing a tab never discards a document —
  * only the explicit discard action here does.
+ *
+ * Naming happens in the row the file will occupy, on the way in and on
+ * a rename. It used to be `window.prompt`, which is the browser's
+ * dialog wearing the browser's font in the middle of an application
+ * that has its own (roadmap: `ui · browser-chrome-in-an-app`) — and it
+ * could not show what the name would become when it collides.
  */
 export function DocumentSidebar(props: DocumentSidebarProps) {
 	const order = useDocumentsStore((state) => state.order);
@@ -37,13 +48,8 @@ export function DocumentSidebar(props: DocumentSidebarProps) {
 		y: number;
 		doc: EditorDocument;
 	} | null>(null);
-
-	const rename = (doc: EditorDocument) => {
-		const title = window.prompt("Rename document", doc.title);
-		if (title !== null && title.trim().length > 0) {
-			useDocumentsStore.getState().renameDocument(doc.id, title.trim());
-		}
-	};
+	/** The row being renamed in place. */
+	const [renamingId, setRenamingId] = useState<string | null>(null);
 
 	const remove = (doc: EditorDocument) => {
 		if (
@@ -51,6 +57,16 @@ export function DocumentSidebar(props: DocumentSidebarProps) {
 			window.confirm(`Discard "${doc.title}" and its unsaved changes?`)
 		) {
 			props.onDiscard(doc.id);
+		}
+	};
+
+	const revert = (doc: EditorDocument) => {
+		if (
+			window.confirm(
+				`Throw away the unsaved changes to "${doc.title}" and go back to the last save?`,
+			)
+		) {
+			void useDocumentsStore.getState().revertDocument(doc.id);
 		}
 	};
 
@@ -83,6 +99,21 @@ export function DocumentSidebar(props: DocumentSidebarProps) {
 
 	const renderRow = (doc: EditorDocument) => {
 		const isActive = doc.id === activeDocumentId;
+		if (renamingId === doc.id) {
+			return (
+				<li key={doc.id}>
+					<NameInput
+						initial={doc.title}
+						aria-label={`Rename ${doc.title}`}
+						onCommit={(title) => {
+							setRenamingId(null);
+							useDocumentsStore.getState().renameDocument(doc.id, title);
+						}}
+						onCancel={() => setRenamingId(null)}
+					/>
+				</li>
+			);
+		}
 		return (
 			<li key={doc.id}>
 				{/* biome-ignore lint/a11y/noStaticElementInteractions: row-level context menu; the interactive content is the buttons inside */}
@@ -100,7 +131,7 @@ export function DocumentSidebar(props: DocumentSidebarProps) {
 						className="dg-document-open"
 						title={openDocumentIds.has(doc.id) ? "Focus editor" : "Open editor"}
 						onClick={() => props.onOpen(doc.id)}
-						onDoubleClick={() => rename(doc)}
+						onDoubleClick={() => setRenamingId(doc.id)}
 					>
 						{doc.dirty && <span className="dg-tab-dirty" />}
 						{doc.title}
@@ -123,10 +154,15 @@ export function DocumentSidebar(props: DocumentSidebarProps) {
 	};
 
 	const ids = props.kind === "shared" ? shared : scratch;
+	// The name a new file is offered, before anybody types: the same
+	// `query-N.sql` an unnamed document has always been given.
+	const suggested = `query-${nextUntitledIndex(
+		order.map((id) => documents[id]?.title ?? ""),
+	)}.sql`;
 
 	return (
 		<div className="dg-documents">
-			{ids.length === 0 ? (
+			{ids.length === 0 && !props.creating ? (
 				<p className="dg-sidebar-empty">
 					{props.kind === "shared"
 						? "No shared files yet. Shared files sync to every workspace member."
@@ -134,6 +170,20 @@ export function DocumentSidebar(props: DocumentSidebarProps) {
 				</p>
 			) : (
 				<ul className="dg-document-list">
+					{props.creating && (
+						<li key="new">
+							<NameInput
+								initial={suggested}
+								aria-label={
+									props.kind === "shared"
+										? "Name the new shared file"
+										: "Name the new scratchpad"
+								}
+								onCommit={props.onCreate}
+								onCancel={props.onCancelCreate}
+							/>
+						</li>
+					)}
 					{ids.map((id) => {
 						const doc = documents[id];
 						return doc === undefined ? null : renderRow(doc);
@@ -154,14 +204,30 @@ export function DocumentSidebar(props: DocumentSidebarProps) {
 						onClick={() => {
 							const doc = menu.doc;
 							setMenu(null);
-							rename(doc);
+							setRenamingId(doc.id);
 						}}
 					>
 						rename… <kbd>dbl click</kbd>
 					</button>
+					{/* Only on a document that has something to throw away: an
+						  offer to revert a saved file is an offer to do nothing. */}
+					{menu.doc.dirty && (
+						<button
+							type="button"
+							className="dg-context-item"
+							role="menuitem"
+							onClick={() => {
+								const doc = menu.doc;
+								setMenu(null);
+								revert(doc);
+							}}
+						>
+							revert to last save
+						</button>
+					)}
 					<button
 						type="button"
-						className="dg-context-item"
+						className="dg-context-item dg-context-danger"
 						role="menuitem"
 						onClick={() => {
 							const doc = menu.doc;

@@ -50,16 +50,18 @@ const DOC: RegistryDocument = {
 function setup(onLastRelease: () => void = () => {}) {
 	const driver = createManualDefer();
 	const created: Array<{ uri: string; content: string; language: string }> = [];
+	const retuned: string[] = [];
 	const registry = createModelRegistry({
 		createModel: (uri, content, language) => {
 			created.push({ uri, content, language });
 			return fakeModel();
 		},
+		setModelLanguage: (_model, language) => retuned.push(language),
 		onLastRelease,
 		defer: driver.defer,
 		cancelDefer: driver.cancelDefer,
 	});
-	return { registry, driver, created };
+	return { registry, driver, created, retuned };
 }
 
 describe("model registry", () => {
@@ -137,5 +139,23 @@ describe("model registry", () => {
 		registry.release("00000000-0000-4000-8000-000000000000");
 		driver.flush();
 		expect(registry.has(DOC.id)).toBe(false);
+	});
+});
+
+describe("retuning a model", () => {
+	// A rename decides the language, and the model has to follow without
+	// being rebuilt: rebuilding loses the undo history the person just
+	// typed.
+	test("a live model follows its document's language", () => {
+		const { registry, retuned } = setup();
+		registry.acquire(DOC);
+		registry.setLanguage(DOC.id, "markdown");
+		expect(retuned).toEqual(["markdown"]);
+	});
+
+	test("a document with no live model is not an error", () => {
+		const { registry, retuned } = setup();
+		registry.setLanguage(DOC.id, "plaintext");
+		expect(retuned).toEqual([]);
 	});
 });

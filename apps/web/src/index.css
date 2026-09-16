@@ -906,6 +906,16 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	border-left-color: var(--dg-violet);
 }
 
+/* Naming a file happens in the row the file will occupy, so the box is
+   the row: tree type, no chrome of its own beyond the focus line. */
+.dg-name-input {
+	width: calc(100% - 14px);
+	margin: 2px 4px 2px 10px;
+	padding: 3px 6px;
+	font-family: var(--dg-font-mono);
+	font-size: var(--dg-fs-tree);
+}
+
 .dg-document-open {
 	flex: 1;
 	display: flex;

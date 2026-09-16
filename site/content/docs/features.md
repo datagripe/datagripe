@@ -93,6 +93,17 @@ and *New project…* is the last item in it.
 - **Markdown documents** render beside SQL — a runbook lives in the
   project with the queries it describes, and a SQL fence inside it runs
   and formats like SQL.
+- **You name the file**, in the row it will occupy, prefilled with
+  `query-N.sql` and with the extension left out of the selection so
+  typing keeps it. The extension is the whole rule: `.md` is a runbook,
+  `.sql` is a query, anything else opens as plain text rather than being
+  refused. Renaming `notes.sql` to `notes.md` switches it there and
+  then — no reload.
+- **A name that is taken counts up** — `notes.md`, `notes-1.md` — rather
+  than being refused. Rename it afterwards if that is not what you
+  meant.
+- **Revert to last save** is in the right-click menu of any file with
+  unsaved changes: the counterpart to the dot that says it has them.
 - **Reformatting** on `Ctrl+Alt+L` for SQL, JSON and Markdown.
 
 ## Running queries
