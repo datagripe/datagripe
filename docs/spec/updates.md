@@ -82,9 +82,10 @@ separated when they disagree.
 to be behind — a newer release exists, the page has fallen behind the
 server, or a service worker is holding a downloaded build — because the
 reader's next action is the same in all three: open it and find out what
-to press. Inside: both versions, the latest if it is known, the refresh
-for a waiting build, the restart button where that applies, and the link
-to `/docs/upgrading/`.
+to press. Inside: both versions, the latest if it is known, one
+**refresh** that covers the last two cases (see below — it is not a
+reload), the restart button where that applies, and the link to
+`/docs/upgrading/`.
 
 The dot is the part read from across a desk, and it is green only when
 there is something to do.
@@ -140,8 +141,34 @@ Four things keep that honest:
 The reply is sent, then the process exits a quarter of a second later —
 the close frame has to reach the browser, or the person who pressed the
 button gets a dead tab instead of "restarting…". The client then polls
-`/health` and reloads when it answers, because a restart that pulled a
-new image also replaced the bundle.
+`/health` and moves onto the new build when it answers, because a
+restart that pulled a new image also replaced the bundle.
+
+### A reload is not a way out of a stale bundle
+
+This is the part that bit. The page is behind a service worker, which
+answers from its precache, so `location.reload()` re-renders the exact
+build you were trying to leave. A server upgraded underneath a tab left
+that tab saying "this page is running an older build than the server"
+after every refresh, for ever, and the only honest way out was a hard
+reload nobody should have to know about.
+
+Anything that knows the page is behind therefore calls
+`refreshOntoLatest()` rather than reloading:
+
+1. ask the registration for a new worker (`registration.update()`);
+2. wait for it to finish installing — precaching a Monaco-sized bundle
+   is seconds, so this waits up to thirty of them;
+3. hand over to it (`skipWaiting`), which reloads onto the new build;
+4. and only when there is no worker at all — no registration, nothing
+   new, an install that never finished — fall back to an ordinary
+   reload, which is the whole job in that case.
+
+Two things call it: the restart, once the server answers again, and the
+**refresh** in the version popup. And a version mismatch now asks for a
+new worker as soon as it is noticed rather than on the hourly timer,
+because a server on a different version *is* the proof that a new bundle
+exists.
 
 ## The update check
 

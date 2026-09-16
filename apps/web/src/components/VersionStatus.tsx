@@ -44,6 +44,7 @@ export function upgradeAdvice(
 
 export function VersionStatus() {
 	const [open, setOpen] = useState(false);
+	const [refreshing, setRefreshing] = useState(false);
 	const rootRef = useRef<HTMLDivElement>(null);
 
 	const version = useAppStore((state) => state.version);
@@ -52,14 +53,25 @@ export function VersionStatus() {
 	const restarting = useAppStore((state) => state.restarting);
 	const error = useAppStore((state) => state.error);
 	const workspace = useSessionStore((state) => state.currentWorkspace);
-	// A service worker holding a new build is the third way to be behind,
-	// and the only one with a one-click answer.
+	// A service worker holding a new build is the third way to be behind.
 	const bundleWaiting = usePwaStore((state) => state.updateAvailable);
-	const applyBundle = usePwaStore((state) => state.applyUpdate);
 
 	const serverVersion = version?.server ?? null;
 	const mismatch = serverVersion !== null && serverVersion !== UI_VERSION;
 	const behind = update?.newer === true || mismatch || bundleWaiting;
+
+	/**
+	 * A server on a different version is proof that a new bundle exists,
+	 * so ask for it now rather than on the hourly timer. Without this the
+	 * page keeps saying "refresh to catch up" at somebody who is
+	 * refreshing: the service worker answers every reload from the
+	 * precache it already has.
+	 */
+	useEffect(() => {
+		if (mismatch && !bundleWaiting) {
+			void usePwaStore.getState().checkForNewBuild?.();
+		}
+	}, [mismatch, bundleWaiting]);
 
 	useEffect(() => {
 		if (!open) {
@@ -128,24 +140,30 @@ export function VersionStatus() {
 						)}
 					</div>
 
-					{mismatch && (
-						<p className="dg-account-note">
-							This page is running a different build from the server. Refresh to
-							catch up.
-						</p>
-					)}
-
-					{bundleWaiting && applyBundle !== null && (
+					{(mismatch || bundleWaiting) && (
 						<>
 							<p className="dg-account-note">
-								A new build is downloaded and waiting.
+								{bundleWaiting
+									? "A new build is downloaded and waiting."
+									: "This page is running a different build from the server."}
 							</p>
+							{/* One button for both, because a plain refresh is not an
+								  answer to either: the worker in front of this page
+								  serves what it already has until it is told to stand
+								  down (stores/app.ts). */}
 							<button
 								type="button"
 								className="dg-btn dg-btn-pri dg-version-action"
-								onClick={applyBundle}
+								disabled={refreshing}
+								onClick={() => {
+									setRefreshing(true);
+									void useAppStore
+										.getState()
+										.refreshOntoLatest()
+										.finally(() => setRefreshing(false));
+								}}
 							>
-								refresh onto it
+								{refreshing ? "refreshing…" : "refresh onto the new build"}
 							</button>
 						</>
 					)}

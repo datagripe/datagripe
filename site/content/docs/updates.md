@@ -14,6 +14,13 @@ all of them, because your next move is the same: a newer release exists,
 the page has fallen behind the server, or a downloaded build is waiting
 to be applied.
 
+For the last two the popup has a **refresh**, and it is worth knowing
+that this is not the browser's refresh. DataGripe is a progressive web
+app: a service worker answers from what it has already stored, so
+reloading the page re-renders the build you are trying to leave. The
+button asks for the new one, waits for it to install, and hands over —
+which is also what happens on its own after a restart.
+
 **The check asks once, when you open a project.** No interval, no
 background thread, no telemetry — and the server holds the answer for
 ten minutes, so a team opening the same project is one request between

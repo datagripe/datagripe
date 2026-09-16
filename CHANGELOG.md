@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- **A server that upgraded under an open tab left it there.** Restarting
+  into a new image worked; the page then reloaded, the service worker
+  answered from the build it already had, and the version popup said
+  "this page is running an older build than the server" — at somebody
+  who was refreshing. A reload is not a way out of a stale bundle, and
+  the only one that worked was a hard reload nobody should need to know
+  about.
+
+  Everything that knows the page is behind now asks for the new service
+  worker, waits for it to install, and hands over to it, falling back to
+  an ordinary reload only where there is no worker to hand over to. The
+  restart does it once the server answers again, the popup's refresh
+  does it on demand, and a version mismatch now asks for a new worker
+  the moment it is noticed rather than on the hourly timer — a server on
+  a different version is proof that a new bundle exists.
+
 ## 0.0.9 — 2026-09-15
 
 ### Changed

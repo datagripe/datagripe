@@ -1,6 +1,7 @@
 import type { AppVersion, UpdateCheck } from "@datagripe/contracts";
 import { create } from "zustand";
 import { wsClient } from "../api/ws";
+import { usePwaStore } from "./pwa";
 
 /**
  * What the account menu knows about the running application
@@ -31,6 +32,13 @@ export interface AppState {
 	loadVersionAndUpdate: () => Promise<void>;
 	checkForUpdate: () => Promise<void>;
 	restart: () => Promise<void>;
+	/**
+	 * Leave a stale bundle behind: ask for the new service worker, hand
+	 * over to it, and fall back to a reload when there is none. What the
+	 * "refresh" in the version popup does, and what a restart does for
+	 * itself once the server answers again.
+	 */
+	refreshOntoLatest: () => Promise<void>;
 	reset: () => void;
 }
 
@@ -43,9 +51,34 @@ const RESTART_WAIT_MS = 120_000;
 const RESTART_POLL_MS = 1_000;
 
 /**
- * Wait for the server to answer again, then reload onto whatever it is
- * now serving. A restart that pulled a new image also replaced the
- * bundle, so staying on the old one is the one outcome nobody wanted.
+ * Onto whatever the server is serving now.
+ *
+ * **Not `location.reload()`.** A service worker answers from its
+ * precache, so a reload re-renders the build you are trying to leave —
+ * which is how a page ends up saying "this page is running an older
+ * build than the server" after every refresh, for ever. The page has to
+ * ask for a new worker, wait for it to install, and hand over to it.
+ * With no worker registered, a reload is the whole job.
+ */
+async function refreshOntoLatest(): Promise<void> {
+	const { checkForNewBuild, applyUpdate } = usePwaStore.getState();
+	if (checkForNewBuild !== null && applyUpdate !== null) {
+		const waiting = await checkForNewBuild().catch(() => false);
+		if (waiting) {
+			// Activates the new worker and reloads onto it.
+			applyUpdate();
+			return;
+		}
+	}
+	window.location.reload();
+}
+
+/**
+ * Wait for the server to answer again, then move onto what it is now
+ * serving. A restart that pulled a new image also replaced the bundle,
+ * so staying on the old one is the one outcome nobody wanted — and the
+ * one that happens by default, because the cache in front of the page
+ * survives the server it came from.
  */
 async function reloadWhenBack(): Promise<void> {
 	const deadline = Date.now() + RESTART_WAIT_MS;
@@ -54,7 +87,7 @@ async function reloadWhenBack(): Promise<void> {
 		try {
 			const response = await fetch("/health", { cache: "no-store" });
 			if (response.ok) {
-				window.location.reload();
+				await refreshOntoLatest();
 				return;
 			}
 		} catch {
@@ -115,6 +148,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
 			set({ restarting: false, error: message(error) });
 		}
 	},
+
+	refreshOntoLatest,
 
 	reset() {
 		set({ version: null, update: null, error: null, checking: false });
