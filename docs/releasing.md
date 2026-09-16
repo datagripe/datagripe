@@ -11,23 +11,52 @@ DataGripe ships, from one commit:
 | Web bundle, desktop builds for three platforms | GitHub release assets |
 
 ```bash
-# 1. Version everything that carries one.
+# 1. Version everything that carries one: eight package.json files —
+#    the root, three apps, four packages — and the chart.
 $EDITOR package.json apps/*/package.json packages/*/package.json
 $EDITOR deploy/helm/datagripe/Chart.yaml    # version and appVersion
+bun install                                 # bun.lock carries them too
 
-# 2. Move the CHANGELOG's Unreleased section under the new heading.
+# 2. Date the notes: `## Unreleased` becomes `## 0.0.6 — 2026-09-16`.
 $EDITOR CHANGELOG.md
+
+# 3. Run what CI runs, before the thing that publishes.
+bun run typecheck && bun run lint && bun run check:brand &&
+  bun test && bun run build:site
 
 git commit -am "release 0.0.6"
 git tag v0.0.6
 git push origin main --tags
 ```
 
+Eleven files change and no more: the eight `package.json`s, `bun.lock`,
+`Chart.yaml`, `CHANGELOG.md`. `git show` of any previous release commit
+is the diff to compare against.
+
+**`bun install` is step one and a half, not an afterthought.** The
+lockfile records every workspace version, every job installs
+`--frozen-lockfile`, and a lock that disagrees with the manifests fails
+the install rather than the publish — which is a red release that never
+built anything.
+
+**The notes are dated, not written, at this point.** Every change has
+been landing under `## Unreleased` as it shipped
+([AGENTS.md](../AGENTS.md) "Releasing"); this step renames that heading
+and nothing else. Reconstructing a changelog from `git log` at release
+time is how a release ends up describing the commits rather than the
+product.
+
 The npm job refuses to publish if the tag and `dist/package.json`
 disagree, which is the check that catches a forgotten version bump. The
 chart's two versions are overwritten from the tag at package time, so
 the ones in `Chart.yaml` only matter to somebody installing from a
 checkout — keep them current anyway.
+
+**A release that carries a migration needs nothing extra here.** The
+server applies migrations on start (and `bun run db:migrate` does it by
+hand), so the ordering is the deployment's, not the tag's — but it is
+worth saying so in the CHANGELOG entry, because an operator reading the
+release notes is the person who finds out either way.
 
 ## One-time setup
 

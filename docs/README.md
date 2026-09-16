@@ -4,9 +4,21 @@ Living documentation for DataGripe. `docs/initial_idea.md` is the original
 engineering handoff; everything in `adr/`, `spec/`, and `rfc/` reflects
 decisions made after it and takes precedence where they conflict.
 
-Two documents sit outside those folders: [operations.md](operations.md)
-for running a deployment, and [releasing.md](releasing.md) for
-publishing one.
+Six documents sit outside those folders, for the questions that are
+about the repository rather than about a feature:
+
+| File | Answers |
+| --- | --- |
+| [codebase-map.md](codebase-map.md) | Where things live, and which is the one place for each |
+| [adding-an-action.md](adding-an-action.md) | The four edits a new WebSocket action needs |
+| [testing.md](testing.md) | What `bun test` runs, and what it skips silently |
+| [migrations.md](migrations.md) | Changing the app database's schema |
+| [operations.md](operations.md) | Running a deployment |
+| [releasing.md](releasing.md) | Publishing one |
+
+They exist so that discovery happens once. If you had to read four files
+to answer something, the answer belongs in one of them — see
+[AGENTS.md](../AGENTS.md) "Before you go looking".
 
 Everything here is for people **building** DataGripe. The documentation
 for people **using** it — getting started, keyboard shortcuts, what it

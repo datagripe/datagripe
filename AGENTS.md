@@ -134,10 +134,70 @@ missing: an `# Spec — Title` heading, a `**Status:**` line, a
 `**Phase:**` line, and a `## Goal` section whose first sentence becomes
 the page's description. Keep that shape.
 
+## Before you go looking
+
+These exist so nobody spends an hour rediscovering them. Each is a file
+of its own rather than a paragraph here, because this file is read every
+time and those are read when they are needed.
+
+| Question | File |
+| --- | --- |
+| Where does X live? Which is the *one* place for it? | [docs/codebase-map.md](docs/codebase-map.md) |
+| I am adding a WebSocket action | [docs/adding-an-action.md](docs/adding-an-action.md) |
+| What runs in `bun test`, and what skips without saying so? | [docs/testing.md](docs/testing.md) |
+| I am changing the database schema | [docs/migrations.md](docs/migrations.md) |
+| How do I cut a release? | [docs/releasing.md](docs/releasing.md) |
+| How does a deployment run, and what breaks it? | [docs/operations.md](docs/operations.md) |
+| What does this subsystem do, and why that way? | [docs/spec/](docs/spec/) — published at `/specs/` |
+| What should it look like? | [docs/brand/brand-system.md](docs/brand/brand-system.md) |
+
+**Keep this list earning its place.** If you had to read four files or
+walk the git history to answer a question, the answer goes into the
+right file above — or a new one — *in the same change*, in a sentence
+somebody can act on. Long-form discovery is the most expensive thing
+that happens in this repository and it is almost always the second time
+somebody has done it. Two rules for where it goes:
+
+- **Short and universal → here.** A rule that applies to every change
+  belongs in this file, in a line or two.
+- **Long or situational → `docs/`, linked from the table above.** This
+  file is loaded for every task; a sub-document is loaded only by
+  somebody doing that task, so detail is free there and expensive here.
+
+A note that was true last month and is not now is worse than no note.
+Correcting one is part of the change that made it wrong.
+
+## Releasing
+
+**Every change lands under `## Unreleased` in
+[CHANGELOG.md](CHANGELOG.md), in the same commit as the behaviour.** A
+release does not write the notes, it dates them — so the notes are
+written by the person who knows what changed, on the day they changed
+it, rather than reconstructed from `git log` by whoever cuts the tag.
+
+**The tag is the release.** Pushing `v*` is what publishes the npm
+package, the container image, the Helm chart and the desktop builds;
+nothing else does, and moving a tag afterwards is not a fix.
+[`docs/releasing.md`](docs/releasing.md) is the whole procedure —
+including the one-time registry setup and what to do when a release
+gets part way — and it is worth reading before the first one rather
+than during it. The short version:
+
+1. Bump the version in the eight `package.json` files and in
+   `deploy/helm/datagripe/Chart.yaml` (both `version` and
+   `appVersion`), then run `bun install` so `bun.lock` follows. CI
+   installs `--frozen-lockfile`, so a lock left behind fails the build
+   rather than the release.
+2. Rename `## Unreleased` to `## X.Y.Z — YYYY-MM-DD`.
+3. Run what CI runs: `bun run typecheck`, `bun run lint`,
+   `bun run check:brand`, `bun test`, `bun run build:site`.
+4. `git commit -am "release X.Y.Z"`, `git tag vX.Y.Z`,
+   `git push origin main --tags`.
+
 ## Brand
 
 [`docs/brand/brand-system.md`](docs/brand/brand-system.md) is binding,
-not advisory. Two rules catch people out:
+not advisory. Four rules catch people out:
 
 - **Colour alone never carries meaning.** Every severity, status or
   category coded by colour also carries an icon, a dash pattern or a
@@ -146,6 +206,17 @@ not advisory. Two rules catch people out:
   exception is the landing page's hero canvas, which is a joke about
   that rule and is argued for by name in the brand spec — a second
   exception would mean the rule is wrong, not that the budget grew.
+- **Forms are dock tabs. There is no modal chrome**, and the backdrop
+  was removed deliberately. Something that needs a surface becomes a
+  tab; something that needs one field — a filename, a rename — asks for
+  it in the row it belongs to. `window.prompt` and `window.alert` are
+  the browser's dialogs in an application that has its own.
+- **A control comes from
+  [`components/controls.tsx`](apps/web/src/components/controls.tsx)** —
+  `TextInput`, `Select`, `Field`, `Button` — rather than being written
+  again where it is needed. A control that must look different takes a
+  modifier class. Toggles and the segmented control are not there yet
+  (roadmap: `ui · one-of-each-control`).
 
 The site imports `tokens.css` and every colour in `site/style.css` is a
 `var()`. Keep it that way: it is what stops the site and the app from
@@ -192,6 +263,12 @@ bun run db:migrate
 
 Run `typecheck`, `test`, `lint` and `build:site` before calling a change
 done. CI runs all four and nothing else will catch a broken site link.
+
+**`bun test` is green without a database, and quieter than you think.**
+The server's service tests probe `localhost:5432` and turn themselves
+into `test.skip` when nothing answers, so a run with no PostgreSQL
+passes and says `31 skip` instead of `0 skip`. Read the skip count after
+writing one — see [docs/testing.md](docs/testing.md).
 
 ## Style
 
