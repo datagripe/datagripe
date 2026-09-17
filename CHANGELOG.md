@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- MCP status errors no longer remove the sidebar launcher. Owners can open
+  the management tab, see the failure and retry. Only an explicit deployment
+  disablement hides the header; unknown status is never shown as off.
+- The MCP header reads only the original settings columns, so a deployment
+  missing migration 0027 still shows its configured mode and token count.
+  The settings tab explains that pending migrations must be applied.
+- App startup now checks migration history and applies missing files
+  before serving requests in both database modes. A transaction advisory
+  lock prevents concurrent replicas or manual runners applying a file
+  twice; failed migrations roll back and stop startup.
+- Updated restart advice and deployment/configuration documentation,
+  published MCP/updates specs and operator guides for automatic startup
+  migrations and MCP status recovery. Existing migration jobs remain valid.
+
 ## 0.0.14 — 2026-09-17
 
 ### Fixed

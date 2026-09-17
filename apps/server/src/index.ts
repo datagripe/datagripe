@@ -57,8 +57,8 @@ const config = await loadConfig();
 const hot = hotState<EmbeddedPgHandle>();
 await disposePrevious(hot);
 
-// Embedded mode: boot the managed PostgreSQL cluster first, then keep its
-// schema current automatically. External mode expects `bun run db:migrate`.
+// Embedded mode boots the managed PostgreSQL cluster first. Both modes
+// check the app schema before creating services or accepting requests.
 // The cluster is handed across hot reloads rather than restarted: it takes
 // seconds to start and it is not the code being edited.
 let embeddedPg: EmbeddedPgHandle | null = hot.kept;
@@ -70,9 +70,7 @@ const appDb = createAppDb(
 	embeddedPg?.url ?? (config.APP_DATABASE_URL as string),
 );
 hot.disposers.push(() => appDb.close());
-if (embeddedPg !== null) {
-	await migrate(appDb, migrationsDir(config));
-}
+await migrate(appDb, migrationsDir(config));
 
 // Direct-in mode: a single implicit identity, no accounts or cookies.
 const localAuth = config.AUTH_DISABLED

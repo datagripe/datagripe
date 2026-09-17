@@ -42,6 +42,13 @@ sidebar keeps the on/off switch and read/write status; the tab holds
 mode, functionality switches, tokens, endpoint and client configuration.
 You can configure it and create or revoke tokens while it is off.
 
+A failed status read keeps the MCP Server launcher visible for owners and
+shows **status unknown**, with **retry**. Open the tab to see the error and
+retry loading settings. Unknown does not mean off. The header is hidden
+only when the deployment explicitly reports MCP disabled or the account
+cannot manage MCP. If settings report a pending migration, follow
+[Upgrading](/docs/upgrading/) and retry after applying it.
+
 Domain management, sync and Git are separate opt-ins, initially off:
 
 - **Domains:** list, create, edit and delete domains; assign or unassign

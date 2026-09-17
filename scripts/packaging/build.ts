@@ -7,7 +7,7 @@
  *                                  dependencies that cannot be bundled
  *   dist/bin/datagripe.mjs         the launcher, runnable under plain node
  *   dist/apps/server/src/index.js  the bundled server
- *   dist/apps/server/migrations/   applied at startup in embedded mode
+ *   dist/apps/server/migrations/   applied at app startup in both database modes
  *   dist/apps/web/dist/            the built web app, served by the server
  *
  * The checkout's directory layout is reproduced on purpose, down to the

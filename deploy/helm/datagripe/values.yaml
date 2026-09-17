@@ -17,9 +17,9 @@ image:
 imagePullSecrets: []
 
 # One, and there is no autoscaling here on purpose. Sessions and
-# workspace state live in the database, so more replicas would work; what
-# does not is several of them applying migrations at the same moment. Run
-# the migration job (below) and raise this once you have a reason to.
+# workspace state live in the database, so more replicas would work.
+# Migration runners use a database advisory lock to serialize concurrent
+# starts. Keep one writer when using an embedded database or shared disk.
 replicaCount: 1
 
 # `production` adds `Secure` to the session cookie. Right for the https

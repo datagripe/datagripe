@@ -66,8 +66,8 @@ cookie back.
 
 The stack runs the image's `migrate` entry point as a one-shot service
 before the app, so an upgrade applies its migrations automatically on
-`docker compose up -d`. A shared deployment never migrates itself from
-inside the running server — see [upgrading](/docs/upgrading/).
+`docker compose up -d`. The app also checks and applies pending migrations
+at startup before serving requests — see [upgrading](/docs/upgrading/).
 
 ## The database is not published
 

@@ -20,17 +20,17 @@ no down migration and no ORM: the files are the schema, and
 
 ## Applying it
 
-- **Embedded mode** (`bun run dev`, the desktop app, `bunx
-  @datagripe/cli personal`) migrates itself at startup. Restarting is
-  enough.
-- **External mode** (`APP_DATABASE_URL` set — the compose setup, Docker,
-  Kubernetes) does **not** migrate at startup. Run `bun run db:migrate`,
-  which is also what the deployment docs tell operators.
+The app checks `schema_migrations` on every startup, in embedded and
+external database modes, and applies missing files before accepting HTTP
+or WebSocket connections. Each migration and its history row commit
+together. A PostgreSQL advisory lock serializes concurrent app starts and
+manual runners; a failed migration rolls back and stops startup. The app
+database account must have permission to apply the schema changes.
 
-That asymmetry is the one that wastes an afternoon: a new migration in
-a checkout with `.env` pointing at a real PostgreSQL does nothing until
-you run it by hand, and the failure is a constraint violation from the
-old schema rather than anything mentioning migrations.
+`bun run db:migrate` and `datagripe migrate` remain available for applying
+changes before rollout. Compose services, Helm hooks and init containers
+may still run them; startup rechecks the history and skips applied files.
+The app process owns this work, not the PostgreSQL pod or a database trigger.
 
 ## Widening a constraint
 

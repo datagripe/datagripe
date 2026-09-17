@@ -33,10 +33,29 @@ import { Button, TextInput } from "./controls";
  */
 export function McpSwitch() {
 	const status = useMcpStore((store) => store.status);
+	const statusLoading = useMcpStore((store) => store.statusLoading);
+	const statusError = useMcpStore((store) => store.statusError);
 	const busy = useMcpStore((store) => store.busy);
 
 	if (status === null) {
-		return null;
+		return (
+			<>
+				<span
+					className="dg-mcp-pill"
+					title={statusError ?? "MCP status has not loaded yet"}
+					role="status"
+				>
+					{statusLoading ? "loading" : "status unknown"}
+				</span>
+				<Button
+					size="sm"
+					disabled={statusLoading}
+					onClick={() => void useMcpStore.getState().loadStatus()}
+				>
+					retry
+				</Button>
+			</>
+		);
 	}
 
 	const pill =
@@ -109,6 +128,7 @@ export function McpSection() {
 	const loading = useMcpStore((store) => store.loading);
 	const busy = useMcpStore((store) => store.busy);
 	const error = useMcpStore((store) => store.error);
+	const statusError = useMcpStore((store) => store.statusError);
 	const revealed = useMcpStore((store) => store.revealed);
 	const project = useSessionStore((store) => store.currentWorkspace);
 	const [copied, setCopied] = useState<string | null>(null);
@@ -136,9 +156,26 @@ export function McpSection() {
 		);
 	if (state === null) {
 		return (
-			<p className="dg-sidebar-empty">
-				{loading ? "Loading…" : (error ?? "Nothing to show yet.")}
-			</p>
+			<div className="dg-mcp dg-scroll">
+				<h2>MCP Server</h2>
+				<div>
+					<McpSwitch />
+				</div>
+				<p role={error || statusError ? "alert" : "status"}>
+					{loading
+						? "Loading…"
+						: (error ?? statusError ?? "MCP settings have not loaded yet.")}
+				</p>
+				<Button
+					disabled={loading}
+					onClick={() => {
+						void useMcpStore.getState().loadStatus();
+						void useMcpStore.getState().load();
+					}}
+				>
+					retry settings
+				</Button>
+			</div>
 		);
 	}
 

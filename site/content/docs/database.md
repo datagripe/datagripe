@@ -13,7 +13,7 @@ One variable decides the shape.
 
 | | Default | |
 | --- | --- | --- |
-| `APP_DATABASE_URL` | — | A PostgreSQL for DataGripe's own state. Setting it selects **external** mode: accounts on, and migrations run separately with `bun run db:migrate`. |
+| `APP_DATABASE_URL` | — | A PostgreSQL for DataGripe's own state. Setting it selects **external** mode: accounts on, and the app applies pending migrations at startup. |
 | `DATABASE_MODE` | derived | `embedded` or `external`, forced. Without it, external when `APP_DATABASE_URL` is set and embedded otherwise. Set it to run embedded while a stray `APP_DATABASE_URL` is still in the environment. |
 
 ## Embedded mode
@@ -39,6 +39,10 @@ data directory the server owns to generate them into.
 | `SESSION_SECRET` | — | Signs session cookies. Regenerating it signs everyone out and does nothing worse. |
 | `MIGRATIONS_DIR` | the checkout's | Directory of migration `.sql` files. A packaged build ships them beside the bundled server and points here; from a checkout you should not need to set it. |
 
-Migrations do **not** run automatically in external mode: a shared
-database is upgraded deliberately, at a moment somebody chose. See
+The app checks `schema_migrations` on every startup, in embedded and
+external database modes, and applies missing files before accepting HTTP
+or WebSocket connections. Each migration and its history row commit
+together. A PostgreSQL advisory lock serializes concurrent app starts and
+manual runners; a failed migration rolls back and stops startup. The app
+database account must have permission to apply the schema changes. See
 [upgrading](/docs/upgrading/).

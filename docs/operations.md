@@ -222,3 +222,20 @@ In a hosted, multi-tenant deployment, set `HOST_FS_DISABLED=true` and
 leave `GIT_ENABLED` and `REPO_COMMANDS_ENABLED` unset. Host-filesystem access exists for the
 local and desktop shape, where the person pressing the button owns the
 checkout.
+
+## App startup and migrations
+
+The app checks `schema_migrations` on every startup, in embedded and
+external database modes, and applies missing files before accepting HTTP
+or WebSocket connections. Each migration and its history row commit
+together. A PostgreSQL advisory lock serializes concurrent app starts and
+manual runners; a failed migration rolls back and stops startup. The app
+database account must have permission to apply the schema changes.
+
+A Kubernetes app-container restart does not rerun completed init containers.
+It does run the app startup check, so an image pulled into the same pod
+can bring its app schema up to date. The PostgreSQL StatefulSet is an
+external app database, even when bundled with the chart. Manual recovery
+for older servers remains `kubectl exec -n datagripe deployment/datagripe
+-- bun run /app/bin/datagripe.mjs migrate`. See the
+[Kubernetes guide](../site/content/docs/kubernetes.md).

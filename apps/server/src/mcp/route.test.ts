@@ -594,3 +594,25 @@ pgTest(
 		});
 	},
 );
+
+pgTest(
+	"an upgrade missing migration 0027 still reports MCP status and explains the settings failure",
+	async () => {
+		await enable("read-write");
+		const before = await service.status({ id: workspaceId });
+		// Reproduce an external app database whose deployment updated the server
+		// without running the new migration. Restore the column for other tests.
+		await appDb`ALTER TABLE mcp_settings RENAME COLUMN domains_enabled TO domains_enabled_pending`;
+		try {
+			expect(await service.status({ id: workspaceId })).toEqual(before);
+			await expect(
+				service.state({ id: workspaceId, name: "Main" }),
+			).rejects.toThrow("database migration 0027");
+		} finally {
+			await appDb`ALTER TABLE mcp_settings RENAME COLUMN domains_enabled_pending TO domains_enabled`;
+		}
+		expect(
+			(await service.state({ id: workspaceId, name: "Main" })).enabled,
+		).toBe(true);
+	},
+);

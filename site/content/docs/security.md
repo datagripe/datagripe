@@ -185,7 +185,9 @@ is removed outright by `UPDATE_CHECK_DISABLED`.
 
 In Kubernetes, where a Deployment is guaranteed to start it again, a
 workspace **owner** can restart the server from the account menu — with
-`imagePullPolicy: Always` that is the whole upgrade. It is off by
+`imagePullPolicy: Always` it can pull a new image, but does not rerun
+migration init containers or Helm hooks. The app itself applies pending
+migrations before serving requests, in both database modes. It is off by
 default in every other shape and refused by the server there, not just
 hidden, because a process nothing will restart must not be able to stop
 itself. `RESTART_TO_UPDATE` decides it either way, and every press is

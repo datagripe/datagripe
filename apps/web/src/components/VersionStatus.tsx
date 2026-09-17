@@ -26,7 +26,7 @@ export function upgradeAdvice(
 	supervised: boolean,
 ): string {
 	if (supervised) {
-		return "This deployment pulls its image when the process starts, so restarting is the whole upgrade.";
+		return "The server checks its app database and applies pending migrations before it starts, including after a container restart. The image tag and pull policy decide whether it starts a new version.";
 	}
 	switch (shape) {
 		case "desktop":
@@ -36,7 +36,7 @@ export function upgradeAdvice(
 		case "container":
 			return "Pull the image and restart the container.";
 		case "kubernetes":
-			return "Roll the Deployment — its image tag decides what comes back.";
+			return "Upgrade the image or roll the Deployment. The app applies pending migrations before serving requests.";
 		default:
 			return "Pull the repository and restart.";
 	}
@@ -98,7 +98,7 @@ export function VersionStatus() {
 	const restart = () => {
 		if (
 			window.confirm(
-				"Restart DataGripe? Everyone in this deployment is disconnected for a few seconds, and unsaved work in an editor is kept in the browser. It comes back on whatever image it pulls.",
+				"Restart DataGripe? Everyone in this deployment is disconnected for a few seconds, and unsaved work in an editor is kept in the browser. It comes back on whatever image it pulls. The app checks and applies pending migrations before accepting connections.",
 			)
 		) {
 			void useAppStore.getState().restart();
@@ -210,7 +210,7 @@ export function VersionStatus() {
 							disabled={restarting}
 							onClick={restart}
 						>
-							{restarting ? "restarting…" : "restart to apply an update"}
+							{restarting ? "restarting…" : "restart server"}
 						</button>
 					)}
 

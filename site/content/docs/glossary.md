@@ -124,7 +124,7 @@ generates its own secrets, and has no accounts. The personal and desktop
 shapes, and the zero-config container.
 
 **External mode** — you supply `APP_DATABASE_URL`. Accounts on,
-migrations run separately. Selected by setting that variable, or forced
+the app applies pending migrations at startup. Selected by setting that variable, or forced
 with `DATABASE_MODE`.
 
 **`WEB_ORIGIN`** — the exact origin browsers use. Both the HTTP routes

@@ -62,8 +62,9 @@ the ones in `Chart.yaml` only matter to somebody installing from a
 checkout — keep them current anyway.
 
 **A release that carries a migration needs nothing extra here.**
-Embedded deployments apply migrations on startup; external PostgreSQL
-deployments require `bun run db:migrate` before starting the new version.
+The app applies pending migrations on startup in both embedded and
+external modes, before serving requests. `bun run db:migrate` remains
+available to apply them before rollout.
 The ordering is the deployment's, not the tag's — but it is
 worth saying so in the CHANGELOG entry, because an operator reading the
 release notes is the person who finds out either way.

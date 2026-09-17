@@ -59,9 +59,8 @@ services:
     # Deliberately not published: DataGripe is the only thing that needs
     # this database, and it reaches it on the compose network.
 
-  # Runs to completion before the app starts. External mode does not
-  # migrate itself — that is embedded mode's job — and a server whose
-  # schema is a version behind fails at the first query, not at boot.
+  # Pre-applies migrations before the app starts. App startup also checks
+  # history; concurrent runners serialize through the same advisory lock.
   migrate:
     <<: *datagripe
     command: ["migrate"]

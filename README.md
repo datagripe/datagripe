@@ -37,7 +37,7 @@ Shared/external PostgreSQL (e.g. the compose setup):
 bun install
 docker compose up -d postgres   # or any local Postgres; see .env.example
 cp .env.example .env            # sets APP_DATABASE_URL + the two secrets
-bun run db:migrate
+bun run db:migrate       # optional pre-rollout step; app startup also applies migrations
 bun run dev                     # web on :5173, api on :3001, login enabled
 ```
 

@@ -26,6 +26,8 @@ import { wsClient } from "../api/ws";
 export interface McpUiState {
 	/** Null until the header has asked; absent deployments answer too. */
 	status: McpStatus | null;
+	statusLoading: boolean;
+	statusError: string | null;
 	state: McpState | null;
 	loading: boolean;
 	busy: boolean;
@@ -55,8 +57,20 @@ function statusOf(state: McpState): McpStatus {
 	};
 }
 
+// Ignore a previous project's status response after a workspace reset.
+let statusRequest = 0;
+
+export function showMcpHeader(
+	canManage: boolean,
+	status: McpStatus | null,
+): boolean {
+	return canManage && status?.available !== false;
+}
+
 export const useMcpStore = create<McpUiState>()((set, get) => ({
 	status: null,
+	statusLoading: false,
+	statusError: null,
 	state: null,
 	loading: false,
 	busy: false,
@@ -64,12 +78,17 @@ export const useMcpStore = create<McpUiState>()((set, get) => ({
 	revealed: null,
 
 	async loadStatus() {
+		const request = ++statusRequest;
+		set({ statusLoading: true, statusError: null });
 		try {
-			set({ status: await wsClient.request<McpStatus>("mcp.status", {}) });
-		} catch {
-			// A viewer, or a deployment without MCP: either way the header
-			// shows nothing, which is what an unanswered status means.
-			set({ status: null });
+			const status = await wsClient.request<McpStatus>("mcp.status", {});
+			if (request === statusRequest) set({ status, statusError: null });
+		} catch (error) {
+			// A failed read is unknown, not a deployment that disabled MCP.
+			if (request === statusRequest)
+				set({ status: null, statusError: message(error) });
+		} finally {
+			if (request === statusRequest) set({ statusLoading: false });
 		}
 	},
 
@@ -80,7 +99,7 @@ export const useMcpStore = create<McpUiState>()((set, get) => ({
 		set({ loading: true });
 		try {
 			const state = await wsClient.request<McpState>("mcp.settings", {});
-			set({ state, status: statusOf(state), error: null });
+			set({ state, status: statusOf(state), statusError: null, error: null });
 		} catch (error) {
 			set({ error: message(error) });
 		} finally {
@@ -152,7 +171,11 @@ export const useMcpStore = create<McpUiState>()((set, get) => ({
 	},
 
 	reset() {
+		statusRequest++;
 		set({
+			statusLoading: false,
+			statusError: null,
+			loading: false,
 			status: null,
 			state: null,
 			error: null,

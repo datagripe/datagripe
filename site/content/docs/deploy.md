@@ -66,8 +66,9 @@ both are, with the database supplied differently.
 
 ## Migrations
 
-A shared deployment does not migrate itself — that is the embedded
-database's job — so the image has a second entry point:
+The app applies pending migrations at startup in every deployment, before
+serving requests. The image also has a migration-only entry point for
+operators who want to apply changes before rollout:
 
 ```bash
 docker run --rm -e APP_DATABASE_URL=… -e CONNECTION_ENCRYPTION_KEY=… \

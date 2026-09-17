@@ -92,7 +92,14 @@ export function createMcpService(deps: McpDeps): McpService {
 	 * indexed read, no datasource list, no file walk, no briefing.
 	 */
 	async function status(workspace: { id: string }): Promise<McpStatus> {
-		const settings = await readSettings(deps.appDb, workspace.id);
+		// The header needs only the original settings columns. A pending
+		// functionality migration must not conceal an already-enabled server.
+		const rows = await deps.appDb<
+			Array<{ enabled: boolean; mode: McpStatus["mode"] }>
+		>`
+			SELECT enabled, mode FROM mcp_settings WHERE workspace_id = ${workspace.id}
+		`;
+		const settings = rows[0] ?? { enabled: false, mode: "read-only" };
 		const counted = await deps.appDb<{ count: string }[]>`
 			SELECT count(*) AS count FROM mcp_tokens
 			WHERE workspace_id = ${workspace.id} AND revoked_at IS NULL

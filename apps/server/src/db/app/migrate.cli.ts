@@ -1,7 +1,7 @@
 /**
  * `bun run db:migrate` — apply pending migrations to the external
- * database and exit. Embedded mode migrates itself at startup and has no
- * use for this.
+ * database and exit. An optional pre-rollout step: app startup also runs
+ * the same locked migration check in both database modes.
  *
  * Its own module rather than an `import.meta.main` block inside
  * `migrate.ts`, because `migrate.ts` is also imported by the server and a

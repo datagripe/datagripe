@@ -43,9 +43,9 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       initContainers:
-        # External mode does not migrate itself — that is embedded mode's
-        # job — so this runs first, every start, and exits. Migrations are
-        # idempotent, so a restart with nothing to do costs a connection.
+        # Pre-apply migrations before the app container starts. The app also
+        # checks on startup, including container restarts that do not rerun
+        # this init container. Both runners use the same advisory lock.
         - name: migrate
           image: ghcr.io/datagripe/datagripe:latest
           args: ["migrate"]

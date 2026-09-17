@@ -42,7 +42,7 @@ often not the person who deployed it.
 
 | Shape | What the menu says |
 | --- | --- |
-| Kubernetes | Restart — the pod pulls on start. Offered as a button; see below. |
+| Kubernetes | Upgrade the image or chart, then restart. The app checks migrations before serving requests. |
 | Desktop | Nothing to do: the app updates itself and offers the new version. |
 | CLI (`bunx @datagripe/cli`) | Stop it and run it again with `@latest`. |
 | Container | Pull the image and restart the container. |
@@ -55,12 +55,14 @@ the commands and, more importantly, the migration story per shape.
 | --- | --- | --- |
 | `DATAGRIPE_SHAPE` | detected | Which of `desktop`, `cli` or `container` this is. The desktop shell, the CLI launcher and the image each set it for you, and Kubernetes is detected from `KUBERNETES_SERVICE_HOST` and wins over it. Setting it by hand only changes which upgrade advice you are shown. |
 
-## Restarting to apply
+## Restarting the server
 
-With `imagePullPolicy: Always`, restarting **is** the upgrade: the new
-pod pulls, runs the entry point, and comes back on the new image. So in
-Kubernetes the menu offers a **restart to apply** button rather than an
-instruction.
+The **restart server** button ends the app process. Kubernetes restarts
+the container inside the same pod and may pull a new image, but it does
+not rerun completed init containers or Helm hooks. The app itself checks
+`schema_migrations` and applies pending files at startup in both database
+modes. It waits for concurrent runners and refuses to serve if a migration
+fails. See [Upgrading](/docs/upgrading/).
 
 | | Default | |
 | --- | --- | --- |
@@ -68,7 +70,8 @@ instruction.
 
 The button is there whether or not the update check found anything: a
 deployment that builds its own image from a moving tag has updates the
-feed has never heard of, and restarting applies those too.
+feed has never heard of. A moving tag still requires the new image's
+migrations; the app startup check applies them before serving.
 
 Four things about that button:
 

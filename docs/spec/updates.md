@@ -112,16 +112,21 @@ it. `RESTART_TO_UPDATE` overrides it in both directions, for a compose
 stack or a systemd unit that restarts — and for a pod where somebody
 would rather it did not.
 
-When it is true, and only then, the menu offers **restart to apply** to
-a workspace **owner**. With `imagePullPolicy: Always` the restart *is*
-the upgrade: the new pod pulls, runs the entry point, and comes back on
-the new image.
+When it is true, and only then, the menu offers **restart server** to
+a workspace **owner**. This ends the app process, so Kubernetes restarts
+the container in the same pod. Even with `imagePullPolicy: Always`,
+completed init containers do not rerun, and no Helm hook is triggered.
+The app startup path checks `schema_migrations` and applies pending
+files before creating services or opening HTTP/WebSocket listeners, in
+both embedded and external modes. Startup and manual migration runners
+share a PostgreSQL transaction advisory lock. Each file and its history
+row commit together; failures roll back that file and stop startup.
+The advice and confirmation state that this check happens on restart.
 
 The button does not wait for the update check to find something. A
 deployment building its own image from a moving tag has updates the
-release feed has never heard of, and restarting is how those are applied
-too — the check answers "is there a release", not "is your image
-current".
+release feed has never heard of. The check answers "is there a release",
+not "is your image current" or "have its migrations run".
 
 Four things keep that honest:
 
@@ -205,7 +210,7 @@ failed is how a person misses a security release.
 
 | Shape | The one thing to do |
 | --- | --- |
-| `kubernetes` (supervised) | Restart — the pod pulls on start. Offered as a button. |
+| `kubernetes` (supervised) | Upgrade the image or chart, then restart. App startup applies missing migrations before serving. |
 | `desktop` | Nothing: the shell updates itself and offers the new version. |
 | `cli` | Stop it and run it again with `@latest`. |
 | `container` | Pull the image and restart the container. |

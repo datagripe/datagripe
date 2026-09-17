@@ -5,8 +5,9 @@ group: Deploy
 order: 7
 ---
 
-An upgrade is: new image, migrations applied, server started. What
-differs between shapes is only who runs the migration.
+An upgrade is: new image, migrations applied, server ready. The app
+checks and applies pending migrations on every startup, before serving
+requests, whether its PostgreSQL is embedded or external.
 
 While the version is `0.0.x`, nothing in the application is promised to
 stay put. Read the [release notes](/docs/release-notes/) before upgrading
@@ -24,7 +25,7 @@ it tells you to do about it is one of these.
 | `bunx @datagripe/cli personal` | `bunx @datagripe/cli@latest personal`. The data directory is untouched. |
 | One container | `docker pull … && docker restart datagripe`. It migrates itself on start. |
 | Compose | `docker compose pull && docker compose up -d`. The migration service runs first. |
-| Kubernetes or Helm | Roll the Deployment. With `imagePullPolicy: Always`, **restarting is the whole upgrade** — and the account menu offers an owner a button that does exactly that. |
+| Kubernetes or Helm | Upgrade the image or chart, then restart. The app checks migrations before serving; existing hooks and init containers may still pre-apply them. Image tags and pull policy determine which version starts. |
 | A checkout | `git pull && bun install && bun run db:migrate`. |
 
 The rest of this page is what those commands are doing, and the two
@@ -67,10 +68,14 @@ The data directory is untouched. It is the thing worth backing up.
 
 ## Shared shapes
 
-A shared deployment does **not** migrate itself. That is deliberate: a
-server that migrates on start is a server that migrates twice when two
-replicas start, and the second one loses. The image has a second entry
-point instead.
+The app checks `schema_migrations` on every startup, in embedded and
+external database modes, and applies missing files before accepting HTTP
+or WebSocket connections. Each migration and its history row commit
+together. A PostgreSQL advisory lock serializes concurrent app starts and
+manual runners; a failed migration rolls back and stops startup. The app
+database account must have permission to apply the schema changes.
+
+The image also has a migration-only entry point for an explicit pre-rollout step:
 
 ```bash
 docker run --rm \
@@ -89,26 +94,35 @@ So in practice: `docker compose pull && docker compose up -d`, or
 `helm upgrade datagripe oci://ghcr.io/datagripe/charts/datagripe`, and
 the migration is already in the path.
 
-Migrations are idempotent. Running one twice is a no-op, which is what
-makes the init-container race untidy rather than harmful.
+Already-recorded migrations are skipped. Concurrent runners wait on the
+same advisory lock and recheck history before executing each file.
 
 ### Restarting into a pulled image
 
-With `imagePullPolicy: Always` on a tag that moved, a pod that restarts
-comes back on the new image — the pull is the start-up, so ending the
-process is the entire upgrade. That is why the account menu offers a
-workspace owner a **restart to apply** button in Kubernetes and nowhere
-else: it is the one shape where something is guaranteed to start
-DataGripe again.
+With `imagePullPolicy: Always` on a tag that moved, an app-container
+restart may pull the new image. Completed init containers do not rerun,
+but the app itself checks migration history before serving. The
+**restart server** button therefore includes the schema check in both
+database modes. A pinned image still needs its tag updated to get a
+new release.
 
-It is off elsewhere because a container run without a restart policy
-that exits is a DataGripe nobody is running. A compose stack or a
-systemd unit that does restart can turn it on with
+The button requires a supervisor that will restart the process. Kubernetes
+enables it by default; other supervised shapes can set
 `RESTART_TO_UPDATE=true` — see [updates](/docs/updates/).
 
-A restart does not run a migration. In the shared shapes that is a
-separate step and stays one; restart to pick up an image whose
-migrations have already been applied.
+## MCP missing after a 0.0.13 upgrade
+
+Version 0.0.13 silently hid the MCP sidebar header when its status request
+failed. One cause is a shared app database missing migration 0027: the
+status query attempted to read the new functionality columns. Apply the
+pending migrations using the upgraded image or CLI, then reload the app.
+This does not revoke tokens or reset the project's MCP setting.
+
+The corrected client keeps the launcher visible on status failures and
+shows **status unknown** with a retry action. Its management tab reports
+missing migrations explicitly. If migration 0027 is already applied,
+check the server log for the failed `mcp.status` action; a missing header
+alone does not prove the server is off.
 
 ## Pin the version
 

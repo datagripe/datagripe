@@ -76,8 +76,9 @@ Generate those two secrets once and keep them. Regenerating
 
 ## Migrations
 
-A shared deployment does not migrate itself — that is the embedded
-database's job — so the image has a second entry point:
+The app applies pending migrations at startup in every deployment, before
+serving requests. The image also has a migration-only entry point for
+operators who want to apply changes before rollout:
 
 ```bash
 docker run --rm \
@@ -85,8 +86,8 @@ docker run --rm \
   ghcr.io/datagripe/datagripe migrate
 ```
 
-Run it before the app starts, on every upgrade. Migrations are
-idempotent. [Compose](/docs/compose/) runs this as a one-shot service,
+Running it separately is optional. Applied files are skipped, and
+concurrent runners are serialized by a database advisory lock. [Compose](/docs/compose/) runs this as a one-shot service,
 Helm as a pre-install hook, and the plain manifests as an init
 container — see [upgrading](/docs/upgrading/).
 

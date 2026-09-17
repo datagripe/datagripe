@@ -1,6 +1,8 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { McpMode, McpToken } from "@datagripe/contracts";
 import { MCP_TOKEN_PREFIX } from "@datagripe/contracts";
+import { ErrorCodes } from "@datagripe/contracts/errors";
+import { ServiceError } from "../connections/service";
 import type { AppDb } from "../db/app/pool";
 
 /**
@@ -48,7 +50,20 @@ export async function readSettings(
 	>`
 		SELECT enabled, mode, domains_enabled, sync_enabled, git_enabled, updated_at FROM mcp_settings
 		WHERE workspace_id = ${workspaceId}
-	`;
+	`.catch((error: unknown) => {
+		if (
+			error !== null &&
+			typeof error === "object" &&
+			(("errno" in error && error.errno === "42703") ||
+				("code" in error && error.code === "42703"))
+		) {
+			throw new ServiceError(
+				ErrorCodes.BadRequest,
+				"MCP settings need database migration 0027. Apply pending app-database migrations with this version of DataGripe, then retry. See the Upgrading documentation for your deployment.",
+			);
+		}
+		throw error;
+	});
 	const row = rows[0];
 	return row === undefined
 		? OFF

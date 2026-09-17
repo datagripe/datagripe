@@ -1,13 +1,8 @@
 {{- if and .Values.migrations.enabled (ne .Values.database.mode "embedded") }}
 {{- /*
-   External mode does not migrate itself — that is embedded mode's job —
-   so the schema has to be brought up to the image's expectations before
-   any pod serves a request.
-
-   A hook rather than an init container so that it runs once per release
-   instead of once per pod: identical init containers on several replicas
-   would race to apply the same migration, and the losers crash and
-   retry. Idempotent either way, but untidy for no gain.
+   Pre-apply migrations once per Helm release. App startup also checks
+   history and applies missing files, including on container restarts
+   that do not rerun this hook. Both paths share an advisory lock.
 */ -}}
 apiVersion: batch/v1
 kind: Job

@@ -34,11 +34,10 @@ until you have one.
 - **`CONNECTION_ENCRYPTION_KEY` is not recoverable.** Datasource
   passwords in the database are encrypted with it; a database backup
   without the key cannot open them. Back it up separately.
-- **One replica.** The migrations run in an init container, so two pods
-  starting at once would race to apply them — the loser crashes and
-  retries, which is untidy rather than harmful, but there is no reason to
-  invite it. Nothing else in DataGripe requires a single replica;
-  sessions live in the database.
+- **One replica by default.** Startup and init-container migrations share
+  an advisory lock, so concurrent starts do not apply files twice. Keep
+  one writer for an embedded database or a shared local data volume;
+  sessions themselves live in the database.
 - **`NODE_ENV: production` needs HTTPS.** It puts `Secure` on the session
   cookie, which a browser will not send back over plain http. It is set
   in `configmap.yaml` because that is where a real deployment ends up;

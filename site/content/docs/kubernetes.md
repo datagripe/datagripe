@@ -23,6 +23,30 @@ The chart is an OCI artifact published beside the image, so there is no
 DataGripe's version: `--version <!--dg:version-->` is the chart that
 installs `<!--dg:version-->`.
 
+### Upgrades and restarts
+
+The chart's bundled PostgreSQL StatefulSet is an **external app database**
+from DataGripe's perspective. Its schema needs the same migration step as
+a separately managed PostgreSQL service.
+
+The app checks and applies missing migrations on every startup, before
+serving requests. This also runs when Kubernetes restarts only the app
+container in an existing pod. Concurrent starts share a database advisory
+lock, and a failed migration prevents the app from becoming ready.
+
+`helm upgrade` may pre-apply migrations through its hook, and the plain
+manifests retain a migration init container. Both are compatible with the
+startup check: already-recorded files are skipped. Pin the migration and
+server images to the same release.
+
+For an older server, such as 0.0.13, that has already started without its
+migrations, apply them from the running image and reload the browser:
+
+```bash
+kubectl exec -n datagripe deployment/datagripe -- \
+  bun run /app/bin/datagripe.mjs migrate
+```
+
 ### A managed database
 
 Better operated than one you now own:
@@ -75,9 +99,10 @@ kubectl apply -k deploy/k8s
 
 ## One replica
 
-The migrations run in an init container, so two pods starting at once
-would race to apply them. The loser crashes and retries, which is untidy
-rather than harmful — but there is no reason to invite it.
+The default is one replica. Migration runners serialize through a
+database advisory lock, so concurrent starts do not apply a file twice.
+Embedded database mode and a shared local data volume still require one
+writer.
 
 Nothing else in DataGripe requires a single replica. Sessions live in the
 database, not in the pod.

@@ -21,13 +21,21 @@ export function migrationsDir(
 		: resolveRepoPath(config.MIGRATIONS_DIR);
 }
 
+// A stable, app-specific advisory-lock namespace, shared by startup and
+// the manual runner. Transaction locks are released on commit, rollback,
+// or connection loss; no pooled session can accidentally retain one.
+const MIGRATION_LOCK = 0x44475250; // DGRP
+
 async function ensureMigrationsTable(db: AppDb): Promise<void> {
-	await db`
+	await db.begin(async (tx) => {
+		await tx`SELECT pg_advisory_xact_lock(${MIGRATION_LOCK}, 1)`;
+		await tx`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       name text PRIMARY KEY,
       applied_at timestamptz NOT NULL DEFAULT now()
     )
   `;
+	});
 }
 
 async function appliedMigrations(db: AppDb): Promise<Set<string>> {
@@ -44,7 +52,9 @@ export async function listMigrationFiles(
 
 /**
  * Apply pending migrations in filename order. Each migration runs in a
- * transaction and is recorded in schema_migrations.
+ * transaction and is recorded in schema_migrations. Startup and manual
+ * runners serialize the history check and DDL with the same advisory
+ * lock, including the first creation of the history table.
  */
 export async function migrate(
 	db: AppDb,
@@ -60,12 +70,29 @@ export async function migrate(
 			continue;
 		}
 		const sql = await Bun.file(path.join(dir, file)).text();
-		await db.begin(async (tx) => {
-			await tx.unsafe(sql);
-			await tx`INSERT INTO schema_migrations (name) VALUES (${file})`;
-		});
-		newlyApplied.push(file);
-		log.info("migration applied", { migration: file });
+		const didApply = await db
+			.begin(async (tx) => {
+				await tx`SELECT pg_advisory_xact_lock(${MIGRATION_LOCK}, 1)`;
+				// The initial list is only an optimization: another app may
+				// have applied this file while we waited for its transaction.
+				const existing =
+					await tx`SELECT name FROM schema_migrations WHERE name = ${file}`;
+				if (existing.length > 0) return false;
+				await tx.unsafe(sql);
+				await tx`INSERT INTO schema_migrations (name) VALUES (${file})`;
+				return true;
+			})
+			.catch((error: unknown) => {
+				log.error("migration failed", {
+					migration: file,
+					error: error instanceof Error ? error.message : String(error),
+				});
+				throw error;
+			});
+		if (didApply) {
+			newlyApplied.push(file);
+			log.info("migration applied", { migration: file });
+		}
 	}
 	return newlyApplied;
 }

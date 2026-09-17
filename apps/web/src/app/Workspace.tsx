@@ -54,7 +54,7 @@ import { draftDebouncer, useDocumentsStore } from "../stores/documents";
 import { useFilesStore } from "../stores/files";
 import { useRepoStore } from "../stores/git";
 import { useGripesStore } from "../stores/gripes";
-import { useMcpStore } from "../stores/mcp";
+import { showMcpHeader, useMcpStore } from "../stores/mcp";
 import { usePresenceStore } from "../stores/presence";
 import { useRepoRunsStore } from "../stores/repoRuns";
 import {
@@ -652,13 +652,13 @@ export function Workspace() {
 							// whether something outside the app can read this project
 							// is not a fact you should have to open a panel to learn
 							// (docs/spec/mcp.md "The panel").
-							...(canManageMcp && mcpStatus?.available === true
+							...(showMcpHeader(canManageMcp, mcpStatus)
 								? [
 										{
 											id: "mcp",
 											title: "MCP Server",
 											actions: <McpSwitch />,
-											on: mcpStatus.enabled,
+											on: mcpStatus?.enabled === true,
 											onOpen: openMcpPanel,
 										},
 									]

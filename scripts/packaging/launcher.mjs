@@ -37,9 +37,9 @@ const USAGE = `DataGripe ${pkg.version} — a web-based database IDE.
                                taking its configuration from the
                                environment.
   datagripe migrate            Apply pending migrations to APP_DATABASE_URL
-                               and exit. Only for a shared deployment:
-                               the embedded database migrates itself at
-                               startup.
+                               and exit. Optional before rollout; app
+                               startup checks and applies migrations in
+                               both database modes.
 
 Options:
   -p, --port <port>     Port to listen on (default 3001, or $PORT)

@@ -355,9 +355,18 @@ switch, and its status pill. Clicking the title opens or focuses one
 works independently of the title. A green frame marks an enabled server.
 The pill says **no tokens**, **read only**, or **read/write** while enabled.
 
-The header loads only `mcp.status`. Opening the tab loads
+The header loads only `mcp.status`, reading the original enabled/mode
+columns and token count independently of the functionality migration.
+For an owner, a pending or failed status read keeps the launcher visible;
+it shows **loading** or **status unknown**, never a fabricated off state.
+A retry action reloads status. Errors are retained for the management tab,
+which also offers **retry settings** when its full read fails. Missing
+functionality columns produce a migration-0027 explanation. A response
+from a previous workspace is ignored after reset.
+
+Opening the tab loads
 `mcp.settings`, including file counts and token details. Neither surface
-is offered when `MCP_ENABLED` is off. The tab also checks management
+is offered once the server explicitly reports `MCP_ENABLED` is off. The tab also checks management
 permission when restored from a saved layout.
 
 The tab contains the server toggle, read-only/read-write selector,
