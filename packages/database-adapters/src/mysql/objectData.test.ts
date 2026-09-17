@@ -95,6 +95,9 @@ beforeAll(async () => {
 		`CREATE PROCEDURE ov_touch(IN order_id INT)
 		 UPDATE ov_orders SET status = 'touched' WHERE id = order_id`,
 	);
+	await admin.unsafe(
+		"CREATE TRIGGER ov_orders_touch BEFORE UPDATE ON ov_orders FOR EACH ROW SET NEW.amount = OLD.amount",
+	);
 	await admin.unsafe("ANALYZE TABLE ov_orders");
 });
 
@@ -168,6 +171,9 @@ describe("mysql object view", () => {
 		expect(result.ddl).toContain("CREATE TABLE");
 		expect(result.ddl).toContain("ov_orders");
 		expect(result.ddl).toContain("AUTO_INCREMENT");
+		expect(result.ddl).toContain("TRIGGER");
+		expect(result.ddl).toContain("ov_orders_touch");
+		expect(result.ddl).toContain("SET NEW.amount = OLD.amount");
 	});
 
 	myTest("a view reports its own definition and columns", async () => {

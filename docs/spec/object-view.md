@@ -123,6 +123,14 @@ deliberately careful about two things that a naive rebuild gets wrong:
   the same object; emitting both would produce DDL that creates the
   index twice. Only indexes with no owning constraint are appended.
 
+Attached triggers follow the table or view definition in the DDL tab
+and in domain sync. PostgreSQL uses `pg_get_triggerdef`, excludes internal
+constraint triggers, and appends the statements needed to preserve
+disabled, replica or always modes. MySQL/MariaDB appends `SHOW CREATE
+TRIGGER` definitions in firing order; SQLite appends stored trigger SQL.
+Trigger functions remain separate routines and need their own domain
+tags to be exported.
+
 ### Per-engine differences
 
 | | postgres | mysql | sqlite |

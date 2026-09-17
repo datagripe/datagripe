@@ -15,6 +15,7 @@ import {
 	formatCount,
 	statTiles,
 } from "../object/format";
+import { withTriggerDdl } from "../object/triggerDdl";
 import { TableRequestError } from "../table/builder";
 import type { ObjectRequest, TableLimits } from "../types";
 import { describeMysqlRoutine } from "./routineData";
@@ -79,7 +80,7 @@ const TRIGGERS_SQL = `
 		action_statement AS action
 	FROM information_schema.triggers
 	WHERE event_object_schema = ? AND event_object_table = ?
-	ORDER BY trigger_name`;
+	ORDER BY action_timing, event_manipulation, action_order, trigger_name`;
 
 const GRANTS_SQL = `
 	SELECT grantee AS grantee,
@@ -252,6 +253,23 @@ export async function describeMysqlObject(
 			nullableText(showRow["Create Table"]) ??
 			nullableText(showRow["Create View"]);
 
+		// SHOW CREATE preserves the definer and full body. Creation order
+		// follows ACTION_ORDER so multiple triggers retain their firing order.
+		const triggerDefinitions: string[] = [];
+		for (const trigger of triggerRows) {
+			const quote = (name: string) => `\`${name.replaceAll("`", "``")}\``;
+			const rows = (await reserved.unsafe(
+				`SHOW CREATE TRIGGER ${quote(request.schema)}.${quote(text(trigger.name))}`,
+			)) as Row[];
+			const definition = nullableText(rows[0]?.["SQL Original Statement"]);
+			if (definition === null) {
+				throw new TableRequestError(
+					`No definition reported for trigger '${text(trigger.name)}'`,
+				);
+			}
+			triggerDefinitions.push(definition);
+		}
+
 		const dependents: ObjectDependent[] = dependentKeyRows.map((row) => ({
 			kind: text(row.kind),
 			name: text(row.name),
@@ -272,7 +290,7 @@ export async function describeMysqlObject(
 			triggers,
 			grants,
 			statistics,
-			ddl,
+			ddl: withTriggerDdl(ddl, triggerDefinitions),
 			unsupported: [],
 			ddlReconstructed: false,
 			dependents,

@@ -1,8 +1,10 @@
+import { Database } from "bun:sqlite";
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { SQL } from "bun";
+import { objectFileBody } from "../../../../apps/server/src/domains/exporter";
 import type { ResolvedConnection } from "../types";
 import { SqliteAdapter } from "./adapter";
 import { parseTriggerHeader } from "./objectData";
@@ -42,6 +44,11 @@ beforeAll(async () => {
 	await setup.unsafe(
 		"INSERT INTO orders (id, reference, amount, status) VALUES (1, 'A-1', 10.0, 'open')",
 	);
+	await setup.unsafe(
+		"CREATE VIEW order_view AS SELECT id, reference FROM orders",
+	);
+	await setup.unsafe(`CREATE TRIGGER view_insert INSTEAD OF INSERT ON order_view
+		BEGIN INSERT INTO orders (id, reference) VALUES (NEW.id, NEW.reference); END`);
 	await setup.close();
 	connection = {
 		adapter: "sqlite",
@@ -62,6 +69,47 @@ afterAll(async () => {
 });
 
 const table = { schema: "main", name: "orders", kind: "table" as const };
+
+describe("trigger sync", () => {
+	test("table and view exports recreate working triggers", async () => {
+		const tableResult = await adapter.describeObject(connection, table);
+		const viewTarget = {
+			schema: "main",
+			name: "order_view",
+			kind: "view" as const,
+		};
+		const viewResult = await adapter.describeObject(connection, viewTarget);
+		const restored = new Database(":memory:");
+		try {
+			restored.exec(objectFileBody(table, tableResult.ddl, []));
+			restored.exec(objectFileBody(viewTarget, viewResult.ddl, []));
+			expect(
+				restored
+					.query(
+						"SELECT name FROM sqlite_master WHERE type = 'trigger' ORDER BY name",
+					)
+					.all(),
+			).toEqual([{ name: "orders_touch" }, { name: "view_insert" }]);
+			restored.exec(
+				"INSERT INTO order_view (id, reference) VALUES (9, 'restored')",
+			);
+			expect(
+				restored.query("SELECT reference FROM orders WHERE id = 9").get(),
+			).toEqual({ reference: "restored" });
+			expect((await adapter.describeObject(connection, table)).ddl).toBe(
+				tableResult.ddl,
+			);
+			const plain = await adapter.describeObject(connection, {
+				schema: "main",
+				name: "lines",
+				kind: "table",
+			});
+			expect(plain.ddl).not.toContain("TRIGGER");
+		} finally {
+			restored.close();
+		}
+	});
+});
 
 describe("parseTriggerHeader", () => {
 	test("reads timing and event out of the stored CREATE text", () => {

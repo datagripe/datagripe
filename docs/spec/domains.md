@@ -461,7 +461,15 @@ root:
   `data/`. Functions and procedures share `routines/`, because the
   distinction is already in the DDL and a `procedures/` directory that
   is empty on every engine but MySQL is noise.
-- File bodies carry the object's DDL, then its grants. The grant block
+- File bodies carry the object's DDL, including its attached triggers,
+  then its grants. Triggers stay in their table or view's file and need
+  no separate domain tag. PostgreSQL uses full catalog definitions and
+  preserves disabled, replica and always modes; internal constraint
+  triggers are excluded. MySQL/MariaDB uses SHOW CREATE TRIGGER in firing
+  order; SQLite uses stored trigger SQL. PostgreSQL trigger functions
+  remain independently tagged routines; this does not expand dependencies.
+  The export remains a snapshot, not a dependency-ordered restore script.
+- The grant block
   is not decoration: under PostgREST a `CREATE FUNCTION` without one
   tells a reviewer nothing about whether the function is an endpoint.
   Grants to `PUBLIC` are written out explicitly, including PostgreSQL's

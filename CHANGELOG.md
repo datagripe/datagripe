@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.0.14 — 2026-09-17
+
+### Fixed
+
+- Table and view sync now includes attached trigger definitions in each
+  object’s SQL file and DDL tab, across PostgreSQL, MySQL/MariaDB and
+  SQLite. PostgreSQL trigger enable modes are preserved.
+
+### Added
+
+- Login header artwork and its original source image under brand assets.
+
 ## 0.0.13 — 2026-09-17
 
 ### Added

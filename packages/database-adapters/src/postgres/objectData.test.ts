@@ -107,6 +107,12 @@ beforeAll(async () => {
 		CREATE TRIGGER orders_touch BEFORE INSERT OR UPDATE ON shop.orders
 			FOR EACH ROW EXECUTE FUNCTION shop.touch_order();
 
+
+		DROP TRIGGER IF EXISTS view_touch ON shop.open_orders;
+		CREATE TRIGGER view_touch INSTEAD OF INSERT ON shop.open_orders
+			FOR EACH ROW EXECUTE FUNCTION shop.touch_order();
+		ALTER TABLE shop.open_orders DISABLE TRIGGER view_touch;
+
 		TRUNCATE shop.order_lines;
 		DELETE FROM shop.orders;
 		INSERT INTO shop.orders (reference, amount, status)
@@ -190,6 +196,37 @@ describe("postgres object view", () => {
 		expect(result.constraints[0]?.type).toBe("primary key");
 	});
 
+	pgTest("view trigger DDL preserves each enable mode", async () => {
+		const modes = [
+			["DISABLE", "DISABLE"],
+			["ENABLE REPLICA", "ENABLE REPLICA"],
+			["ENABLE ALWAYS", "ENABLE ALWAYS"],
+			["ENABLE", null],
+		] as const;
+		for (const [mode, expected] of modes) {
+			await admin.unsafe(
+				`ALTER TABLE shop.open_orders ${mode} TRIGGER view_touch`,
+			);
+			const result = await adapter.describeObject(
+				CONNECTION,
+				{
+					schema: "shop",
+					name: "open_orders",
+					kind: "view",
+				},
+				LIMITS,
+			);
+			expect(result.ddl).toContain(
+				"CREATE TRIGGER view_touch INSTEAD OF INSERT",
+			);
+			if (expected !== null) {
+				expect(result.ddl).toContain(`${expected} TRIGGER "view_touch";`);
+			} else {
+				expect(result.ddl).not.toContain("ALTER TABLE");
+			}
+		}
+	});
+
 	pgTest("triggers report timing and every event they cover", async () => {
 		const result = await adapter.describeObject(CONNECTION, table, LIMITS);
 		const trigger = result.triggers.find(
@@ -199,6 +236,10 @@ describe("postgres object view", () => {
 		expect(trigger?.events).toBe("insert, update");
 		expect(trigger?.action).toBe("touch_order()");
 		expect(trigger?.enabled).toBe(true);
+		expect(result.ddl).toContain(
+			"CREATE TRIGGER orders_touch BEFORE INSERT OR UPDATE",
+		);
+		expect(result.ddl).toContain("EXECUTE FUNCTION shop.touch_order()");
 	});
 
 	pgTest("grants list the roles that hold privileges", async () => {

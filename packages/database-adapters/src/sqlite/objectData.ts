@@ -10,6 +10,7 @@ import type {
 import { isRelationKind, tabsForKind } from "@datagripe/contracts";
 import type { SQL } from "bun";
 import { formatBytes, formatCount, statTiles } from "../object/format";
+import { withTriggerDdl } from "../object/triggerDdl";
 import { TableRequestError } from "../table/builder";
 import type { ObjectRequest } from "../types";
 
@@ -245,7 +246,10 @@ export async function describeSqliteObject(
 		triggers,
 		grants: [],
 		statistics,
-		ddl,
+		ddl: withTriggerDdl(
+			ddl,
+			triggerRows.map((row) => text(row.sql)),
+		),
 		unsupported: UNSUPPORTED,
 		ddlReconstructed: false,
 		dependents,

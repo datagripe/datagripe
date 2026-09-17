@@ -16,6 +16,7 @@ import {
 	reconstructCreateTable,
 	statTiles,
 } from "../object/format";
+import { withTriggerDdl } from "../object/triggerDdl";
 import { POSTGRES_TABLE_DIALECT, TableRequestError } from "../table/builder";
 import type { ObjectRequest, TableLimits } from "../types";
 import {
@@ -118,7 +119,9 @@ const TRIGGERS_SQL = `
 			CASE WHEN (t.tgtype & 32) <> 0 THEN 'truncate' END
 		) AS events,
 		p.proname || '()' AS action,
-		t.tgenabled <> 'D' AS enabled
+		t.tgenabled <> 'D' AS enabled,
+		t.tgenabled AS enable_mode,
+		pg_get_triggerdef(t.oid, false) AS definition
 	FROM pg_trigger t
 	JOIN pg_class c ON c.oid = t.tgrelid
 	JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -370,7 +373,28 @@ export async function describePostgresObject(
 				triggers,
 				grants,
 				statistics,
-				ddl,
+				ddl: withTriggerDdl(
+					ddl,
+					triggerRows.flatMap((row) => {
+						const statements = [text(row.definition)];
+						// CREATE defaults to origin mode; preserve disabled, replica
+						// and always triggers rather than silently changing behavior.
+						const mode = (
+							{
+								D: "DISABLE",
+								R: "ENABLE REPLICA",
+								A: "ENABLE ALWAYS",
+							} as Record<string, string>
+						)[text(row.enable_mode)];
+						if (mode !== undefined) {
+							const quote = POSTGRES_TABLE_DIALECT.quote;
+							statements.push(
+								`ALTER TABLE ${quote(request.schema)}.${quote(request.name)} ${mode} TRIGGER ${quote(text(row.name))};`,
+							);
+						}
+						return statements;
+					}),
+				),
 				unsupported: [],
 				ddlReconstructed,
 				dependents,

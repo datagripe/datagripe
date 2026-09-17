@@ -154,7 +154,11 @@ and *New project…* is the last item in it.
 - **Domains** group objects by what they are for — billing, identity,
   the reporting tables nobody owns — because `information_schema` cannot
   tell you which tables are billing. Domains export to a directory or a
-  git repository, and import somewhere else.
+  git repository, and import somewhere else. Sync includes each table's
+  or view's triggers in its SQL file, after the object definition and
+  before grants. The DDL tab shows the same definitions. PostgreSQL
+  trigger functions remain separate routines: tag them too if you want
+  their bodies in the export.
 - **Access report** answers "who can read this" across a schema or a
   domain, and refuses above a cell count rather than timing out.
 - **Datasource paths** let a datasource point at a directory on the host
