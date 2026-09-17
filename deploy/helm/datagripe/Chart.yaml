@@ -5,8 +5,8 @@ type: application
 # Both are the DataGripe release. The chart has no lifecycle of its own —
 # `helm package` overwrites these from the git tag when it is published,
 # and these values are what a checkout installs in the meantime.
-version: 0.0.12
-appVersion: "0.0.12"
+version: 0.0.13
+appVersion: "0.0.13"
 home: https://datagripe.com
 sources:
   - https://github.com/datagripe/datagripe

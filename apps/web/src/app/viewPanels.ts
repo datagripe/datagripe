@@ -38,6 +38,7 @@ let connectionFormOpener:
 let importDatasourceOpener: (() => void) | null = null;
 let closeImport: (() => void) | null = null;
 let newProjectOpener: (() => void) | null = null;
+let mcpOpener: (() => void) | null = null;
 let projectSettingsOpener: (() => void) | null = null;
 let accountSettingsOpener: (() => void) | null = null;
 let domainManagerOpener: ((connectionRef: string) => void) | null = null;
@@ -142,6 +143,14 @@ export function registerViewPanelOpeners(api: DockviewApi): void {
 			component: "newProject",
 			title: "New project",
 			params: { view: "newProject" },
+		});
+	};
+	mcpOpener = () => {
+		focusOrAdd(api, {
+			id: "mcp",
+			component: "mcp",
+			title: "MCP Server",
+			params: { view: "mcp" },
 		});
 	};
 	projectSettingsOpener = () => {
@@ -348,4 +357,8 @@ export function readViewPanelParams(params: unknown): ViewPanelParams {
 		kind,
 		tab,
 	};
+}
+
+export function openMcpPanel(): void {
+	mcpOpener?.();
 }

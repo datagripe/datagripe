@@ -11,12 +11,22 @@ import type { AppDb } from "../db/app/pool";
 
 export interface McpSettings {
 	enabled: boolean;
+	domainsEnabled: boolean;
+	syncEnabled: boolean;
+	gitEnabled: boolean;
 	mode: McpMode;
 	updatedAt: string | null;
 }
 
 /** Absent means off: a project nobody configured has nothing listening. */
-const OFF: McpSettings = { enabled: false, mode: "read-only", updatedAt: null };
+const OFF: McpSettings = {
+	enabled: false,
+	mode: "read-only",
+	updatedAt: null,
+	domainsEnabled: false,
+	syncEnabled: false,
+	gitEnabled: false,
+};
 
 export function hashToken(value: string): string {
 	return createHash("sha256").update(value).digest("hex");
@@ -27,9 +37,16 @@ export async function readSettings(
 	workspaceId: string,
 ): Promise<McpSettings> {
 	const rows = await appDb<
-		Array<{ enabled: boolean; mode: McpMode; updated_at: string | Date }>
+		Array<{
+			enabled: boolean;
+			mode: McpMode;
+			domains_enabled: boolean;
+			sync_enabled: boolean;
+			git_enabled: boolean;
+			updated_at: string | Date;
+		}>
 	>`
-		SELECT enabled, mode, updated_at FROM mcp_settings
+		SELECT enabled, mode, domains_enabled, sync_enabled, git_enabled, updated_at FROM mcp_settings
 		WHERE workspace_id = ${workspaceId}
 	`;
 	const row = rows[0];
@@ -38,6 +55,9 @@ export async function readSettings(
 		: {
 				enabled: row.enabled,
 				mode: row.mode,
+				domainsEnabled: row.domains_enabled,
+				syncEnabled: row.sync_enabled,
+				gitEnabled: row.git_enabled,
 				updatedAt: new Date(row.updated_at).toISOString(),
 			};
 }
@@ -46,19 +66,35 @@ export async function writeSettings(
 	appDb: AppDb,
 	workspaceId: string,
 	userId: string,
-	settings: { enabled: boolean; mode: McpMode },
+	settings: {
+		enabled: boolean;
+		mode: McpMode;
+		domainsEnabled?: boolean | undefined;
+		syncEnabled?: boolean | undefined;
+		gitEnabled?: boolean | undefined;
+	},
 ): Promise<McpSettings> {
 	const rows = await appDb<
-		Array<{ enabled: boolean; mode: McpMode; updated_at: string | Date }>
+		Array<{
+			enabled: boolean;
+			mode: McpMode;
+			domains_enabled: boolean;
+			sync_enabled: boolean;
+			git_enabled: boolean;
+			updated_at: string | Date;
+		}>
 	>`
-		INSERT INTO mcp_settings (workspace_id, enabled, mode, updated_by, updated_at)
-		VALUES (${workspaceId}, ${settings.enabled}, ${settings.mode}, ${userId}, now())
+		INSERT INTO mcp_settings (workspace_id, enabled, mode, domains_enabled, sync_enabled, git_enabled, updated_by, updated_at)
+		VALUES (${workspaceId}, ${settings.enabled}, ${settings.mode}, ${settings.domainsEnabled ?? false}, ${settings.syncEnabled ?? false}, ${settings.gitEnabled ?? false}, ${userId}, now())
 		ON CONFLICT (workspace_id) DO UPDATE SET
 			enabled = ${settings.enabled},
 			mode = ${settings.mode},
+			domains_enabled = COALESCE(${settings.domainsEnabled ?? null}, mcp_settings.domains_enabled),
+			sync_enabled = COALESCE(${settings.syncEnabled ?? null}, mcp_settings.sync_enabled),
+			git_enabled = COALESCE(${settings.gitEnabled ?? null}, mcp_settings.git_enabled),
 			updated_by = ${userId},
 			updated_at = now()
-		RETURNING enabled, mode, updated_at
+		RETURNING enabled, mode, domains_enabled, sync_enabled, git_enabled, updated_at
 	`;
 	const row = rows[0];
 	if (row === undefined) {
@@ -67,6 +103,9 @@ export async function writeSettings(
 	return {
 		enabled: row.enabled,
 		mode: row.mode,
+		domainsEnabled: row.domains_enabled,
+		syncEnabled: row.sync_enabled,
+		gitEnabled: row.git_enabled,
 		updatedAt: new Date(row.updated_at).toISOString(),
 	};
 }

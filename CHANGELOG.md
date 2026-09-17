@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.0.13 — 2026-09-17
+
+### Added
+
+- MCP domain management, datasource sync preview/apply, and Git status,
+  commit and push tools, with separate project opt-ins. Mutations require
+  read/write mode and editor access. Migration 0027 leaves new controls off;
+  external PostgreSQL deployments must run `bun run db:migrate` before upgrade.
+- MCP management now opens in a dock tab from its sidebar title. The
+  sidebar keeps the on/off switch and status; the tab manages modes,
+  functionality, tokens and client configuration even while off.
+- Updated the MCP, security and features site pages, published MCP/workspace specs,
+  roadmap and contributor map for these tools and the title-click gesture.
+
 ## 0.0.12 — 2026-09-16
 
 ### Added

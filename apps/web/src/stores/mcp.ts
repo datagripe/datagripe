@@ -1,5 +1,5 @@
 import type {
-	McpMode,
+	McpSettingsSetRequest,
 	McpState,
 	McpStatus,
 	McpTokenCreateResult,
@@ -34,7 +34,7 @@ export interface McpUiState {
 	revealed: { id: string; name: string; value: string } | null;
 	loadStatus: () => Promise<void>;
 	load: () => Promise<void>;
-	setSettings: (settings: { enabled: boolean; mode: McpMode }) => Promise<void>;
+	setSettings: (settings: McpSettingsSetRequest) => Promise<void>;
 	createToken: (name: string) => Promise<void>;
 	revokeToken: (id: string) => Promise<void>;
 	dismissRevealed: () => void;

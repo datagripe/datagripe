@@ -52,10 +52,11 @@ Three things are worth knowing before touching a panel:
   `ProjectSettingsPanel`). Naming something inline happens in the row it
   belongs to (`components/NameInput.tsx`).
 - **The sidebar is `SidebarSections`.** A section is
-  `{ id, title, actions?, on?, body }`; `actions` renders in the header
+  `{ id, title, actions?, on?, body?, onOpen? }`; `actions` renders in the header
   and stays visible while the section is shut, which is where anything
   worth knowing without opening the panel goes (the MCP switch and its
-  pill, the repository's branch and refresh).
+  pill, the repository's branch and refresh). `onOpen` opens a dock tab
+  instead of expanding a body; MCP management uses this path.
 
 ## The server's shape
 

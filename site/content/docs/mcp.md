@@ -36,5 +36,30 @@ a person has. A read-only project cannot change a row no matter what an
 agent is asked to run — and a datasource marked read-only stays
 read-only however the project's mode is set.
 
+
+Click **MCP Server** in the sidebar to open its management tab. The
+sidebar keeps the on/off switch and read/write status; the tab holds
+mode, functionality switches, tokens, endpoint and client configuration.
+You can configure it and create or revoke tokens while it is off.
+
+Domain management, sync and Git are separate opt-ins, initially off:
+
+- **Domains:** list, create, edit and delete domains; assign or unassign
+  objects; set descriptions, ordering, hidden and include-data settings.
+  Hidden domains are excluded from sync.
+- **Sync:** preview or write a datasource snapshot to its configured
+  export directory. Preview is the default. This does not pull Git changes.
+- **Git:** inspect status, commit, and push as separate tool calls. Commit
+  stages named paths then commits the whole staged index, including files
+  staged earlier. Inspect status first. Push never forces. Deployment Git
+  must also be enabled, and the datasource must have a repository.
+
+Domain changes, sync writes, commits and pushes additionally require
+read/write mode and editor access. Reads and sync previews work in
+read-only mode once their functionality is enabled. The account must
+also hold the corresponding domain, sync or Git capability; custom
+role restrictions still apply. Agents should reuse
+the same idempotency key when retrying a completed mutation.
+
 The design, the tool list and the token model are in
 [the MCP spec](/specs/mcp/).

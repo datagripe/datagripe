@@ -528,3 +528,69 @@ describe("mcp endpoint", () => {
 		expect(response.status).toBe(403);
 	});
 });
+
+pgTest(
+	"functionality settings survive sidebar toggles and domains can be managed",
+	async () => {
+		const workspace = { id: workspaceId, name: "Main" };
+		const token = await enable("read-write");
+		await service.setSettings(workspace, userId, {
+			enabled: true,
+			mode: "read-write",
+			domainsEnabled: true,
+			syncEnabled: true,
+			gitEnabled: true,
+		});
+		const off = await service.setSettings(workspace, userId, {
+			enabled: false,
+			mode: "read-only",
+		});
+		expect(off).toMatchObject({
+			enabled: false,
+			domainsEnabled: true,
+			syncEnabled: true,
+			gitEnabled: true,
+		});
+		await service.setSettings(workspace, userId, {
+			enabled: true,
+			mode: "read-write",
+		});
+		const created = await callTool(token, "upsert_domain", {
+			connectionRef: DATASOURCE.id,
+			name: "billing",
+			colour: 1,
+			includeData: true,
+			idempotencyKey: "mcp-domain-create",
+		});
+		expect(created.isError).toBe(false);
+		const domain = created.payload?.domain as {
+			id: string;
+			includeData: boolean;
+		};
+		expect(domain.includeData).toBe(true);
+		const tagged = await callTool(token, "tag_objects", {
+			connectionRef: DATASOURCE.id,
+			domainId: domain.id,
+			targets: [{ schema: "public", name: "payments", kind: "table" }],
+			idempotencyKey: "mcp-domain-tag",
+		});
+		expect(tagged.isError).toBe(false);
+		const listed = await callTool(token, "list_domains", {
+			connectionRef: DATASOURCE.id,
+		});
+		expect(listed.payload?.tags).toMatchObject([{ domainId: domain.id }]);
+		const deleted = await callTool(token, "delete_domain", {
+			connectionRef: DATASOURCE.id,
+			id: domain.id,
+			idempotencyKey: "mcp-domain-delete",
+		});
+		expect(deleted.isError).toBe(false);
+		await service.setSettings(workspace, userId, {
+			enabled: true,
+			mode: "read-only",
+			domainsEnabled: false,
+			syncEnabled: false,
+			gitEnabled: false,
+		});
+	},
+);

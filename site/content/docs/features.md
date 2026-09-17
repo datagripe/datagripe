@@ -188,9 +188,15 @@ Off by default, and enabled per deployment.
 ## MCP
 
 The switch is in the sidebar's **MCP Server** header, and the section
-wears a green frame while the server is running — including collapsed,
+wears a green frame while the server is running,
 because whether something outside the app can read a project is not
 something you should have to open a panel to check.
+
+Click the MCP Server title to open its management tab for mode, tokens
+and independent domain-management, sync and Git opt-ins. Agents can
+manage domains and object assignments, preview or write sync snapshots,
+and inspect Git status, commit and push. Writes require read/write mode
+and editor access. See [MCP](/docs/mcp/) for the gates and commit scope.
 
 Every project can expose an endpoint an AI agent connects to, so the
 agent reads the project's own documentation and queries its datasources

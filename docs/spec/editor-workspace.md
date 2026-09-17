@@ -296,7 +296,8 @@ The empty workspace shows a Dockview watermark with a New query button.
 
 Below the explorer the sidebar is a stack of collapsible sections
 (`SidebarSections`): **Files**, **Repository** when the datasource has
-one, **Online**, and **MCP Server** for an owner. Two rules, both about
+one, and **Online**. **MCP Server** is an owner-only navigation header:
+its title opens a dock tab, while its switch and status remain in the sidebar. Two rules, both about
 not moving:
 
 - **Every section starts collapsed.** A person opening one is stating a

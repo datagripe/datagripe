@@ -71,7 +71,7 @@ import {
 	registerEditorPanelApi,
 } from "./editorPanels";
 import { registerResultsOpener } from "./resultsPanel";
-import { registerViewPanelOpeners } from "./viewPanels";
+import { openMcpPanel, registerViewPanelOpeners } from "./viewPanels";
 
 const LAYOUT_SAVE_DELAY_MS = 500;
 
@@ -122,6 +122,7 @@ const components = {
 	gripes: GripesPanel,
 	connectionForm: ConnectionForm,
 	newProject: NewProjectForm,
+	mcp: McpSection,
 	projectSettings: ProjectSettingsPanel,
 	accountSettings: AccountSettingsPanel,
 	domainManager: DomainManager,
@@ -658,7 +659,7 @@ export function Workspace() {
 											title: "MCP Server",
 											actions: <McpSwitch />,
 											on: mcpStatus.enabled,
-											body: <McpSection />,
+											onOpen: openMcpPanel,
 										},
 									]
 								: []),

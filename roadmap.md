@@ -342,7 +342,7 @@ agent instead of being re-guessed from field names.
       clients where a human assembles context by hand
 - [x] `instructions` from `.datagripe/config.yaml` → `AGENTS.md` → our
       words alone, with the mode sentence always ours and always first
-- [x] `mcp` sidebar section, collapsed by default and owner-only:
+- [x] `mcp` owner-only management tab, opened from the sidebar title:
       toggle, mode, endpoint, copy-client-config, tokens with
       reveal-once, last used, revoke. `defaultCollapsed` in
       `SidebarSections`, with an expanded list beside the collapsed one

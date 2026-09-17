@@ -30,7 +30,7 @@ says otherwise.
   resumable streams, no progress notifications. A query that outruns
   `QUERY_TIMEOUT_MS` fails the way it does in the editor.
 - Structure editing, row editing and document writing over MCP. Write
-  mode changes exactly one thing: whether a query commits.
+  mode permits query commits and explicitly enabled domain, sync and Git writes.
 - Agent-facing gripes. `check_sql` waits for the Phase 11 server-side
   runner.
 - Prompts, sampling, roots, elicitation.
@@ -121,7 +121,10 @@ the two things to change.
 ### Settings
 
 `mcp_settings`: `workspace_id` primary key, `enabled` default false,
-`mode` default `'read-only'`, `updated_by`, `updated_at`. No row means
+`mode` default `'read-only'`, `domains_enabled`, `sync_enabled` and
+`git_enabled` default false, `updated_by`, `updated_at`. Migration 0027
+adds the three functionality switches without granting existing tokens
+new write access. No row means
 off, which is why nothing bootstraps one.
 
 Five actions, all `owner`: `mcp.status` (three fields off the settings
@@ -244,7 +247,30 @@ agent reads and the validation it hits cannot drift apart.
 | `list_schemas` | `{ datasource? }` | over the existing `schema.children` introspection and its cache |
 | `list_objects` | `{ datasource?, schema, kind? }` | tables, views, functions, procedures or sequences |
 | `describe_object` | `{ datasource?, schema, name, kind? }` | the `object.describe` payload: columns, keys, indexes, constraints, triggers, grants, DDL |
+| `list_domains` | `{ connectionRef }` | all domains, including hidden ones, and object assignments |
+| `upsert_domain` | `{ connectionRef, id?, name, colour, description?, includeData?, hidden?, sortOrder?, idempotencyKey }` | created or updated domain; omitted settings use defaults, so read before updating |
+| `delete_domain` | `{ connectionRef, id, idempotencyKey }` | removes the domain and tags, never database objects |
+| `tag_objects` | `{ connectionRef, targets, domainId, idempotencyKey }` | assigns objects; null domain removes assignments |
+| `sync_datasource` | `{ connectionRef, dryRun?, idempotencyKey }` | export preview by default; false writes the configured snapshot to files |
+| `git_status` | `{ connectionRef }` | repository status |
+| `git_commit` | `{ connectionRef, message, paths?, idempotencyKey }` | stages named paths, then commits the whole index, including previously staged files |
+| `git_push` | `{ connectionRef, setUpstream?, idempotencyKey }` | pushes the current branch without force |
 | `run_query` | `{ datasource?, sql, maxRows? }` | `{ columns, rows, rowCount, resultSets, statements, truncated, elapsedMs, committed }` |
+
+Domain management, sync and Git each require their own project opt-in.
+Mutations additionally require read/write mode and an editor token.
+Reads and sync previews work in read-only mode once enabled, subject to
+the account capabilities: `domain.manage` for domain changes, `sync.run`
+for sync, `git.commit` for Git status/commit and `git.push` for push.
+Custom role restrictions are re-read on every authenticated call.
+`connectionRef` comes from `describe_project`; Git requires a repository
+datasource in this project and deployment Git enabled. Sync uses the
+existing configured export target and host filesystem policy; it does
+not pull Git changes. Commit and push are separate calls. Inspect
+`git_status` before committing: the entire staged index is committed.
+Reuse an `idempotencyKey` only to retry the same completed mutation.
+Domain settings and assignments use the same services as the Domains
+tab, and sync exports them into the configured snapshot.
 
 The domain map is in `describe_project` because the object-to-domain map
 is the layout knowledge the catalogue does not hold: "which of these
@@ -323,72 +349,30 @@ under a line naming where it came from, capped at
 
 ### The panel
 
-A `SidebarSections` entry, id `mcp`, titled **MCP Server**, rendered
-only for an owner and only when the deployment has MCP at all. Like
-every section it starts collapsed (docs/spec/editor-workspace.md
-"Sections").
+The sidebar retains an owner-only **MCP Server** header, its on/off
+switch, and its status pill. Clicking the title opens or focuses one
+**MCP Server** dock tab; it does not expand a sidebar body. The switch
+works independently of the title. A green frame marks an enabled server.
+The pill says **no tokens**, **read only**, or **read/write** while enabled.
 
-**The switch is in the header, not the panel.** It is the section's
-`actions`, and the section carries `on` while the server is running, so
-it wears a green frame whether it is open or shut. Whether something
-outside this app can read the project is not a fact that should need a
-panel opened to see, and turning it off should not either.
+The header loads only `mcp.status`. Opening the tab loads
+`mcp.settings`, including file counts and token details. Neither surface
+is offered when `MCP_ENABLED` is off. The tab also checks management
+permission when restored from a saved layout.
 
-**Beside the switch, a pill says what is true of it.** Three states,
-three colours, and the word every time, because colour alone never
-distinguishes two states here (brand-system.md "Accessibility"):
-*no tokens* in grey, because a server nothing can connect to is on in
-name only; *read only* in green; *read/write* in violet, because an
-agent whose writes commit is not the same fact and must not wear the
-colour of the safe one. The pill is absent while the server is off —
-the switch already says that.
+The tab contains the server toggle, read-only/read-write selector,
+separate domain management, sync and Git functionality switches, token
+creation and revocation, endpoint, and copy-client-config action.
+Settings and tokens remain manageable while the server is off. Changes
+apply on the next call; in-flight operations are not unwound. Switching
+the server or mode does not reset the functionality switches.
 
-That costs one cheap read. `mcp.status` — available, enabled, mode and
-the number of live tokens, off the settings row and one indexed count —
-is asked for on every project open by an owner, and
-is deliberately not `mcp.settings`: the panel's state walks every
-datasource path to count the files an agent would see, and that is a
-disk read nobody asked for while the section sits shut. The section body
-still only mounts when it is opened, so that read still happens exactly
-when somebody looks.
-
-`mcp.status` answers rather than refuses when `MCP_ENABLED` is off
-(`available: false`), because that is the question being asked — a
-thrown `Forbidden` would leave the sidebar unable to tell "off" from
-"broken". The section is absent in that case, as it is for anybody who
-is not an owner.
-
-Top to bottom, inside the panel. It is a column 260 pixels wide, so the
-order is what somebody does in it — decide the ceiling, mint a token,
-take the endpoint away — and the prose that used to head it is gone: the
-header pill says the same thing in two words.
-
-- read-only ⇄ read/write, the segmented shape the datasource page's
-  overrides use. Read/write is a deliberate second press, its
-  description states that every tool call commits, and when it is
-  selected the row below names any datasource whose own `read only`
-  still stands in the way. Off, the panel says only "Nothing is
-  listening for this project."
-- **tokens**, under that word: the list, and a name field with
-  **create** beside it.
-- **endpoint**, under that word, with **copy uri** on the same line,
-  the URL itself, and **copy client config** across the width beneath it
-  — it is the one press this panel exists for. The snippet is what a
-  client wants
-  (`{"mcpServers": {"datagripe-<project>": {"type": "http", "url": …,
-  "headers": {"Authorization": "Bearer …"}}}}`). The token is inlined
-  only while it is on screen at creation; afterwards the snippet carries
-  a placeholder, because a value that was never stored cannot be shown
-  twice.
-- a token row is a name, when it was last used, and **revoke**. Creating
-  one reveals the value once, in a row that says as much. Revoking asks
-  first, because it stops an agent mid-task.
-- one honest status line: `read only · 3 datasources · 12 files ·
-  briefing from …`.
-
-The panel's counts come from the same code the endpoint uses — the same
-datasource list, the same file index, the same briefing resolution — so
-what it shows is what an agent will actually get.
+A new token is revealed once; the client config includes it only while
+revealed, otherwise using a placeholder. Closing the tab clears the
+revealed value. Token rows show name and last use, with revocation
+confirmation. Datasource read-only constraints remain visible beside
+the query mode. Counts and briefing details use the endpoint's own
+knowledge readers.
 
 ### Visibility inside the app
 
@@ -454,8 +438,8 @@ Timeout and concurrency come from the existing `QUERY_*` limits.
 - `ExecuteLimits.sandbox`, honoured by the three SQL adapters
 - migration `0019_mcp.sql`
 - `apps/web/src/components/McpSection.tsx`,
-  `apps/web/src/stores/mcp.ts`, `defaultCollapsed` in
-  `SidebarSections.tsx`
+  `apps/web/src/stores/mcp.ts`, sidebar navigation in
+  `SidebarSections.tsx` and tab opening in `app/viewPanels.ts`
 
 ### A note on `bun --hot`
 

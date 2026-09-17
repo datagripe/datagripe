@@ -1,7 +1,27 @@
+import {
+	BUILTIN_ROLE_CAPABILITIES,
+	type Capability,
+	domainDeleteRequestSchema,
+	domainExportRequestSchema,
+	domainListRequestSchema,
+	domainTagRequestSchema,
+	domainUpsertRequestSchema,
+	gitCommitRequestSchema,
+	gitPushRequestSchema,
+} from "@datagripe/contracts";
 import { ErrorCodes } from "@datagripe/contracts/errors";
 import { asSqlDialect } from "@datagripe/sql-tools";
 import { z } from "zod";
 import { ServiceError } from "../connections/service";
+import { withIdempotency } from "../db/app/idempotency";
+import { runExport } from "../domains/export";
+import {
+	deleteDomain,
+	listDomains,
+	tag,
+	upsertDomain,
+} from "../domains/service";
+import * as gitRepo from "../git/repo";
 import { type McpContext, type McpDeps, requireCommitRole } from "./context";
 import {
 	capabilitiesOf,
@@ -18,7 +38,7 @@ import { refusalMessage, refuseWrites } from "./readonly";
 /**
  * The tool set (docs/spec/mcp.md "Tools").
  *
- * Nine tools, flat `snake_case` names, and no tool that takes a project
+ * Tools use flat `snake_case` names, and no tool that takes a project
  * argument — the project is the endpoint. A list an agent can hold in
  * its head beats a complete one: the WebSocket protocol has sixty-odd
  * actions and most of them are UI state.
@@ -41,6 +61,16 @@ const OBJECT_CATEGORIES = [
 ] as const;
 
 const schemas = {
+	list_domains: domainListRequestSchema,
+	upsert_domain: domainUpsertRequestSchema,
+	delete_domain: domainDeleteRequestSchema.extend({
+		idempotencyKey: z.string().min(8).max(128),
+	}),
+	tag_objects: domainTagRequestSchema,
+	sync_datasource: domainExportRequestSchema,
+	git_status: z.object({ connectionRef: z.string().min(1).max(255) }),
+	git_commit: gitCommitRequestSchema,
+	git_push: gitPushRequestSchema,
 	describe_project: z.object({}),
 	describe_domain: z.object({
 		name: z
@@ -112,6 +142,21 @@ const schemas = {
 export type ToolName = keyof typeof schemas;
 
 const DESCRIPTIONS: Record<ToolName, string> = {
+	list_domains:
+		"List all domains including hidden domains, their sync settings and object assignments.",
+	upsert_domain:
+		"Create a domain, or replace its settings by id. Read list_domains first and preserve settings you want to keep. includeData exports table data; hidden excludes the domain from sync. Reuse idempotencyKey for retries.",
+	delete_domain:
+		"Delete a domain and its assignments, not database objects. Reuse idempotencyKey for retries.",
+	tag_objects:
+		"Assign objects to a domain, moving any previous assignment. domainId null removes assignments. Reuse idempotencyKey for retries.",
+	sync_datasource:
+		"Export the configured datasource snapshot to files. Defaults to dryRun for preview; pass dryRun false to apply. Does not pull Git changes. Reuse the idempotencyKey when retrying an apply.",
+	git_status: "Read the datasource repository status before committing.",
+	git_commit:
+		"Stage named paths, then commit all staged changes, including previously staged files. Empty paths commits the existing index. Inspect git_status first. Reuse idempotencyKey for retries.",
+	git_push:
+		"Push the current branch, never force. Separate from commit. Reuse idempotencyKey for retries.",
 	describe_project:
 		"Start here. The project's datasources, its domain map (which database objects belong to which part of the product) and an index of its own documentation. The domain map and the documents hold knowledge the schema does not: read them before inferring meaning from table and column names.",
 	describe_domain:
@@ -170,8 +215,149 @@ export async function callTool(
 		);
 	}
 	const args = parsed.data as Record<string, unknown>;
+	const required: Partial<Record<ToolName, Capability>> = {
+		upsert_domain: "domain.manage",
+		delete_domain: "domain.manage",
+		tag_objects: "domain.manage",
+		sync_datasource: "sync.run",
+		git_status: "git.commit",
+		git_commit: "git.commit",
+		git_push: "git.push",
+	};
+	const capability = required[name];
+	if (
+		capability &&
+		!(ctx.capabilities ?? BUILTIN_ROLE_CAPABILITIES[ctx.role]).includes(
+			capability,
+		)
+	) {
+		throw new ServiceError(
+			ErrorCodes.Forbidden,
+			`This operation requires ${capability}; writes also require read/write mode and editor access`,
+		);
+	}
 
 	switch (name) {
+		case "list_domains":
+		case "upsert_domain":
+		case "delete_domain":
+		case "tag_objects": {
+			requireFunctionality(ctx, "domainsEnabled", name !== "list_domains");
+			const datasource = await resolveDatasource(
+				deps,
+				ctx,
+				args.connectionRef as string,
+			);
+			const scoped = { ...args, connectionRef: datasource.id };
+			if (name === "list_domains")
+				return listDomains(deps.appDb, ctx.workspace.id, datasource.id);
+			return withIdempotency(
+				deps.appDb,
+				ctx.workspace.id,
+				`mcp.${name}`,
+				args.idempotencyKey as string,
+				async () => {
+					if (name === "upsert_domain")
+						return upsertDomain(
+							deps.appDb,
+							ctx.workspace.id,
+							domainUpsertRequestSchema.parse(scoped),
+						);
+					if (name === "delete_domain")
+						return deleteDomain(
+							deps.appDb,
+							ctx.workspace.id,
+							domainDeleteRequestSchema.parse(scoped),
+						);
+					return tag(
+						deps.appDb,
+						ctx.workspace.id,
+						ctx.userId,
+						domainTagRequestSchema.parse(scoped),
+					);
+				},
+			);
+		}
+		case "sync_datasource": {
+			requireFunctionality(ctx, "syncEnabled", args.dryRun !== true);
+			const datasource = await resolveDatasource(
+				deps,
+				ctx,
+				args.connectionRef as string,
+			);
+			const request = domainExportRequestSchema.parse({
+				...args,
+				connectionRef: datasource.id,
+			});
+			const run = () =>
+				runExport(
+					{
+						...deps,
+						maxDataRows: deps.config.DOMAIN_EXPORT_MAX_DATA_ROWS,
+						maxCells: deps.config.ACCESS_REPORT_MAX_CELLS,
+					},
+					ctx.workspace,
+					ctx.userId,
+					request,
+				);
+			return request.dryRun
+				? run()
+				: withIdempotency(
+						deps.appDb,
+						ctx.workspace.id,
+						"mcp.sync_datasource",
+						request.idempotencyKey,
+						run,
+					);
+		}
+		case "git_status":
+		case "git_commit":
+		case "git_push": {
+			requireFunctionality(ctx, "gitEnabled", name !== "git_status");
+			if (!deps.config.GIT_ENABLED || !deps.gitDatasources)
+				throw new ServiceError(
+					ErrorCodes.Forbidden,
+					"Git is disabled for this deployment",
+				);
+			const connectionRef = args.connectionRef as string;
+			const entry = await deps.gitDatasources.entryFor(
+				ctx.workspace.id,
+				connectionRef,
+			);
+			if (entry === null)
+				throw new ServiceError(
+					ErrorCodes.NotFound,
+					"No repository datasource in this project matches that ref",
+				);
+			const options = { timeoutMs: deps.config.GIT_TIMEOUT_MS };
+			const audit = {
+				workspaceId: ctx.workspace.id,
+				userId: ctx.userId,
+				connectionRef,
+			};
+			if (name === "git_status") return gitRepo.status(entry.repoPath, options);
+			return withIdempotency(
+				deps.appDb,
+				ctx.workspace.id,
+				`mcp.${name}`,
+				args.idempotencyKey as string,
+				() =>
+					name === "git_commit"
+						? gitRepo.commit(
+								entry.repoPath,
+								args.message as string,
+								args.paths as string[],
+								options,
+								audit,
+							)
+						: gitRepo.push(
+								entry.repoPath,
+								args.setUpstream as boolean,
+								options,
+								audit,
+							),
+			);
+		}
 		case "describe_project":
 			return describeProject(deps, ctx);
 
@@ -327,6 +513,11 @@ async function describeProject(deps: McpDeps, ctx: McpContext) {
 	return {
 		project: ctx.workspace.name,
 		mode: ctx.mode,
+		functionality: {
+			domains: ctx.domainsEnabled === true,
+			sync: ctx.syncEnabled === true,
+			git: ctx.gitEnabled === true,
+		},
 		modeMeans:
 			ctx.mode === "read-only"
 				? "Writes are refused before they reach the database, and every query runs in a read-only transaction that is rolled back."
@@ -420,4 +611,21 @@ async function runQuery(
 				}
 			: {}),
 	};
+}
+
+function requireFunctionality(
+	ctx: McpContext,
+	key: "syncEnabled" | "gitEnabled" | "domainsEnabled",
+	writes: boolean,
+): void {
+	if (ctx[key] !== true)
+		throw new ServiceError(
+			ErrorCodes.Forbidden,
+			"This functionality is disabled in the MCP Server tab",
+		);
+	if (writes && (ctx.mode !== "read-write" || ctx.role !== "editor"))
+		throw new ServiceError(
+			ErrorCodes.Forbidden,
+			"This operation requires MCP read/write mode and editor access",
+		);
 }

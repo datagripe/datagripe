@@ -20,7 +20,8 @@ import { IconChevronDown, IconChevronRight } from "./icons";
 export interface SidebarSection {
 	id: string;
 	title: ReactNode;
-	body: ReactNode;
+	body?: ReactNode;
+	onOpen?: () => void;
 	/**
 	 * Controls that live in the header, where they work whether the
 	 * section is open or shut — the MCP switch is the case this exists
@@ -53,7 +54,8 @@ export function SidebarSections(props: { sections: SidebarSection[] }) {
 	return (
 		<>
 			{props.sections.map((section) => {
-				const open = expandedIds.includes(section.id);
+				const open =
+					section.onOpen === undefined && expandedIds.includes(section.id);
 				return (
 					<section
 						key={section.id}
@@ -65,8 +67,10 @@ export function SidebarSections(props: { sections: SidebarSection[] }) {
 							<button
 								type="button"
 								className="dg-section-header"
-								aria-expanded={open}
-								onClick={() => toggle(section.id)}
+								aria-expanded={section.onOpen === undefined ? open : undefined}
+								onClick={() =>
+									section.onOpen ? section.onOpen() : toggle(section.id)
+								}
 							>
 								<span className="dg-section-chevron">
 									{open ? <IconChevronDown /> : <IconChevronRight />}

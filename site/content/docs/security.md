@@ -217,3 +217,14 @@ the details and a private channel will be arranged.
 - [Upgrading](/docs/upgrading/) — backups and key rotation.
 - [Kubernetes](/docs/kubernetes/), [Compose](/docs/compose/) — the
   shapes with accounts on.
+
+## MCP functionality
+
+The MCP Server tab has separate, default-off switches for domain management,
+datasource sync and Git. Enabling the server or changing its query mode does
+not enable these switches. Domain mutations, sync writes, commits and pushes
+also require read/write mode and an editor-level token account, with the
+corresponding `domain.manage`, `sync.run`, `git.commit` or `git.push` capability.
+Custom role restrictions are checked on each authenticated call. Existing
+host filesystem restrictions and the deployment Git switch still apply.
+See [MCP](/docs/mcp/) for tool behavior and commit scope.

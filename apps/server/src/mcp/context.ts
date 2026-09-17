@@ -1,4 +1,8 @@
-import type { McpMode } from "@datagripe/contracts";
+import {
+	BUILTIN_ROLE_CAPABILITIES,
+	type Capability,
+	type McpMode,
+} from "@datagripe/contracts";
 import { ErrorCodes } from "@datagripe/contracts/errors";
 import type { AppConfig } from "../config";
 import type { ConnectionsService } from "../connections/service";
@@ -8,6 +12,7 @@ import type { DocumentsService } from "../documents/service";
 import type { HostFsPolicy } from "../domains/paths";
 import type { ExecutionRegistry } from "../execution/registry";
 import type { GitDatasourcesService } from "../git/types";
+import { membershipFor } from "../permissions";
 import type { RateLimiter } from "../security/rateLimit";
 import { lookupToken, readSettings, touchToken } from "./store";
 
@@ -40,6 +45,10 @@ export interface McpContext {
 	 */
 	role: "viewer" | "editor";
 	mode: McpMode;
+	capabilities?: Capability[];
+	domainsEnabled?: boolean;
+	syncEnabled?: boolean;
+	gitEnabled?: boolean;
 }
 
 type MembershipRow = {
@@ -116,6 +125,11 @@ export async function authenticate(
 			"The account this token belongs to is no longer a member of this project",
 		);
 	}
+	const access = await membershipFor(
+		deps.appDb,
+		token.workspaceId,
+		token.userId,
+	);
 	touchToken(deps.appDb, token.id);
 	return {
 		workspace: {
@@ -126,7 +140,11 @@ export async function authenticate(
 		userId: token.userId,
 		token: { id: token.id, name: token.name },
 		role: membership === "viewer" ? "viewer" : "editor",
+		capabilities: access?.capabilities ?? BUILTIN_ROLE_CAPABILITIES[membership],
 		mode: settings.mode,
+		domainsEnabled: settings.domainsEnabled,
+		syncEnabled: settings.syncEnabled,
+		gitEnabled: settings.gitEnabled,
 	};
 }
 

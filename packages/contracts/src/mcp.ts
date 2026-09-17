@@ -6,7 +6,7 @@ import { z } from "zod";
  * The wire shape of the protocol itself is not here: JSON-RPC envelopes,
  * tool definitions and tool results never reach the browser, so they
  * live in `apps/server/src/mcp/`. What crosses this boundary is what the
- * sidebar panel shows and changes.
+ * management tab shows and changes.
  */
 
 /**
@@ -72,6 +72,9 @@ export type McpStatus = z.infer<typeof mcpStatusSchema>;
 
 /** Everything the panel renders, in one read. */
 export const mcpStateSchema = z.object({
+	domainsEnabled: z.boolean().default(false),
+	syncEnabled: z.boolean().default(false),
+	gitEnabled: z.boolean().default(false),
 	/**
 	 * `MCP_ENABLED`. False means the route is not mounted and the panel
 	 * is absent — this field exists so the client knows which, rather
@@ -94,6 +97,9 @@ export const mcpStateSchema = z.object({
 export type McpState = z.infer<typeof mcpStateSchema>;
 
 export const mcpSettingsSetRequestSchema = z.object({
+	domainsEnabled: z.boolean().optional(),
+	syncEnabled: z.boolean().optional(),
+	gitEnabled: z.boolean().optional(),
 	enabled: z.boolean(),
 	mode: mcpModeSchema,
 });

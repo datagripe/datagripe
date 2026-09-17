@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import { useMcpStore } from "../stores/mcp";
-import { useSessionStore } from "../stores/session";
+import { useCan, useSessionStore } from "../stores/session";
 import { Button, TextInput } from "./controls";
 
 /**
  * The MCP panel (docs/spec/mcp.md "The panel").
  *
- * Collapsed by default and owner-only. The switch is not here — it is
- * in the section header (`McpSwitch`), where it is reachable and
- * legible without opening anything. What the panel adds, in this order:
+ * Owner-only dock tab, opened from the sidebar title. The shared switch
+ * remains reachable in the sidebar header. What the tab adds:
  * what mode it is in, that the mode is a ceiling rather than a grant
  * because a datasource marked `read only` stays read-only however this
  * is set, where to point a client, and which tokens exist.
@@ -19,7 +18,7 @@ import { Button, TextInput } from "./controls";
  * (`SidebarSection.actions`).
  *
  * Separate from the panel because it outlives it: the panel mounts when
- * somebody opens the section, and this has to say whether an agent can
+ * somebody opens the tab, and this has to say whether an agent can
  * reach the project whether or not anybody ever does. It reads
  * `status` — one settings row and a count — rather than the panel's
  * whole state.
@@ -105,6 +104,7 @@ function relative(iso: string | null): string {
 }
 
 export function McpSection() {
+	const canManage = useCan("mcp.manage");
 	const state = useMcpStore((store) => store.state);
 	const loading = useMcpStore((store) => store.loading);
 	const busy = useMcpStore((store) => store.busy);
@@ -114,11 +114,11 @@ export function McpSection() {
 	const [copied, setCopied] = useState<string | null>(null);
 	const [name, setName] = useState("");
 
-	// The section only mounts when it is expanded, so this is also the
-	// answer to "nothing reads the disk while it is collapsed".
+	// Full settings are loaded only when the management tab opens.
 	useEffect(() => {
-		void useMcpStore.getState().load();
-	}, []);
+		if (canManage) void useMcpStore.getState().load();
+		return () => useMcpStore.getState().dismissRevealed();
+	}, [canManage]);
 
 	const copy = (key: string, text: string) => {
 		void navigator.clipboard?.writeText(text).then(() => {
@@ -130,6 +130,10 @@ export function McpSection() {
 		});
 	};
 
+	if (!canManage)
+		return (
+			<p className="dg-sidebar-empty">MCP management requires owner access.</p>
+		);
 	if (state === null) {
 		return (
 			<p className="dg-sidebar-empty">
@@ -165,179 +169,203 @@ export function McpSection() {
 	);
 
 	return (
-		<div className="dg-mcp">
+		<div className="dg-mcp dg-scroll">
+			<h2>MCP Server</h2>
+			<div>
+				<McpSwitch />
+			</div>
 			{!state.enabled && (
 				<p className="dg-mcp-lead">
-					Nothing is listening for this project. The switch is in the header.
+					Nothing is listening for this project. Enable it here or in the
+					sidebar.
 				</p>
 			)}
-
-			{state.enabled && (
-				<>
-					{/* The ceiling first: everything below is about who reaches
+			{/* The ceiling first: everything below is about who reaches
 						  the project, and this is what they get when they do. */}
-					<fieldset className="dg-seg dg-mcp-seg" aria-label="Access">
-						<button
-							type="button"
-							aria-pressed={state.mode === "read-only"}
-							disabled={busy}
-							onClick={() =>
-								void useMcpStore
-									.getState()
-									.setSettings({ enabled: true, mode: "read-only" })
-							}
-						>
-							read only
-						</button>
-						<button
-							type="button"
-							aria-pressed={state.mode === "read-write"}
-							disabled={busy}
-							onClick={() =>
-								void useMcpStore
-									.getState()
-									.setSettings({ enabled: true, mode: "read-write" })
-							}
-						>
-							read/write
-						</button>
-					</fieldset>
-					<p className="dg-mcp-note">
-						{state.mode === "read-only"
-							? "Writes are refused before they reach the database, and every query runs in a transaction that is rolled back."
-							: "Every query an agent runs commits."}
-					</p>
-					{/* The ceiling, named. Flipping this switch does not lift a
+			<fieldset className="dg-seg dg-mcp-seg" aria-label="Access">
+				<button
+					type="button"
+					aria-pressed={state.mode === "read-only"}
+					disabled={busy}
+					onClick={() =>
+						void useMcpStore
+							.getState()
+							.setSettings({ enabled: state.enabled, mode: "read-only" })
+					}
+				>
+					read only
+				</button>
+				<button
+					type="button"
+					aria-pressed={state.mode === "read-write"}
+					disabled={busy}
+					onClick={() =>
+						void useMcpStore
+							.getState()
+							.setSettings({ enabled: state.enabled, mode: "read-write" })
+					}
+				>
+					read/write
+				</button>
+			</fieldset>
+			<p className="dg-mcp-note">
+				{state.mode === "read-only"
+					? "Writes are refused before they reach the database, and every query runs in a transaction that is rolled back."
+					: "Every query an agent runs commits."}
+			</p>
+			{/* The ceiling, named. Flipping this switch does not lift a
 						  datasource's own read-only setting, and finding that out
 						  from a failed query is a worse way to learn it. */}
-					{state.mode === "read-write" && readOnlyDatasources.length > 0 && (
-						<p className="dg-mcp-note dg-mcp-ceiling">
-							Still read-only, by their own setting:{" "}
-							{readOnlyDatasources.map((entry) => entry.name).join(", ")}.
-						</p>
-					)}
-
-					<p className="dg-mcp-head">tokens</p>
-					{revealed !== null && (
-						<div className="dg-mcp-revealed">
-							<p>
-								<b>{revealed.name}</b> — copy it now. This is the only time it
-								is shown; DataGripe kept a hash, not the token.
-							</p>
-							<code>{revealed.value}</code>
-							<div className="dg-repo-buttons">
-								<Button
-									size="sm"
-									tone="primary"
-									onClick={() => copy("token", revealed.value)}
-								>
-									{copied === "token" ? "copied" : "copy token"}
-								</Button>
-								<Button
-									size="sm"
-									onClick={() => useMcpStore.getState().dismissRevealed()}
-								>
-									done
-								</Button>
-							</div>
-						</div>
-					)}
-
-					<ul className="dg-mcp-tokens">
-						{state.tokens.map((token) => (
-							<li key={token.id}>
-								<span className="dg-mcp-token-name">{token.name}</span>
-								<span className="dg-mcp-token-meta">
-									{relative(token.lastUsedAt)}
-								</span>
-								<Button
-									size="sm"
-									tone="danger"
-									disabled={busy}
-									onClick={() => {
-										if (
-											window.confirm(
-												`Revoke "${token.name}"? Any agent using it stops working immediately.`,
-											)
-										) {
-											void useMcpStore.getState().revokeToken(token.id);
-										}
-									}}
-								>
-									revoke
-								</Button>
-							</li>
-						))}
-						{state.tokens.length === 0 && (
-							<li className="dg-mcp-token-meta">
-								No tokens yet — nothing can connect.
-							</li>
-						)}
-					</ul>
-
-					<form
-						className="dg-mcp-new"
-						onSubmit={(event) => {
-							event.preventDefault();
-							if (name.trim() === "") {
-								return;
-							}
-							void useMcpStore
-								.getState()
-								.createToken(name.trim())
-								.then(() => setName(""));
-						}}
-					>
-						<TextInput
-							type="text"
-							value={name}
-							maxLength={60}
-							placeholder="name this token…"
-							aria-label="New token name"
-							onChange={(event) => setName(event.target.value)}
-						/>
-						<Button
-							type="submit"
-							size="sm"
-							tone="primary"
-							disabled={busy || name.trim() === ""}
-						>
-							create
-						</Button>
-					</form>
-
-					<p className="dg-mcp-head">
-						endpoint
-						<button
-							type="button"
-							className="dg-mcp-copy"
-							onClick={() => copy("url", state.url)}
-						>
-							{copied === "url" ? "copied" : "copy uri"}
-						</button>
-					</p>
-					<code className="dg-mcp-url">{state.url}</code>
+			{state.mode === "read-write" && readOnlyDatasources.length > 0 && (
+				<p className="dg-mcp-note dg-mcp-ceiling">
+					Still read-only, by their own setting:{" "}
+					{readOnlyDatasources.map((entry) => entry.name).join(", ")}.
+				</p>
+			)}
+			\t\t\t\t\t<p className="dg-mcp-head">functionality</p>
+			{(
+				[
+					["domainsEnabled", "Manage domains and object assignments"],
+					["syncEnabled", "Sync datasource to files"],
+					["gitEnabled", "Git status, commit and push"],
+				] as const
+			).map(([key, label]) => (
+				<div key={key}>
 					<Button
 						size="sm"
-						tone="primary"
-						className="dg-mcp-config"
-						onClick={() => copy("config", clientConfig)}
+						aria-pressed={state[key]}
+						disabled={busy}
+						onClick={() =>
+							void useMcpStore.getState().setSettings({
+								enabled: state.enabled,
+								mode: state.mode,
+								[key]: !state[key],
+							})
+						}
 					>
-						{copied === "config" ? "copied" : "copy client config"}
+						{state[key] ? "Disable" : "Enable"} {label}
 					</Button>
-
-					<p className="dg-mcp-status">
-						{state.mode === "read-only" ? "read only" : "read/write"} ·{" "}
-						{state.datasources.length}{" "}
-						{state.datasources.length === 1 ? "datasource" : "datasources"} ·{" "}
-						{state.fileCount} {state.fileCount === 1 ? "file" : "files"}
-						{state.instructionsSource === null
-							? ""
-							: ` · briefing from ${state.instructionsSource}`}
+				</div>
+			))}
+			<p className="dg-mcp-note">
+				Domain changes, sync writes and Git commits/pushes also require
+				read/write mode and an editor account. Sync exports the configured
+				datasource snapshot; it does not pull Git changes.
+			</p>
+			<p className="dg-mcp-head">tokens</p>
+			{revealed !== null && (
+				<div className="dg-mcp-revealed">
+					<p>
+						<b>{revealed.name}</b> — copy it now. This is the only time it is
+						shown; DataGripe kept a hash, not the token.
 					</p>
-				</>
+					<code>{revealed.value}</code>
+					<div className="dg-repo-buttons">
+						<Button
+							size="sm"
+							tone="primary"
+							onClick={() => copy("token", revealed.value)}
+						>
+							{copied === "token" ? "copied" : "copy token"}
+						</Button>
+						<Button
+							size="sm"
+							onClick={() => useMcpStore.getState().dismissRevealed()}
+						>
+							done
+						</Button>
+					</div>
+				</div>
 			)}
-
+			<ul className="dg-mcp-tokens">
+				{state.tokens.map((token) => (
+					<li key={token.id}>
+						<span className="dg-mcp-token-name">{token.name}</span>
+						<span className="dg-mcp-token-meta">
+							{relative(token.lastUsedAt)}
+						</span>
+						<Button
+							size="sm"
+							tone="danger"
+							disabled={busy}
+							onClick={() => {
+								if (
+									window.confirm(
+										`Revoke "${token.name}"? Any agent using it stops working immediately.`,
+									)
+								) {
+									void useMcpStore.getState().revokeToken(token.id);
+								}
+							}}
+						>
+							revoke
+						</Button>
+					</li>
+				))}
+				{state.tokens.length === 0 && (
+					<li className="dg-mcp-token-meta">
+						No tokens yet — nothing can connect.
+					</li>
+				)}
+			</ul>
+			<form
+				className="dg-mcp-new"
+				onSubmit={(event) => {
+					event.preventDefault();
+					if (name.trim() === "") {
+						return;
+					}
+					void useMcpStore
+						.getState()
+						.createToken(name.trim())
+						.then(() => setName(""));
+				}}
+			>
+				<TextInput
+					type="text"
+					value={name}
+					maxLength={60}
+					placeholder="name this token…"
+					aria-label="New token name"
+					onChange={(event) => setName(event.target.value)}
+				/>
+				<Button
+					type="submit"
+					size="sm"
+					tone="primary"
+					disabled={busy || name.trim() === ""}
+				>
+					create
+				</Button>
+			</form>
+			<p className="dg-mcp-head">
+				endpoint
+				<button
+					type="button"
+					className="dg-mcp-copy"
+					onClick={() => copy("url", state.url)}
+				>
+					{copied === "url" ? "copied" : "copy uri"}
+				</button>
+			</p>
+			<code className="dg-mcp-url">{state.url}</code>
+			<Button
+				size="sm"
+				tone="primary"
+				className="dg-mcp-config"
+				onClick={() => copy("config", clientConfig)}
+			>
+				{copied === "config" ? "copied" : "copy client config"}
+			</Button>
+			<p className="dg-mcp-status">
+				{state.mode === "read-only" ? "read only" : "read/write"} ·{" "}
+				{state.datasources.length}{" "}
+				{state.datasources.length === 1 ? "datasource" : "datasources"} ·{" "}
+				{state.fileCount} {state.fileCount === 1 ? "file" : "files"}
+				{state.instructionsSource === null
+					? ""
+					: ` · briefing from ${state.instructionsSource}`}
+			</p>
 			{error !== null && <p className="dg-test-failed">{error}</p>}
 		</div>
 	);

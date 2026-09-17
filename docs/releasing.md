@@ -61,9 +61,10 @@ chart's two versions are overwritten from the tag at package time, so
 the ones in `Chart.yaml` only matter to somebody installing from a
 checkout — keep them current anyway.
 
-**A release that carries a migration needs nothing extra here.** The
-server applies migrations on start (and `bun run db:migrate` does it by
-hand), so the ordering is the deployment's, not the tag's — but it is
+**A release that carries a migration needs nothing extra here.**
+Embedded deployments apply migrations on startup; external PostgreSQL
+deployments require `bun run db:migrate` before starting the new version.
+The ordering is the deployment's, not the tag's — but it is
 worth saying so in the CHANGELOG entry, because an operator reading the
 release notes is the person who finds out either way.
 
