@@ -71,6 +71,11 @@ beside it: `workspaces`, `documents`, `connections`, `domains`,
 a switch rather than a router on purpose — the action list is meant to
 be readable in one sitting.
 
+Domain membership reconciliation lives in `apps/server/src/domains/reconcile.ts`: both
+datasource refresh and sync use fresh catalogs to remove stale object tags.
+Grouped tree categories load through explorer `ensure`, not row expansion;
+refresh must reload those paths as well as expanded rows.
+
 ## Related
 
 - [adding-an-action.md](adding-an-action.md) — the checklist for a new

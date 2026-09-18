@@ -90,6 +90,7 @@ import {
 	parseHostRoots,
 	resolveHostDirectory,
 } from "../domains/paths";
+import { reconcileDomains } from "../domains/reconcile";
 import { attachCommit, listRuns, setExportPath } from "../domains/runs";
 import {
 	deleteDomain,
@@ -1759,6 +1760,14 @@ export function createDispatcher(deps: DispatcherDeps): Dispatch {
 
 			case "schema.children": {
 				const request = schemaChildrenRequestSchema.parse(payload);
+				if (request.refresh && request.path.length === 0) {
+					await reconcileDomains(
+						appDb,
+						connections,
+						workspace,
+						request.connectionId,
+					);
+				}
 				return {
 					nodes: await connections.schemaChildren(
 						workspace,

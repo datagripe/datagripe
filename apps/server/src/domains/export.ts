@@ -31,8 +31,8 @@ import {
 	type ObjectDdl,
 } from "./exporter";
 import { type HostFsPolicy, resolveHostDirectory } from "./paths";
+import { reconcileDomains } from "./reconcile";
 import { exportPath, recordRun } from "./runs";
-import { listDomains } from "./service";
 import { appendPullLog, applyExport } from "./writer";
 
 /**
@@ -156,10 +156,12 @@ export async function runExport(
 	);
 	const root = target.root;
 
-	const { domains: allDomains, tags } = await listDomains(
+	const { domains: allDomains, tags } = await reconcileDomains(
 		deps.appDb,
-		workspace.id,
+		deps.connections,
+		workspace,
 		request.connectionRef,
+		!request.dryRun,
 	);
 	/*
 	 * A hidden domain is a shelf, not part of the structure

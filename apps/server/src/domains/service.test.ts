@@ -390,3 +390,40 @@ describe("domains", () => {
 		expect(domains).toEqual([]);
 	});
 });
+
+pgTest(
+	"reconciliation previews without writes and prunes only the selected datasource",
+	async () => {
+		const { reconcileDomains } = await import("./reconcile");
+		await clear();
+		for (const ref of [REF, OTHER_REF]) {
+			const domainId = await makeDomain("auth", { ref });
+			await tag(appDb, workspaceId, userId, {
+				connectionRef: ref,
+				domainId,
+				targets: [LOGIN, USERS],
+				idempotencyKey: key(),
+			});
+		}
+		const connections = {
+			schemaChildren: async () => [],
+		};
+		const workspace = { id: workspaceId, name: "Main" };
+		const preview = await reconcileDomains(
+			appDb,
+			connections,
+			workspace,
+			REF,
+			false,
+		);
+		expect(preview.tags).toHaveLength(0);
+		expect((await listDomains(appDb, workspaceId, REF)).tags).toHaveLength(2);
+		await reconcileDomains(appDb, connections, workspace, REF);
+		const refreshed = await listDomains(appDb, workspaceId, REF);
+		expect(refreshed.tags).toHaveLength(0);
+		expect(refreshed.domains).toHaveLength(1);
+		expect(
+			(await listDomains(appDb, workspaceId, OTHER_REF)).tags,
+		).toHaveLength(2);
+	},
+);

@@ -268,6 +268,17 @@ the tree you were reading.
   rather than inside either tree, and the selection both trees share
   lives in `stores/treeUi.ts`.
 
+### Refresh and database changes
+
+The database is the source of truth for object membership. Datasource refresh
+reloads grouped domains and removes tags for objects absent from fresh database
+catalogs, including old routine signatures. Domain definitions remain, even when
+empty; a replacement signature is a new object and starts untagged. Sync performs
+the same reconciliation without requiring a refresh first, and deletes the old
+objects' exported files. Preview shows those deletions without changing tags or
+files. A failed catalog read aborts reconciliation instead of treating the failure
+as an empty database.
+
 ### Sorting
 
 The grouped tree is the sorting surface. Rows drag between groups, which

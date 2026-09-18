@@ -129,3 +129,31 @@ describe("explorer store", () => {
 		expect(store.getState().expanded).toEqual({});
 	});
 });
+
+test("refresh reloads grouped categories loaded without expanding rows", async () => {
+	const fake = createFakeRequest();
+	const store = createExplorerStore(fake.request);
+	const category: SchemaPathSegment[] = [
+		{ kind: "schema", name: "app" },
+		{ kind: "functions", name: "functions" },
+	];
+	await store.getState().ensure(CONN, category);
+	await store.getState().ensure("other", category);
+	fake.calls.length = 0;
+	await store.getState().refresh(CONN, [{ kind: "schema", name: "app" }]);
+	expect(store.getState().children[nodeKey(CONN, category)]).toEqual({
+		status: "loaded",
+		nodes: CATEGORIES,
+	});
+	expect(fake.calls).toContainEqual({
+		action: "schema.children",
+		payload: { connectionId: CONN, path: category, refresh: true },
+	});
+	expect(
+		fake.calls.every(
+			({ payload }) =>
+				(payload as { connectionId: string }).connectionId === CONN,
+		),
+	).toBe(true);
+	expect(store.getState().expanded).toEqual({});
+});

@@ -9,7 +9,7 @@ import type { WsRequestFn } from "../api/ws";
 /**
  * Schema explorer tree state. Deliberately a plain store rather than a
  * query cache: refresh must propagate `refresh: true` into the request
- * payload for exactly the expanded paths, which query caches cannot
+ * payload for expanded and ensured paths, which query caches cannot
  * express. Children stay cached until refresh or socket reconnect.
  */
 
@@ -35,6 +35,8 @@ export type KeyValueState =
 
 export type ExplorerState = {
 	children: Record<string, ChildrenState>;
+	/** Paths loaded by grouped views without expanding tree rows. */
+	ensured: Record<string, { connectionId: string; path: SchemaPathSegment[] }>;
 	/** Key → path; presence means expanded. The path travels along so
 	 * refresh can re-request without reverse-parsing the key. */
 	expanded: Record<string, { connectionId: string; path: SchemaPathSegment[] }>;
@@ -48,7 +50,7 @@ export type ExplorerState = {
 		path: SchemaPathSegment[],
 		key: string,
 	) => Promise<void>;
-	/** Re-request every expanded path plus the given tree root (the
+	/** Re-request expanded and ensured paths plus the given tree root (the
 	 * breadcrumb's datasource+namespace root is never "expanded", it is
 	 * the base the tree hangs from). */
 	refresh: (
@@ -95,6 +97,7 @@ export function createExplorerStore(request: WsRequestFn) {
 
 		return {
 			children: {},
+			ensured: {},
 			expanded: {},
 			keyValues: {},
 
@@ -118,6 +121,7 @@ export function createExplorerStore(request: WsRequestFn) {
 
 			async ensure(connectionId, path) {
 				const key = nodeKey(connectionId, path);
+				set({ ensured: { ...get().ensured, [key]: { connectionId, path } } });
 				if (get().children[key] === undefined) {
 					await fetchChildren(connectionId, path, false);
 				}
@@ -169,7 +173,10 @@ export function createExplorerStore(request: WsRequestFn) {
 				if (rootPath != null) {
 					targets.set(nodeKey(connectionId, rootPath), rootPath);
 				}
-				for (const entry of Object.values(get().expanded)) {
+				for (const entry of Object.values({
+					...get().ensured,
+					...get().expanded,
+				})) {
 					if (entry.connectionId === connectionId) {
 						targets.set(nodeKey(entry.connectionId, entry.path), entry.path);
 					}
@@ -190,7 +197,7 @@ export function createExplorerStore(request: WsRequestFn) {
 			},
 
 			reset() {
-				set({ children: {}, expanded: {}, keyValues: {} });
+				set({ children: {}, ensured: {}, expanded: {}, keyValues: {} });
 			},
 		};
 	});

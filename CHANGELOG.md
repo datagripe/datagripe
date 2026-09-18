@@ -1,8 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.0.15 — 2026-09-18
 
 ### Fixed
+
+- Datasource refresh repopulates grouped domains and removes tags for dropped
+  objects and obsolete routine signatures. Sync reconciles against fresh database
+  catalogs and deletes their old exported files; previews leave tags unchanged.
 
 - MCP status errors no longer remove the sidebar launcher. Owners can open
   the management tab, see the failure and retry. Only an explicit deployment

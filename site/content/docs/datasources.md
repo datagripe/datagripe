@@ -36,3 +36,14 @@ Development against a database on your own machine needs
 `TARGET_HOST_ALLOWLIST=localhost,127.0.0.1,::1`, which is what
 `.env.example` sets. Prefer naming the hosts to switching the policy
 off.
+
+## Refresh and domains
+
+The database is the source of truth for object membership. Datasource refresh
+reloads grouped domains and removes tags for objects absent from fresh database
+catalogs, including old routine signatures. Domain definitions remain, even when
+empty; a replacement signature is a new object and starts untagged. Sync performs
+the same reconciliation without requiring a refresh first, and deletes the old
+objects' exported files. Preview shows those deletions without changing tags or
+files. A failed catalog read aborts reconciliation instead of treating the failure
+as an empty database.

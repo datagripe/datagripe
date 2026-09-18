@@ -13,6 +13,7 @@ import {
 	NAMESPACE_LABELS,
 	useDatasourceStore,
 } from "../stores/datasource";
+import { useDomainsStore } from "../stores/domains";
 import {
 	nodeKey,
 	useConnectionsStore,
@@ -243,7 +244,9 @@ export function DatasourceBreadcrumb() {
 				title={`Refresh ${active.name}`}
 				aria-label={`Refresh ${active.name}`}
 				onClick={() =>
-					void refresh(active.id, treeRootPath(active, chosenNamespace))
+					void refresh(active.id, treeRootPath(active, chosenNamespace)).then(
+						() => useDomainsStore.getState().load(active.id),
+					)
 				}
 			>
 				<IconRefresh />

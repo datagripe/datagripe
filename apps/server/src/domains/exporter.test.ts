@@ -450,3 +450,46 @@ describe("exportable", () => {
 		expect(exportable([SHELF], []).domains).toEqual([]);
 	});
 });
+
+test("a stale routine signature becomes a file deletion, not a refusal", async () => {
+	const { staleTags } = await import("./reconcile");
+	const root = await mkdtemp(path.join(tmpdir(), "dg-stale-routine-"));
+	const initial = await buildExport(
+		[AUTH],
+		new Map([[AUTH.id, [LOGIN]]]),
+		source(),
+	);
+	await applyExport(root, initial, { dryRun: false });
+	const tags = [{ domainId: AUTH.id, target: LOGIN }];
+	const stale = await staleTags(
+		{
+			schemaChildren: async () => [
+				{ kind: "function", name: "login(text, boolean)", hasChildren: false },
+			],
+		},
+		{ id: "workspace", name: "Workspace" },
+		"db",
+		tags,
+	);
+	const built = await buildExport(
+		[AUTH],
+		new Map([
+			[
+				AUTH.id,
+				tags.filter((tag) => !stale.includes(tag)).map((tag) => tag.target),
+			],
+		]),
+		source(),
+	);
+	const preview = await applyExport(root, built, { dryRun: true });
+	expect(preview.refused).toBe(0);
+	expect(preview.deleted).toBe(1);
+	const deleted = preview.entries.find((entry) => entry.action === "deleted");
+	expect(deleted).toBeDefined();
+	const file = Bun.file(path.join(root, deleted?.path ?? "missing"));
+	expect(await file.exists()).toBe(true);
+	await applyExport(root, built, { dryRun: false });
+	expect(
+		await Bun.file(path.join(root, deleted?.path ?? "missing")).exists(),
+	).toBe(false);
+});
