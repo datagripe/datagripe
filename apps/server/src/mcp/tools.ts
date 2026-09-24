@@ -6,7 +6,9 @@ import {
 	domainListRequestSchema,
 	domainTagRequestSchema,
 	domainUpsertRequestSchema,
+	type GitCommandResult,
 	gitCommitRequestSchema,
+	gitPullRequestSchema,
 	gitPushRequestSchema,
 } from "@datagripe/contracts";
 import { ErrorCodes } from "@datagripe/contracts/errors";
@@ -21,7 +23,10 @@ import {
 	tag,
 	upsertDomain,
 } from "../domains/service";
+import { isDatagripeFile } from "../git/config";
+import { dirtyOriginPaths } from "../git/dirty";
 import * as gitRepo from "../git/repo";
+import type { GitOptions } from "../git/run";
 import { type McpContext, type McpDeps, requireCommitRole } from "./context";
 import {
 	capabilitiesOf,
@@ -70,6 +75,7 @@ const schemas = {
 	sync_datasource: domainExportRequestSchema,
 	git_status: z.object({ connectionRef: z.string().min(1).max(255) }),
 	git_commit: gitCommitRequestSchema,
+	git_pull: gitPullRequestSchema,
 	git_push: gitPushRequestSchema,
 	describe_project: z.object({}),
 	describe_domain: z.object({
@@ -151,12 +157,15 @@ const DESCRIPTIONS: Record<ToolName, string> = {
 	tag_objects:
 		"Assign objects to a domain, moving any previous assignment. domainId null removes assignments. Reuse idempotencyKey for retries.",
 	sync_datasource:
-		"Export the configured datasource snapshot to files. Defaults to dryRun for preview; pass dryRun false to apply. Does not pull Git changes. Reuse the idempotencyKey when retrying an apply.",
-	git_status: "Read the datasource repository status before committing.",
+		"Export the configured datasource snapshot to files. Defaults to dryRun for preview; pass dryRun false to apply. Does not touch Git: commit the files with git_commit, and git_push brings the branch up to date before pushing. Reuse the idempotencyKey when retrying an apply.",
+	git_status:
+		"Fetch, then read the datasource repository status, so ahead and behind are about the remote as it is now. Read it before committing. A fetch that fails is reported in fetchError alongside the local status.",
 	git_commit:
 		"Stage named paths, then commit all staged changes, including previously staged files. Empty paths commits the existing index. Inspect git_status first. Reuse idempotencyKey for retries.",
+	git_pull:
+		"Fetch, then bring the current branch level with its upstream: fast-forward, or rebase unpushed local commits onto it. Never a merge commit, never force. Refuses without changing anything on a conflict, on uncommitted changes to tracked files when a rebase is needed, or when incoming commits would overwrite unsaved edits in DataGripe. Reuse idempotencyKey for retries.",
 	git_push:
-		"Push the current branch, never force. Separate from commit. Reuse idempotencyKey for retries.",
+		"Push the current branch, never force. Separate from commit. Does what git_pull does first, so a remote that moved on other paths does not reject the push; a conflict refuses and pushes nothing. Reuse idempotencyKey for retries.",
 	describe_project:
 		"Start here. The project's datasources, its domain map (which database objects belong to which part of the product) and an index of its own documentation. The domain map and the documents hold knowledge the schema does not: read them before inferring meaning from table and column names.",
 	describe_domain:
@@ -222,6 +231,8 @@ export async function callTool(
 		sync_datasource: "sync.run",
 		git_status: "git.commit",
 		git_commit: "git.commit",
+		// As the sidebar's pull: it reads the remote and writes only here.
+		git_pull: "git.commit",
 		git_push: "git.push",
 	};
 	const capability = required[name];
@@ -312,6 +323,7 @@ export async function callTool(
 		}
 		case "git_status":
 		case "git_commit":
+		case "git_pull":
 		case "git_push": {
 			requireFunctionality(ctx, "gitEnabled", name !== "git_status");
 			if (!deps.config.GIT_ENABLED || !deps.gitDatasources)
@@ -335,27 +347,52 @@ export async function callTool(
 				userId: ctx.userId,
 				connectionRef,
 			};
-			if (name === "git_status") return gitRepo.status(entry.repoPath, options);
+			if (name === "git_status") {
+				// The sidebar's refresh fetches for the same reason: counts
+				// read from the last fetch said "0 behind" to an agent whose
+				// push was about to be rejected. A failed fetch still leaves
+				// the local status worth having, so it is reported, not thrown.
+				const fetched = await gitRepo.fetch(entry.repoPath, options, audit);
+				return fetched.exitCode === 0
+					? fetched.status
+					: { ...fetched.status, fetchError: fetched.stderr.trim() };
+			}
 			return withIdempotency(
 				deps.appDb,
 				ctx.workspace.id,
 				`mcp.${name}`,
 				args.idempotencyKey as string,
-				() =>
-					name === "git_commit"
-						? gitRepo.commit(
-								entry.repoPath,
-								args.message as string,
-								args.paths as string[],
-								options,
-								audit,
-							)
-						: gitRepo.push(
-								entry.repoPath,
-								args.setUpstream as boolean,
-								options,
-								audit,
-							),
+				async () => {
+					if (name === "git_commit")
+						return gitRepo.commit(
+							entry.repoPath,
+							args.message as string,
+							args.paths as string[],
+							options,
+							audit,
+						);
+					const integrated = await bringUpToDate(
+						deps,
+						ctx.workspace.id,
+						connectionRef,
+						entry.repoPath,
+						options,
+						audit,
+					);
+					if (name === "git_pull") return integrated;
+					const pushed = await gitRepo.push(
+						entry.repoPath,
+						args.setUpstream as boolean,
+						options,
+						audit,
+					);
+					return {
+						...pushed,
+						stdout: integrated.stdout + pushed.stdout,
+						headMoved: integrated.headMoved,
+						changedPaths: integrated.changedPaths,
+					};
+				},
 			);
 		}
 		case "describe_project":
@@ -611,6 +648,60 @@ async function runQuery(
 				}
 			: {}),
 	};
+}
+
+/**
+ * Fetch, then `integrate` — what `git_pull` is and what `git_push` does
+ * before it pushes.
+ *
+ * Push does it unasked because the alternative wedged a real clone three
+ * times in a day: the repository is shared with people pushing
+ * `migrations/` from their own checkouts, every one of those puts this
+ * clone behind, and an agent has no terminal to rebase in. The commits
+ * being replayed are unpushed, so nothing published is rewritten.
+ *
+ * The same guard as the sidebar's pull: incoming commits that would
+ * rewrite a file with unsaved edits in DataGripe refuse before anything
+ * moves. And the same aftermath: the config is re-read and open tabs are
+ * told which files changed underneath them.
+ */
+async function bringUpToDate(
+	deps: McpDeps,
+	workspaceId: string,
+	connectionRef: string,
+	repoPath: string,
+	options: GitOptions,
+	audit: gitRepo.RepoAudit,
+): Promise<GitCommandResult> {
+	const fetched = await gitRepo.fetch(repoPath, options, audit);
+	if (fetched.exitCode !== 0) {
+		throw new ServiceError(
+			ErrorCodes.BadRequest,
+			`git fetch failed, so nothing was integrated or pushed: ${fetched.stderr.trim()}`,
+		);
+	}
+	const incoming = new Set(await gitRepo.incomingPaths(repoPath, options));
+	if (incoming.size > 0) {
+		const blocked = (
+			await dirtyOriginPaths(deps.appDb, workspaceId, connectionRef, repoPath)
+		).filter((file) => incoming.has(file));
+		if (blocked.length > 0) {
+			throw new ServiceError(
+				ErrorCodes.Conflict,
+				`The remote has changes to ${blocked.join(", ")}, which ${blocked.length === 1 ? "has" : "have"} unsaved edits in DataGripe. Nothing was pulled or pushed; ask for them to be saved or discarded.`,
+			);
+		}
+	}
+	const result = await gitRepo.integrate(repoPath, options, audit);
+	if (result.headMoved) {
+		deps.gitDatasources?.invalidate(repoPath);
+		deps.onRepoChanged?.(workspaceId, {
+			connectionRef,
+			changedPaths: result.changedPaths,
+			configChanged: result.changedPaths.some(isDatagripeFile),
+		});
+	}
+	return result;
 }
 
 function requireFunctionality(

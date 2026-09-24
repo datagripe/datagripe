@@ -36,7 +36,9 @@ buttons; nothing behind it happens on a timer.
   management, no merge conflict resolution, no rebase, no stash, no
   history browser, no blame. When git needs a decision DataGripe cannot
   represent, it stops and shows you git's own stderr, and you go to a
-  terminal.
+  terminal. The one exception is for callers with no terminal: MCP's
+  `git_pull` and `git_push` rebase *unpushed* commits onto the upstream
+  and abort on any conflict (`docs/spec/mcp.md` "Tools").
 - **Nothing automatic.** No autocommit, no autopush, no pull on open,
   no background fetch. Every invocation is a press. This is the single
   most important sentence in this spec.

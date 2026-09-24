@@ -252,22 +252,49 @@ agent reads and the validation it hits cannot drift apart.
 | `delete_domain` | `{ connectionRef, id, idempotencyKey }` | removes the domain and tags, never database objects |
 | `tag_objects` | `{ connectionRef, targets, domainId, idempotencyKey }` | assigns objects; null domain removes assignments |
 | `sync_datasource` | `{ connectionRef, dryRun?, idempotencyKey }` | export preview by default; false writes the configured snapshot to files |
-| `git_status` | `{ connectionRef }` | repository status |
+| `git_status` | `{ connectionRef }` | fetches, then the repository status; a failed fetch comes back as `fetchError` beside the local status |
 | `git_commit` | `{ connectionRef, message, paths?, idempotencyKey }` | stages named paths, then commits the whole index, including previously staged files |
-| `git_push` | `{ connectionRef, setUpstream?, idempotencyKey }` | pushes the current branch without force |
+| `git_pull` | `{ connectionRef, idempotencyKey }` | fetches, then fast-forwards or rebases unpushed commits onto the upstream; refuses on a conflict with nothing changed |
+| `git_push` | `{ connectionRef, setUpstream?, idempotencyKey }` | does what `git_pull` does, then pushes the current branch without force |
 | `run_query` | `{ datasource?, sql, maxRows? }` | `{ columns, rows, rowCount, resultSets, statements, truncated, elapsedMs, committed }` |
 
 Domain management, sync and Git each require their own project opt-in.
 Mutations additionally require read/write mode and an editor token.
 Reads and sync previews work in read-only mode once enabled, subject to
 the account capabilities: `domain.manage` for domain changes, `sync.run`
-for sync, `git.commit` for Git status/commit and `git.push` for push.
-Custom role restrictions are re-read on every authenticated call.
+for sync, `git.commit` for Git status, commit and pull, and `git.push`
+for push. Custom role restrictions are re-read on every authenticated call.
 `connectionRef` comes from `describe_project`; Git requires a repository
 datasource in this project and deployment Git enabled. Sync uses the
 existing configured export target and host filesystem policy; it does
-not pull Git changes. Commit and push are separate calls. Inspect
+not touch Git. Commit and push are separate calls. Inspect
 `git_status` before committing: the entire staged index is committed.
+
+**Git over MCP integrates; the sidebar does not.** The sidebar's pull is
+`--ff-only` and stops at anything more (`docs/spec/git-datasources.md`
+"The repository section"), because the person pressing it has a
+terminal. An agent does not, and a datasource repository is routinely
+shared with people pushing `migrations/` from their own checkouts: every
+one of those puts the server's clone behind, and a clone with one
+unpushed export commit is then wedged — its push rejected as
+non-fast-forward until somebody logs in and rebases by hand. So
+`git_pull`, and `git_push` before it pushes, fetch and then:
+
+- fast-forward when there is nothing unpushed;
+- otherwise `rebase` the unpushed commits onto the upstream. They have
+  never left the server, so nothing published is rewritten;
+- refuse, with git's own words and nothing changed, when the rebase
+  stops (it is aborted, so no conflicted tree is left behind), when a
+  rebase is needed and tracked files have uncommitted changes (never a
+  stash), or when incoming commits would rewrite a file with unsaved
+  edits in DataGripe — the sidebar pull's guard.
+
+Never a merge commit and never a force. A `HEAD` that moved broadcasts
+`repo.changed`, exactly as a sidebar pull does, so open tabs re-check
+their files. `git_status` fetches first, as the sidebar's refresh does,
+so `behind` is about the remote as it is now. `git_pull` needs
+`git.commit`, like the sidebar's pull: it reads the remote and writes
+only to the clone.
 Reuse an `idempotencyKey` only to retry the same completed mutation.
 Domain settings and assignments use the same services as the Domains
 tab, and sync exports them into the configured snapshot.

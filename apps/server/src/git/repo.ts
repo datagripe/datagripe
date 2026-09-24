@@ -8,8 +8,10 @@ import {
 	currentBranch,
 	type GitOptions,
 	headSha,
+	type RunResult,
 	repoStatus,
 	run,
+	tracking,
 	workTreeRoot,
 } from "./run";
 
@@ -17,7 +19,8 @@ import {
  * The repository section's operations (docs/spec/git-datasources.md
  * "The repository section").
  *
- * Status, stage, commit, push, pull, clone. That is the whole verb list
+ * Status, stage, commit, push, pull, clone — and `integrate`, the one
+ * verb for callers with no terminal to go to. That is the whole list
  * and it is not going to grow into a git client: when git needs a
  * decision DataGripe cannot represent, it stops and shows you git's own
  * stderr, and you go to a terminal.
@@ -236,6 +239,130 @@ export async function pull(
 		headMoved,
 		changedPaths,
 	};
+}
+
+/**
+ * Bring the branch level with its upstream as the last fetch left it,
+ * for a caller that cannot go to a terminal (docs/spec/mcp.md "Git").
+ *
+ * `pull --ff-only` is right for the sidebar, where somebody told "not
+ * possible to fast-forward" has a terminal. An MCP agent does not, and
+ * neither does anybody whose clone lives on a server: one unpushed
+ * commit plus a remote that moved is a clone wedged until a person logs
+ * in and rebases it by hand. So this goes one step further, and only
+ * one:
+ *
+ * - **Behind, not ahead:** `merge --ff-only`, which carries uncommitted
+ *   changes along when they do not overlap and refuses when they do.
+ * - **Behind and ahead:** `rebase` the unpushed commits onto the
+ *   upstream. They have never left this machine, so rewriting them
+ *   rewrites nobody's history. Anything that stops the rebase aborts
+ *   it, which puts the branch and the work tree back exactly where they
+ *   were — DataGripe still never leaves a conflicted tree behind.
+ *   Uncommitted changes to tracked files refuse up front rather than
+ *   being stashed, because a stash that will not pop is a conflicted
+ *   tree by another route.
+ *
+ * Never a merge commit and never a force. No fetch either: the caller
+ * fetches, so it can check what is about to arrive before anything
+ * moves. Refusals throw; they are not git's verdict on a command that
+ * ran, they are DataGripe declining to run one.
+ */
+export async function integrate(
+	root: string,
+	options: GitOptions,
+	audit: RepoAudit,
+): Promise<GitCommandResult> {
+	const { upstream, ahead, behind } = await tracking(root, options);
+	if (upstream === null || behind === 0) {
+		return {
+			exitCode: 0,
+			stdout: "",
+			stderr: "",
+			commitSha: null,
+			status: await repoStatus(root, options),
+			headMoved: false,
+			changedPaths: [],
+		};
+	}
+	const before = await headSha(root, options);
+	log.audit("git.integrate", {
+		...audit,
+		root,
+		branch: await currentBranch(root, options),
+		upstream,
+		ahead,
+		behind,
+	});
+
+	let result: RunResult;
+	if (ahead === 0) {
+		// `--no-autostash` on both: a user's `merge.autoStash` or
+		// `rebase.autoStash` is ambient configuration this must not inherit.
+		result = await run(
+			root,
+			["merge", "--ff-only", "--no-autostash", upstream],
+			options,
+		);
+		if (result.exitCode !== 0) {
+			throw new ServiceError(
+				ErrorCodes.Conflict,
+				`Could not fast-forward to ${upstream}; nothing moved.\n${gitOutput(result)}`,
+			);
+		}
+	} else {
+		const dirty = (await repoStatus(root, options)).entries
+			.filter((entry) => entry.status !== "??")
+			.map((entry) => entry.path);
+		if (dirty.length > 0) {
+			throw new ServiceError(
+				ErrorCodes.Conflict,
+				`${upstream} has ${plural(behind, "commit")} this clone does not, and replaying the ${plural(ahead, "unpushed commit")} on top of ${behind === 1 ? "it" : "them"} needs a clean work tree. Commit or discard the changes to ${dirty.join(", ")} first.`,
+			);
+		}
+		result = await run(root, ["rebase", "--no-autostash", upstream], options);
+		if (result.exitCode !== 0) {
+			// Whatever stopped it, stop it completely. With no rebase in
+			// progress (it refused before starting) this is a no-op.
+			await run(root, ["rebase", "--abort"], options);
+			throw new ServiceError(
+				ErrorCodes.Conflict,
+				`Replaying the ${plural(ahead, "unpushed commit")} on top of ${upstream} stopped, so the rebase was aborted: the branch and work tree are as they were. This needs a person — in the clone, \`git pull --rebase\`, resolve, push.\n${gitOutput(result)}`,
+			);
+		}
+	}
+
+	const after = await headSha(root, options);
+	const headMoved = before !== null && after !== null && before !== after;
+	let changedPaths: string[] = [];
+	if (headMoved) {
+		const diff = await run(
+			root,
+			["diff", "--name-only", `${before}..${after}`],
+			options,
+		);
+		changedPaths = diff.stdout.split("\n").filter((line) => line !== "");
+	}
+	return {
+		exitCode: result.exitCode,
+		stdout: result.stdout,
+		stderr: result.stderr,
+		commitSha: headMoved ? after : null,
+		status: await repoStatus(root, options),
+		headMoved,
+		changedPaths,
+	};
+}
+
+function plural(count: number, noun: string): string {
+	return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+/** Git's own words, both streams: a rebase says CONFLICT on stdout. */
+function gitOutput(result: RunResult): string {
+	return [result.stdout.trim(), result.stderr.trim()]
+		.filter((part) => part !== "")
+		.join("\n");
 }
 
 /**

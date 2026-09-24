@@ -55,13 +55,24 @@ Domain management, sync and Git are separate opt-ins, initially off:
   objects; set descriptions, ordering, hidden and include-data settings.
   Hidden domains are excluded from sync.
 - **Sync:** preview or write a datasource snapshot to its configured
-  export directory. Preview is the default. This does not pull Git changes.
-- **Git:** inspect status, commit, and push as separate tool calls. Commit
-  stages named paths then commits the whole staged index, including files
-  staged earlier. Inspect status first. Push never forces. Deployment Git
-  must also be enabled, and the datasource must have a repository.
+  export directory. Preview is the default. Sync writes files and does not
+  touch Git; commit and push them with the Git tools.
+- **Git:** inspect status, commit, pull and push as separate tool calls.
+  Status fetches first, so *behind* is about the remote as it is now.
+  Commit stages named paths then commits the whole staged index, including
+  files staged earlier. Inspect status first. Deployment Git must also be
+  enabled, and the datasource must have a repository.
+- **Pull and push keep a shared repository moving.** When other people push
+  to the same branch — hand-written migrations next to DataGripe's export,
+  say — pull fast-forwards, or rebases the clone's unpushed commits onto
+  the remote. Push does the same first, so a remote that moved on other
+  files does not reject it. Neither ever forces or makes a merge commit.
+  A real conflict, uncommitted changes to tracked files when a rebase is
+  needed, or incoming changes to a file with unsaved edits in DataGripe
+  refuse with nothing changed and nothing pushed; that one needs a person
+  with a terminal. The sidebar's own **pull** stays fast-forward only.
 
-Domain changes, sync writes, commits and pushes additionally require
+Domain changes, sync writes, commits, pulls and pushes additionally require
 read/write mode and editor access. Reads and sync previews work in
 read-only mode once their functionality is enabled. The account must
 also hold the corresponding domain, sync or Git capability; custom

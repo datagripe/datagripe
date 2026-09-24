@@ -31,6 +31,19 @@ export interface McpDeps {
 	hostFs: HostFsPolicy;
 	/** Present when git datasources are available; the briefing uses it. */
 	gitDatasources?: GitDatasourcesService;
+	/**
+	 * Tell open clients a pull moved `HEAD` — the sidebar's `repo.changed`
+	 * — when a Git tool brought the branch up to date. Optional so the
+	 * tools stay testable without a socket hub.
+	 */
+	onRepoChanged?: (
+		workspaceId: string,
+		payload: {
+			connectionRef: string;
+			changedPaths: string[];
+			configChanged: boolean;
+		},
+	) => void;
 }
 
 export interface McpContext {

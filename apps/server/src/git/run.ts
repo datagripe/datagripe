@@ -237,7 +237,7 @@ export function parseStatus(stdout: string): GitStatusEntry[] {
 }
 
 /** `ahead` / `behind` against the upstream, when there is one. */
-async function tracking(
+export async function tracking(
 	root: string,
 	options: GitOptions,
 ): Promise<{ upstream: string | null; ahead: number; behind: number }> {

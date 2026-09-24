@@ -595,6 +595,7 @@ useful than its absence.
 - [unfiled] idea · result-shape-gripes — It never comments on what came back. Four million rows dropped into a grid is a gripe, and it is silent about it.
 - [unfiled] idea · silent-mode — There is no way to make it shut up entirely except switching it off, which is not the same thing and loses the dismissals.
 - [unfiled] idea · ci-mode — Gripes only exist inside the app. They could exist in a pull request, which is where somebody else would have to read them.
+- [unfiled] git · sidebar-pull-ff-only — The sidebar's pull is fast-forward only. On a server's clone holding an unpushed commit, a person in the browser is as stuck as the agent was before MCP learned to rebase, and "go to a terminal" means a machine they may not be able to reach.
 - [unfiled] brand · light-theme — Dark theme only. That is an open item, not a stylistic position, and saying so is cheaper than pretending.
 - [declined] rules · formatting — No formatting rules, ever. Style filler is a formatter's job and the fastest way to get the whole thing switched off.
 - [declined] privacy · usage-analytics — No telemetry, ever. It answers nothing but this machine, and that is the entire point of it.

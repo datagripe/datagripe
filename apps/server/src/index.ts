@@ -242,6 +242,15 @@ const mcpDeps: McpDeps = {
 		disabled: config.HOST_FS_DISABLED,
 	},
 	...(config.GIT_ENABLED && !config.HOST_FS_DISABLED ? { gitDatasources } : {}),
+	onRepoChanged: (workspaceId, payload) =>
+		hub.broadcastToWorkspace(workspaceId, {
+			version: 1,
+			kind: "event",
+			eventId: crypto.randomUUID(),
+			topic: "repo.changed",
+			occurredAt: new Date().toISOString(),
+			payload,
+		}),
 };
 const mcp = config.MCP_ENABLED ? createMcpService(mcpDeps) : null;
 const mcpRoute = config.MCP_ENABLED ? createMcpRoute(mcpDeps) : null;

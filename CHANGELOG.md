@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- A repository datasource shared with other pushers no longer wedges its
+  clone. MCP `git_push` fetches and brings the branch up to date before
+  pushing — fast-forward, or a rebase of the clone's unpushed commits onto
+  the remote — so a remote that moved on other files (hand-written
+  migrations next to the export) no longer rejects the push as
+  non-fast-forward. A real conflict aborts the rebase and refuses with
+  git's output, leaving the clone and the remote exactly as they were.
+  Never a merge commit, never a force.
+- MCP `git_status` fetches first, so `behind` reflects the remote rather
+  than the last fetch. A failed fetch is returned as `fetchError` next to
+  the local status.
+
+### Added
+
+- MCP `git_pull`: fetch, then fast-forward or rebase unpushed commits onto
+  the upstream, with the same refusals as `git_push` and the sidebar pull's
+  unsaved-edits guard. Open tabs are told when it moves `HEAD`. The
+  sidebar's own pull is unchanged and stays fast-forward only.
+
 ## 0.0.15 — 2026-09-18
 
 ### Fixed
