@@ -106,6 +106,11 @@ directory or a git repository.
 domain. Everything in it is *effective* access, with `has_*_privilege`
 already resolved through PUBLIC, inheritance and superuser.
 
+**Column grant** — a privilege on some columns of a table rather than
+the whole of it: `GRANT SELECT (email) ON users TO support`. A table's
+cell in the access report cannot show it, so the row carries a `col`
+note that expands into one row per column.
+
 **Untrusted role** — a role you have marked as one, typically the
 anonymous role behind an API. The `grant.*` rules stay silent until at
 least one role is marked, because guessing which one it is would be

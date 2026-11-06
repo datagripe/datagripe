@@ -2422,6 +2422,28 @@ button.dg-crumb-item-main.dg-crumb-item-cur {
 	text-decoration: underline;
 }
 
+/* The expander for a relation's column grants. Sized to sit among the
+   notes chips; the arrow and the count are the state, not a colour. */
+.dg-access-col.dg-btn-sm {
+	padding: 0 6px;
+}
+
+/* A column under its relation. Told apart by the arrow and the
+   "column" label rather than by tint alone (brand-system.md). */
+.dg-access-colrow td {
+	border-top-style: dashed;
+}
+
+.dg-access-colname {
+	padding-left: 14px;
+	color: var(--dg-ink-dim);
+}
+
+.dg-access-collabel {
+	color: var(--dg-ink-mute);
+	font-size: var(--dg-fs-meta);
+}
+
 /* ---- modals ------------------------------------------------------- */
 
 /* Backdrop/modal chrome is gone — forms are dock tabs (see below).

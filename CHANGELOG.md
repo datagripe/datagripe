@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Added
+
+- The access matrix shows column-level grants instead of rounding them
+  off. A relation with them has a `▸ col N` button in its notes;
+  pressing it lists each column under the row, one cell per shown role,
+  with the same privilege letters — `GRANT SELECT (a) ON t TO r` reads
+  `–` for `r` on `t` and `R` on `a`. "Differences only" hides column
+  rows that repeat their table's cell, and now keeps a relation whose
+  only difference is a column grant. Relations without column grants
+  show no expander. ([#1](https://github.com/datagripe/datagripe/issues/1))
+
 ### Fixed
 
 - A view's DDL in the object view and domain sync never carries an

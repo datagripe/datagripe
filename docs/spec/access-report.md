@@ -131,7 +131,17 @@ Beside the privilege columns, per relation:
   report is where you see all of them at once.
 - **Column grants** — a relation with column-level ACLs shows a `col`
   marker, because an object-level cell necessarily rounds them off.
-  Expanding the row shows the per-column matrix.
+  When any shown role holds a privilege on one of those columns the
+  marker is a button (`▸ col N`, N columns); pressing it lists the
+  columns as rows under the relation — one row per column, one cell per
+  shown role, with the same letters as the relation cells and struck
+  through where the role has no schema `USAGE`. A column row is marked
+  by `↳` and the word `column`, not by tint. Each answer is
+  `has_column_privilege`, so a role that reads the whole table reads
+  every listed column too; `GRANT SELECT (email) ON users TO support`
+  is `–` on the table and `R` on `email`. A relation whose column ACLs
+  give no shown role anything keeps a plain `col` with nothing to
+  expand.
 
 ### Default privileges
 
@@ -221,7 +231,13 @@ the report rather than a setting somewhere else.
   click. Untagged objects group last, as everywhere else.
 - A **differences only** toggle hides every row where nothing is
   reachable without a direct grant. On a mature database that toggle is
-  the report.
+  the report. Column rows have no path to judge that by, so for them a
+  difference is a shown role whose privileges on the column are not the
+  ones its relation cell shows (comparing `SELECT`, `INSERT` and
+  `UPDATE`, the only privileges a column has). The toggle hides column
+  rows that only repeat the table's cell, and keeps a relation whose
+  only difference is in its columns — otherwise it would hide the
+  column-only grant it exists to surface.
 - Filtering by schema is available on the wire (`schemas`) but the tab
   does not expose a control for it yet; the domain filter and the cell
   cap cover the cases that made it necessary.
@@ -337,9 +353,6 @@ PostgREST that is the only thing they needed to know.
 
 ## What is not built
 
-- **Rendering the per-column grant expansion** in the tab. The data is
-  in the report payload and in the wire type; the row does not expand
-  yet, so `col` currently means "look at this one by hand".
 - **A schema filter control** in the tab (the wire field exists).
 - **MySQL.** `accessReport` is false for every other adapter, and the
   tab reports itself unsupported rather than guessing.
