@@ -276,7 +276,7 @@ done. CI runs all four and nothing else will catch a broken site link.
 **`bun test` is green without a database, and quieter than you think.**
 The server's service tests probe `localhost:5432` and turn themselves
 into `test.skip` when nothing answers, so a run with no PostgreSQL
-passes and says `31 skip` instead of `0 skip`. Read the skip count after
+passes and says `237 skip` instead of `0 skip`. Read the skip count after
 writing one — see [docs/testing.md](docs/testing.md).
 
 ## Commits

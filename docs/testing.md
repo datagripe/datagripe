@@ -16,7 +16,7 @@ const reachable = await probe();
 const pgTest = reachable ? test : test.skip;
 ```
 
-A run with no database is still green — it just says `31 skip` instead
+A run with no database is still green — it just says `237 skip` instead
 of `0 skip`. **Read the skip count**, especially after writing a service
 test, because "my new test passed" and "my new test did not run" look
 identical otherwise.
