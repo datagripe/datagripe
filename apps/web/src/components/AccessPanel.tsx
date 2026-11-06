@@ -1,6 +1,4 @@
 import type {
-	AccessCell,
-	AccessObject,
 	AccessReportResult,
 	AccessRolesResult,
 	DatasourceRole,
@@ -15,6 +13,7 @@ import {
 	readDatasourcePanelParams,
 } from "../app/viewPanels";
 import { useGripesStore } from "../stores/gripes";
+import { AccessMatrix, visibleObjects } from "./AccessMatrix";
 import { Select, TextInput } from "./controls";
 import { RailFact, RailHelp, RailSection, TabShell } from "./TabRail";
 
@@ -28,59 +27,10 @@ import { RailFact, RailHelp, RailSection, TabShell } from "./TabRail";
  * this because somebody granted it to PUBLIC three years ago".
  */
 
-const LETTERS: Record<string, string> = {
-	select: "R",
-	insert: "C",
-	update: "U",
-	delete: "D",
-	execute: "X",
-	usage: "G",
-};
-
 type ReportResponse = AccessReportResult & {
 	findings: Finding[];
 	untrusted: string[];
 };
-
-function cellText(entry: AccessCell | undefined): string {
-	if (entry === undefined || entry.privileges.length === 0) {
-		return "–";
-	}
-	return entry.privileges.map((p) => LETTERS[p] ?? p).join("");
-}
-
-function Cell(props: { entry: AccessCell | undefined }) {
-	const entry = props.entry;
-	if (entry === undefined || entry.privileges.length === 0) {
-		return <td className="dg-access-none">–</td>;
-	}
-	const indirect = entry.path !== null && !entry.sources.includes("direct");
-	return (
-		<td
-			className={
-				entry.schemaBlocked
-					? "dg-access-blocked"
-					: indirect
-						? "dg-access-indirect"
-						: undefined
-			}
-			// The path is the product. Markdown gets a Paths table; here it
-			// is the title, which screen readers also announce.
-			title={
-				entry.schemaBlocked
-					? `${cellText(entry)} — but no USAGE on the schema, so this is not access`
-					: (entry.path ?? undefined)
-			}
-		>
-			{cellText(entry)}
-			{indirect && <span aria-hidden>°</span>}
-		</td>
-	);
-}
-
-function isRoutine(object: AccessObject): boolean {
-	return object.kind === "function" || object.kind === "procedure";
-}
 
 export function AccessPanel(props: { params?: unknown }) {
 	const { connectionRef, connectionName } = readDatasourcePanelParams(
@@ -92,6 +42,7 @@ export function AccessPanel(props: { params?: unknown }) {
 	const [busy, setBusy] = useState(false);
 	const [differencesOnly, setDifferencesOnly] = useState(false);
 	const [domainFilter, setDomainFilter] = useState("");
+	const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
 	const setObjectFindings = useGripesStore((state) => state.setObjectFindings);
 
 	const loadRoles = useCallback(async () => {
@@ -169,26 +120,13 @@ export function AccessPanel(props: { params?: unknown }) {
 		}
 	};
 
-	const shownObjects = useMemo(() => {
-		if (report === null) {
-			return [];
-		}
-		return report.objects.filter((object) => {
-			if (domainFilter !== "" && object.domain !== domainFilter) {
-				return false;
-			}
-			if (!differencesOnly) {
-				return true;
-			}
-			// On a mature database this toggle *is* the report.
-			return object.cells.some(
-				(entry) =>
-					entry.privileges.length > 0 &&
-					entry.path !== null &&
-					!entry.sources.includes("direct"),
-			);
-		});
-	}, [report, differencesOnly, domainFilter]);
+	const shownObjects = useMemo(
+		() =>
+			report === null
+				? []
+				: visibleObjects(report, { differencesOnly, domain: domainFilter }),
+		[report, differencesOnly, domainFilter],
+	);
 
 	if (connectionRef === "") {
 		return (
@@ -284,8 +222,16 @@ export function AccessPanel(props: { params?: unknown }) {
 				</dd>
 				<dt>differences only</dt>
 				<dd>
-					Hides rows where nothing is reachable without a direct grant. On a
-					mature database that toggle is the report.
+					Hides rows where nothing is reachable without a direct grant, and
+					column rows that only repeat their table's cell. On a mature database
+					that toggle is the report.
+				</dd>
+				<dt>col</dt>
+				<dd>
+					Column-level grants exist, which a table's cell rounds off. Press it
+					to list each column under the row with the same letters —{" "}
+					<code>GRANT SELECT (email) ON users TO support</code> reads{" "}
+					<code>–</code> on the table and <code>R</code> on <code>email</code>.
 				</dd>
 			</dl>
 			<p>
@@ -451,98 +397,32 @@ export function AccessPanel(props: { params?: unknown }) {
 						so the privilege is inert
 					</p>
 
-					<table className="dg-domain-table dg-access-matrix">
-						<thead>
-							<tr>
-								<th>object</th>
-								<th>domain</th>
-								{columns.map((role) => (
-									<th key={role}>{role}</th>
-								))}
-								<th>RLS</th>
-								<th>notes</th>
-							</tr>
-						</thead>
-						<tbody>
-							{shownObjects.map((object) => {
-								const byRole = new Map(
-									object.cells.map((entry) => [entry.role, entry]),
-								);
-								return (
-									<tr key={`${object.kind}:${object.schema}.${object.name}`}>
-										<td>
-											<button
-												type="button"
-												className="dg-access-object"
-												onClick={() =>
-													openObjectView(
-														{
-															connectionId: connectionRef,
-															schema: object.schema,
-															name: object.name,
-															kind: object.kind,
-														},
-														"grants",
-													)
-												}
-											>
-												{object.schema}.{object.name}
-											</button>
-										</td>
-										<td>{object.domain ?? "—"}</td>
-										{columns.map((role) => (
-											<Cell key={role} entry={byRole.get(role)} />
-										))}
-										<td>
-											{object.rls}
-											{(object.rls === "on" || object.rls === "forced") &&
-												object.policyCount === 0 && (
-													<span
-														className="dg-access-warn"
-														title="RLS on with zero policies denies every row, silently"
-													>
-														{" "}
-														0 policies
-													</span>
-												)}
-										</td>
-										<td className="dg-access-notes">
-											{isRoutine(object) && object.securityDefiner && (
-												<span title="Runs as its owner">definer</span>
-											)}
-											{isRoutine(object) &&
-												object.securityDefiner &&
-												!object.searchPathPinned && (
-													<span title="No search_path pinned">
-														no search_path
-													</span>
-												)}
-											{object.kind === "view" &&
-												object.securityInvoker === false && (
-													<span title="Reads its base relations as its owner">
-														owner-reads
-													</span>
-												)}
-											{object.hasColumnGrants && (
-												<span title="Column-level grants exist; the cell rounds them off">
-													col
-												</span>
-											)}
-										</td>
-									</tr>
-								);
-							})}
-							{shownObjects.length === 0 && (
-								<tr>
-									<td colSpan={columns.length + 4} className="dg-tree-note">
-										{differencesOnly
-											? "every privilege here was granted to its role by name"
-											: "nothing to show"}
-									</td>
-								</tr>
-							)}
-						</tbody>
-					</table>
+					<AccessMatrix
+						report={report}
+						objects={shownObjects}
+						differencesOnly={differencesOnly}
+						expanded={expanded}
+						onToggle={(key) =>
+							setExpanded((current) => {
+								const next = new Set(current);
+								if (!next.delete(key)) {
+									next.add(key);
+								}
+								return next;
+							})
+						}
+						onOpen={(object) =>
+							openObjectView(
+								{
+									connectionId: connectionRef,
+									schema: object.schema,
+									name: object.name,
+									kind: object.kind,
+								},
+								"grants",
+							)
+						}
+					/>
 
 					{report.defaultAcl.length > 0 && (
 						<section>

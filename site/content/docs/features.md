@@ -160,7 +160,12 @@ and *New project…* is the last item in it.
   trigger functions remain separate routines: tag them too if you want
   their bodies in the export.
 - **Access report** answers "who can read this" across a schema or a
-  domain, and refuses above a cell count rather than timing out.
+  domain, and refuses above a cell count rather than timing out. A
+  table with column-level grants shows `▸ col` in its notes; pressing
+  it lists those columns under the row with the same letters, so
+  `GRANT SELECT (email) ON users TO support` reads `–` on `users` and
+  `R` on `email`. "Differences only" keeps the columns that say
+  something the table's cell does not.
 - **Datasource paths** let a datasource point at a directory on the host
   that the sidebar then browses.
 

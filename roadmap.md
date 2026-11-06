@@ -219,8 +219,9 @@ where the grant graph is the API surface.
 - [x] `access: <datasource>` tab, domain-filtered, "differences only"
 - [x] `access/` in the domain dump, with no `Generated:` date in the
       body so a real change is not buried under a timestamp
-- [ ] Render the per-column grant expansion (the data is already in the
-      payload); a schema filter control; MySQL
+- [x] The per-column grant expansion: `col` opens the relation's
+      columns under its row, filtered by "differences only"
+- [ ] A schema filter control; MySQL
 
 Exit: a function created today shows `anon` reaching it via `PUBLIC`
 before anybody has run a query against it.
