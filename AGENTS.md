@@ -279,6 +279,28 @@ into `test.skip` when nothing answers, so a run with no PostgreSQL
 passes and says `31 skip` instead of `0 skip`. Read the skip count after
 writing one — see [docs/testing.md](docs/testing.md).
 
+## Commits
+
+**Every commit carries Rick as co-author**, whoever or whatever makes it:
+
+```
+Co-Authored-By: rick-the-alien <7463986+rick-the-alien@users.noreply.github.com>
+```
+
+It goes on its own line at the end of the message. A squash or a rebase keeps it. A pull request whose commits lack it
+gets them amended before merge.
+
+## Issues
+
+Anybody may open an issue or suggestion on GitHub. Kit (`infra-kit-ops`), the project's maintainer agent, triages
+them:
+- She labels them `bug`, `enhancement`, `documentation`, `question`, `good first issue` or `needs info`.
+- She asks on the issue when something is missing.
+- She fixes the obvious ones and takes design questions to the maintainers.
+
+A fix closes its issue with a "Fixed in #PR" comment. Write issues and fixes for every user of DataGripe, not for one
+setup.
+
 ## Style
 
 Tabs, as biome is configured. `exactOptionalPropertyTypes` and
