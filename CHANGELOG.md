@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- A view's DDL in the object view and domain sync never carries an
+  `ALTER TABLE … ENABLE/DISABLE TRIGGER` line. PostgreSQL refuses those on
+  a view (42809), so a view's `INSTEAD OF` trigger is always enabled and
+  is shown that way. Tables keep their disabled, replica and always modes.
+- The object-view integration test no longer disables a trigger on a view
+  in its fixture, which failed the whole file against a real PostgreSQL.
+  The enable-mode cases now run on a table trigger.
+
 ## 0.0.16 — 2026-09-24
 
 ### Fixed
