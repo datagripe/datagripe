@@ -111,7 +111,6 @@ beforeAll(async () => {
 		DROP TRIGGER IF EXISTS view_touch ON shop.open_orders;
 		CREATE TRIGGER view_touch INSTEAD OF INSERT ON shop.open_orders
 			FOR EACH ROW EXECUTE FUNCTION shop.touch_order();
-		ALTER TABLE shop.open_orders DISABLE TRIGGER view_touch;
 
 		TRUNCATE shop.order_lines;
 		DELETE FROM shop.orders;
@@ -196,36 +195,60 @@ describe("postgres object view", () => {
 		expect(result.constraints[0]?.type).toBe("primary key");
 	});
 
-	pgTest("view trigger DDL preserves each enable mode", async () => {
+	pgTest("table trigger DDL preserves each enable mode", async () => {
 		const modes = [
 			["DISABLE", "DISABLE"],
 			["ENABLE REPLICA", "ENABLE REPLICA"],
 			["ENABLE ALWAYS", "ENABLE ALWAYS"],
 			["ENABLE", null],
 		] as const;
-		for (const [mode, expected] of modes) {
-			await admin.unsafe(
-				`ALTER TABLE shop.open_orders ${mode} TRIGGER view_touch`,
+		try {
+			for (const [mode, expected] of modes) {
+				await fixtures.unsafe(
+					`ALTER TABLE shop.orders ${mode} TRIGGER orders_touch`,
+				);
+				const result = await adapter.describeObject(CONNECTION, table, LIMITS);
+				const trigger = result.triggers.find(
+					(entry) => entry.name === "orders_touch",
+				);
+				expect(trigger?.enabled).toBe(mode !== "DISABLE");
+				if (expected !== null) {
+					expect(result.ddl).toContain(
+						`ALTER TABLE "shop"."orders" ${expected} TRIGGER "orders_touch";`,
+					);
+				} else {
+					expect(result.ddl).not.toContain('TRIGGER "orders_touch";');
+				}
+			}
+		} finally {
+			// Other tests read orders_touch as enabled.
+			await fixtures.unsafe(
+				"ALTER TABLE shop.orders ENABLE TRIGGER orders_touch",
 			);
+		}
+	});
+
+	pgTest(
+		"a view's trigger is enabled and its DDL never toggles it",
+		async () => {
+			// PostgreSQL refuses ENABLE/DISABLE TRIGGER on a view (42809), so
+			// there is no disabled case to fixture here.
 			const result = await adapter.describeObject(
 				CONNECTION,
-				{
-					schema: "shop",
-					name: "open_orders",
-					kind: "view",
-				},
+				{ schema: "shop", name: "open_orders", kind: "view" },
 				LIMITS,
 			);
+			const trigger = result.triggers.find(
+				(entry) => entry.name === "view_touch",
+			);
+			expect(trigger?.timing).toBe("instead of");
+			expect(trigger?.enabled).toBe(true);
 			expect(result.ddl).toContain(
 				"CREATE TRIGGER view_touch INSTEAD OF INSERT",
 			);
-			if (expected !== null) {
-				expect(result.ddl).toContain(`${expected} TRIGGER "view_touch";`);
-			} else {
-				expect(result.ddl).not.toContain("ALTER TABLE");
-			}
-		}
-	});
+			expect(result.ddl).not.toMatch(/ALTER TABLE .* TRIGGER/);
+		},
+	);
 
 	pgTest("triggers report timing and every event they cover", async () => {
 		const result = await adapter.describeObject(CONNECTION, table, LIMITS);

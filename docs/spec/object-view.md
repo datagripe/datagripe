@@ -125,8 +125,10 @@ deliberately careful about two things that a naive rebuild gets wrong:
 
 Attached triggers follow the table or view definition in the DDL tab
 and in domain sync. PostgreSQL uses `pg_get_triggerdef`, excludes internal
-constraint triggers, and appends the statements needed to preserve
-disabled, replica or always modes. MySQL/MariaDB appends `SHOW CREATE
+constraint triggers, and appends the statements needed to preserve a
+table's disabled, replica or always modes. A view's `INSTEAD OF` trigger
+is always enabled — PostgreSQL refuses `ENABLE`/`DISABLE TRIGGER` on a
+view — so a view's DDL never carries one. MySQL/MariaDB appends `SHOW CREATE
 TRIGGER` definitions in firing order; SQLite appends stored trigger SQL.
 Trigger functions remain separate routines and need their own domain
 tags to be exported.

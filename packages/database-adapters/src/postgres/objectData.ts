@@ -377,6 +377,13 @@ export async function describePostgresObject(
 					ddl,
 					triggerRows.flatMap((row) => {
 						const statements = [text(row.definition)];
+						// PostgreSQL refuses ENABLE/DISABLE TRIGGER on a view
+						// (42809), so a view's trigger is always origin mode and
+						// any statement here would be DDL that cannot run. Checked
+						// anyway rather than trusting tgenabled to stay 'O'.
+						if (relationKind === "view") {
+							return statements;
+						}
 						// CREATE defaults to origin mode; preserve disabled, replica
 						// and always triggers rather than silently changing behavior.
 						const mode = (
